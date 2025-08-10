@@ -8,8 +8,8 @@ import (
 )
 
 type Shortener struct {
-	urlStorage      repository.UrlStorage
-	shortUrlStorage repository.UrlStorage
+	urlStorage      repository.URLStorage
+	shortURLStorage repository.URLStorage
 	generator       *shortid.Shortid
 }
 
@@ -19,8 +19,8 @@ func NewShortener() (*Shortener, error) {
 		return nil, errors.New("failed to instantiate short id generator")
 	}
 	return &Shortener{
-		urlStorage:      repository.NewMapUrlStorage(),
-		shortUrlStorage: repository.NewMapUrlStorage(),
+		urlStorage:      repository.NewMapURLStorage(),
+		shortURLStorage: repository.NewMapURLStorage(),
 		generator:       generator,
 	}, nil
 }
@@ -30,23 +30,23 @@ func (s Shortener) Shorten(url string) (string, error) {
 		return s.urlStorage.Get(url)
 	}
 
-	shortId, err := s.generator.Generate()
+	shortID, err := s.generator.Generate()
 	if err != nil {
 		return "", errors.New("failed to generate short url")
 	}
-	if err := s.urlStorage.Set(url, shortId); err != nil {
+	if err := s.urlStorage.Set(url, shortID); err != nil {
 		return "", errors.New("failed to set url in the storage")
 	}
-	if err := s.shortUrlStorage.Set(shortId, url); err != nil {
+	if err := s.shortURLStorage.Set(shortID, url); err != nil {
 		return "", errors.New("failed to set short url in the storage")
 	}
 
-	return shortId, nil
+	return shortID, nil
 }
 
-func (s Shortener) Extract(shortId string) (string, error) {
-	if s.shortUrlStorage.Has(shortId) {
-		return s.shortUrlStorage.Get(shortId)
+func (s Shortener) Extract(shortID string) (string, error) {
+	if s.shortURLStorage.Has(shortID) {
+		return s.shortURLStorage.Get(shortID)
 	}
-	return "", repository.ErrShortUrlNotFound
+	return "", repository.ErrShortURLNotFound
 }

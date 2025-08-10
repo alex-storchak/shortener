@@ -27,7 +27,7 @@ func Serve(cfg config.Config, shortener *service.Shortener) error {
 func newRouter(h *handlers) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", h.MainPageHandler)
-	r.HandleFunc("/{id:[a-zA-Z0-9_-]+}", h.ShortUrlHandler).Name("shortUrl")
+	r.HandleFunc("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler).Name("shortUrl")
 	r.NotFoundHandler = http.HandlerFunc(h.NotFoundHandler)
 
 	return r
@@ -45,7 +45,6 @@ func newHandlers(shortener *service.Shortener) *handlers {
 
 func (h *handlers) NotFoundHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusNotFound)
-	return
 }
 
 func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
@@ -61,34 +60,34 @@ func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
-	shortId, err := h.shortener.Shorten(string(body))
+	shortID, err := h.shortener.Shorten(string(body))
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	shortUrl := fmt.Sprintf("http://%s/%s", req.Host, shortId)
+	shortURL := fmt.Sprintf("http://%s/%s", req.Host, shortID)
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(shortUrl))
+	res.Write([]byte(shortURL))
 }
 
-func (h *handlers) ShortUrlHandler(res http.ResponseWriter, req *http.Request) {
+func (h *handlers) ShortURLHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	vars := mux.Vars(req)
-	shortId, ok := vars["id"]
+	shortID, ok := vars["id"]
 	if !ok {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	targetUrl, err := h.shortener.Extract(shortId)
+	targetURL, err := h.shortener.Extract(shortID)
 	if err != nil {
-		if errors.Is(err, repository.ErrShortUrlNotFound) {
+		if errors.Is(err, repository.ErrShortURLNotFound) {
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -96,6 +95,6 @@ func (h *handlers) ShortUrlHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res.Header().Set("Location", targetUrl)
+	res.Header().Set("Location", targetURL)
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }

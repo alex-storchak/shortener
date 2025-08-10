@@ -2,40 +2,40 @@ package repository
 
 import "errors"
 
-type UrlStorage interface {
+type URLStorage interface {
 	Has(url string) bool
 	Get(url string) (string, error)
-	Set(url string, shortUrl string) error
+	Set(url string, shortURL string) error
 }
 
-type MapUrlStorage struct {
+type MapURLStorage struct {
 	storage map[string]string
 }
 
-func NewMapUrlStorage() MapUrlStorage {
-	return MapUrlStorage{
+func NewMapURLStorage() MapURLStorage {
+	return MapURLStorage{
 		storage: make(map[string]string),
 	}
 }
 
-func (s MapUrlStorage) Has(url string) bool {
+func (s MapURLStorage) Has(url string) bool {
 	_, ok := s.storage[url]
 	return ok
 }
 
-func (s MapUrlStorage) Get(url string) (string, error) {
+func (s MapURLStorage) Get(url string) (string, error) {
 	value, ok := s.storage[url]
 	if !ok {
-		return "", ErrShortUrlNotFound
+		return "", ErrShortURLNotFound
 	}
 	return value, nil
 }
 
-func (s MapUrlStorage) Set(url string, shortUrl string) error {
-	s.storage[url] = shortUrl
+func (s MapURLStorage) Set(url string, shortURL string) error {
+	s.storage[url] = shortURL
 	return nil
 }
 
 var (
-	ErrShortUrlNotFound = errors.New("no data in the storage for the requested url")
+	ErrShortURLNotFound = errors.New("no data in the storage for the requested url")
 )
