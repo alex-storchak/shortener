@@ -4,25 +4,29 @@ import (
 	"errors"
 
 	"github.com/alex-storchak/shortener/internal/repository"
-	"github.com/teris-io/shortid"
 )
+
+type IShortener interface {
+	Shorten(url string) (string, error)
+	Extract(shortID string) (string, error)
+}
 
 type Shortener struct {
 	urlStorage      repository.URLStorage
 	shortURLStorage repository.URLStorage
-	generator       *shortid.Shortid
+	generator       IDGenerator
 }
 
-func NewShortener() (*Shortener, error) {
-	generator, err := shortid.New(1, shortid.DefaultABC, 1)
-	if err != nil {
-		return nil, errors.New("failed to instantiate short id generator")
-	}
+func NewShortener(
+	idGenerator IDGenerator,
+	urlStorage repository.URLStorage,
+	shortURLStorage repository.URLStorage,
+) *Shortener {
 	return &Shortener{
-		urlStorage:      repository.NewMapURLStorage(),
-		shortURLStorage: repository.NewMapURLStorage(),
-		generator:       generator,
-	}, nil
+		urlStorage:      urlStorage,
+		shortURLStorage: shortURLStorage,
+		generator:       idGenerator,
+	}
 }
 
 func (s Shortener) Shorten(url string) (string, error) {
@@ -32,13 +36,13 @@ func (s Shortener) Shorten(url string) (string, error) {
 
 	shortID, err := s.generator.Generate()
 	if err != nil {
-		return "", errors.New("failed to generate short url")
+		return "", ErrShortenerGenerationShortIDFailed
 	}
 	if err := s.urlStorage.Set(url, shortID); err != nil {
-		return "", errors.New("failed to set url in the storage")
+		return "", ErrShortenerSetBindingURLStorageFailed
 	}
 	if err := s.shortURLStorage.Set(shortID, url); err != nil {
-		return "", errors.New("failed to set short url in the storage")
+		return "", ErrShortenerSetBindingShortURLStorageFailed
 	}
 
 	return shortID, nil
@@ -48,5 +52,12 @@ func (s Shortener) Extract(shortID string) (string, error) {
 	if s.shortURLStorage.Has(shortID) {
 		return s.shortURLStorage.Get(shortID)
 	}
-	return "", repository.ErrShortURLNotFound
+	return "", ErrShortenerShortIDNotFound
 }
+
+var (
+	ErrShortenerGenerationShortIDFailed         = errors.New("failed to generate short id")
+	ErrShortenerSetBindingURLStorageFailed      = errors.New("failed to set url binding in the urlStorage")
+	ErrShortenerSetBindingShortURLStorageFailed = errors.New("failed to set url binding in the shortURLStorage")
+	ErrShortenerShortIDNotFound                 = errors.New("short id binding not found in the shortURLStorage")
+)
