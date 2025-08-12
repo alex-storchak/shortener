@@ -31,8 +31,8 @@ func (s MapURLStorage) Get(url string) (string, error) {
 	return value, nil
 }
 
-func (s MapURLStorage) Set(url string, shortURL string) error {
-	s.storage[url] = shortURL
+func (s MapURLStorage) Set(keyURL, valueURL string) error {
+	s.storage[keyURL] = valueURL
 	return nil
 }
 

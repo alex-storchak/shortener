@@ -5,37 +5,67 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-// todo: перделать на использование стабов
-type idGeneratorMock struct {
-	mock.Mock
+type idGeneratorStub struct {
+	generateMethodShouldFail bool
 }
 
-func (m *idGeneratorMock) Generate() (string, error) {
-	args := m.Called()
-	return args.String(0), args.Error(1)
+func newIDGeneratorStub(generateMethodShouldFail bool) *idGeneratorStub {
+	return &idGeneratorStub{
+		generateMethodShouldFail: generateMethodShouldFail,
+	}
 }
 
-type URLStorageMock struct {
-	mock.Mock
+func (d *idGeneratorStub) Generate() (string, error) {
+	if d.generateMethodShouldFail {
+		return "", errors.New("generate method should fail")
+	}
+	return "abcde", nil
 }
 
-func (m *URLStorageMock) Has(shortID string) bool {
-	args := m.Called(shortID)
-	return args.Bool(0)
+type urlStorageStub struct {
+	setMethodShouldFail bool
+	storage             map[string]string
 }
 
-func (m *URLStorageMock) Get(shortID string) (string, error) {
-	args := m.Called(shortID)
-	return args.String(0), args.Error(1)
+func newURLStorageStub(setMethodShouldFail bool) *urlStorageStub {
+	return &urlStorageStub{
+		setMethodShouldFail: setMethodShouldFail,
+		storage: map[string]string{
+			"http://existing.com": "abcde",
+		},
+	}
 }
 
-func (m *URLStorageMock) Set(shortID, url string) error {
-	args := m.Called(shortID, url)
-	return args.Error(0)
+func newShortURLStorageStub(setMethodShouldFail bool) *urlStorageStub {
+	return &urlStorageStub{
+		setMethodShouldFail: setMethodShouldFail,
+		storage: map[string]string{
+			"abcde": "http://existing.com",
+		},
+	}
+}
+
+func (d *urlStorageStub) Has(url string) bool {
+	_, ok := d.storage[url]
+	return ok
+}
+
+func (d *urlStorageStub) Get(url string) (string, error) {
+	if targetURL, ok := d.storage[url]; ok {
+		return targetURL, nil
+	} else {
+		return "", errors.New("no data in the storage for the requested url")
+	}
+}
+
+func (d *urlStorageStub) Set(urlKey, urlValue string) error {
+	if d.setMethodShouldFail {
+		return errors.New("set method should fail")
+	}
+	return nil
 }
 
 func TestShortener_Shorten(t *testing.T) {
@@ -43,23 +73,19 @@ func TestShortener_Shorten(t *testing.T) {
 		url string
 	}
 	tests := []struct {
-		name     string
-		args     args
-		mockFunc func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock)
-		err      error
-		want     string
-		wantErr  bool
+		name                      string
+		args                      args
+		idGeneratorShouldFail     bool
+		urlStorageShouldFail      bool
+		shortURLStorageShouldFail bool
+		err                       error
+		want                      string
+		wantErr                   bool
 	}{
 		{
 			name: "returns new short id if storage is empty",
 			args: args{
 				url: "https://non-existing.com",
-			},
-			mockFunc: func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock) {
-				usm.On("Has", "https://non-existing.com").Return(false)
-				idm.On("Generate").Return("abcde", nil)
-				usm.On("Set", "https://non-existing.com", "abcde").Return(nil)
-				susm.On("Set", "abcde", "https://non-existing.com").Return(nil)
 			},
 			err:     nil,
 			want:    "abcde",
@@ -68,11 +94,7 @@ func TestShortener_Shorten(t *testing.T) {
 		{
 			name: "returns short id from storage if exists",
 			args: args{
-				url: "https://existing.com",
-			},
-			mockFunc: func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock) {
-				usm.On("Has", "https://existing.com").Return(true)
-				usm.On("Get", "https://existing.com").Return("abcde", nil)
+				url: "http://existing.com",
 			},
 			err:     nil,
 			want:    "abcde",
@@ -83,56 +105,39 @@ func TestShortener_Shorten(t *testing.T) {
 			args: args{
 				url: "https://non-existing.com",
 			},
-			mockFunc: func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock) {
-				usm.On("Has", "https://non-existing.com").Return(false)
-				idm.On("Generate").Return("", errors.New("failed"))
-			},
-			err:     ErrShortenerGenerationShortIDFailed,
-			want:    "",
-			wantErr: true,
+			idGeneratorShouldFail: true,
+			err:                   ErrShortenerGenerationShortIDFailed,
+			want:                  "",
+			wantErr:               true,
 		},
 		{
 			name: "returns error if failed to set binding in urlStorage",
 			args: args{
-				url: "https://non-existing.com",
+				url: "http://non-existing.com",
 			},
-			mockFunc: func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock) {
-				usm.On("Has", "https://non-existing.com").Return(false)
-				idm.On("Generate").Return("abcde", nil)
-				usm.On("Set", "https://non-existing.com", "abcde").Return(errors.New("failed"))
-			},
-			err:     ErrShortenerSetBindingURLStorageFailed,
-			want:    "",
-			wantErr: true,
+			urlStorageShouldFail: true,
+			err:                  ErrShortenerSetBindingURLStorageFailed,
+			want:                 "",
+			wantErr:              true,
 		},
 		{
 			name: "returns error if failed to set binding in shortURLStorage",
 			args: args{
-				url: "https://non-existing.com",
+				url: "http://non-existing.com",
 			},
-			mockFunc: func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock) {
-				usm.On("Has", "https://non-existing.com").Return(false)
-				idm.On("Generate").Return("abcde", nil)
-				usm.On("Set", "https://non-existing.com", "abcde").Return(nil)
-				susm.On("Set", "abcde", "https://non-existing.com").Return(errors.New("failed"))
-			},
-			err:     ErrShortenerSetBindingShortURLStorageFailed,
-			want:    "",
-			wantErr: true,
+			shortURLStorageShouldFail: true,
+			err:                       ErrShortenerSetBindingShortURLStorageFailed,
+			want:                      "",
+			wantErr:                   true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Shortener{
-				urlStorage:      &URLStorageMock{},
-				shortURLStorage: &URLStorageMock{},
-				generator:       &idGeneratorMock{},
+				urlStorage:      newURLStorageStub(tt.urlStorageShouldFail),
+				shortURLStorage: newShortURLStorageStub(tt.shortURLStorageShouldFail),
+				generator:       newIDGeneratorStub(tt.idGeneratorShouldFail),
 			}
-			tt.mockFunc(
-				s.generator.(*idGeneratorMock),
-				s.urlStorage.(*URLStorageMock),
-				s.shortURLStorage.(*URLStorageMock),
-			)
 
 			got, err := s.Shorten(tt.args.url)
 
@@ -153,24 +158,20 @@ func TestShortener_Extract(t *testing.T) {
 		shortID string
 	}
 	tests := []struct {
-		name     string
-		args     args
-		mockFunc func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock)
-		err      error
-		want     string
-		wantErr  bool
+		name                      string
+		args                      args
+		shortURLStorageShouldFail bool
+		err                       error
+		want                      string
+		wantErr                   bool
 	}{
 		{
 			name: "extract url from storage if exists",
 			args: args{
 				shortID: "abcde",
 			},
-			mockFunc: func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock) {
-				susm.On("Has", "abcde").Return(true)
-				susm.On("Get", "abcde").Return("https://existing.com", nil)
-			},
 			err:     nil,
-			want:    "https://existing.com",
+			want:    "http://existing.com",
 			wantErr: false,
 		},
 		{
@@ -178,27 +179,20 @@ func TestShortener_Extract(t *testing.T) {
 			args: args{
 				shortID: "non-existing",
 			},
-			mockFunc: func(idm *idGeneratorMock, usm *URLStorageMock, susm *URLStorageMock) {
-				susm.On("Has", "non-existing").Return(false)
-			},
-			err:     ErrShortenerShortIDNotFound,
-			want:    "",
-			wantErr: true,
+			shortURLStorageShouldFail: true,
+			err:                       ErrShortenerShortIDNotFound,
+			want:                      "",
+			wantErr:                   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Shortener{
-				urlStorage:      &URLStorageMock{},
-				shortURLStorage: &URLStorageMock{},
-				generator:       &idGeneratorMock{},
+				urlStorage:      newURLStorageStub(false),
+				shortURLStorage: newShortURLStorageStub(tt.shortURLStorageShouldFail),
+				generator:       newIDGeneratorStub(false),
 			}
-			tt.mockFunc(
-				s.generator.(*idGeneratorMock),
-				s.urlStorage.(*URLStorageMock),
-				s.shortURLStorage.(*URLStorageMock),
-			)
 
 			got, err := s.Extract(tt.args.shortID)
 
