@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/alex-storchak/shortener/internal/service"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -149,7 +150,11 @@ func Test_handlers_ShortURLHandler(t *testing.T) {
 				shortener: newDummyShortener(),
 			}
 			request := httptest.NewRequest(tt.method, tt.path, nil)
-			request = mux.SetURLVars(request, map[string]string{"id": tt.shortID})
+
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("id", tt.shortID)
+			request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, rctx))
+
 			w := httptest.NewRecorder()
 
 			h.ShortURLHandler(w, request)
@@ -165,20 +170,4 @@ func Test_handlers_ShortURLHandler(t *testing.T) {
 			assert.Equal(t, tt.want.Location, res.Header.Get("Location"))
 		})
 	}
-}
-
-func Test_handlers_NotFoundHandler(t *testing.T) {
-	t.Run("random path returns 404 (Not Found)", func(t *testing.T) {
-		h := &handlers{
-			shortener: &dummyShortener{},
-		}
-		request := httptest.NewRequest(http.MethodGet, "/foo/bar", nil)
-		w := httptest.NewRecorder()
-
-		h.NotFoundHandler(w, request)
-		res := w.Result()
-		defer res.Body.Close()
-
-		assert.Equal(t, http.StatusNotFound, res.StatusCode)
-	})
 }

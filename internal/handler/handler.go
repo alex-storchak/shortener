@@ -8,7 +8,7 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/handler/config"
 	"github.com/alex-storchak/shortener/internal/service"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 )
 
 func Serve(cfg config.Config, shortener service.IShortener) error {
@@ -23,11 +23,10 @@ func Serve(cfg config.Config, shortener service.IShortener) error {
 	return srv.ListenAndServe()
 }
 
-func newRouter(h *handlers) *mux.Router {
-	r := mux.NewRouter()
-	r.HandleFunc("/", h.MainPageHandler)
-	r.HandleFunc("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
-	r.NotFoundHandler = http.HandlerFunc(h.NotFoundHandler)
+func newRouter(h *handlers) *chi.Mux {
+	r := chi.NewRouter()
+	r.Get("/", h.MainPageHandler)
+	r.Get("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
 
 	return r
 }
@@ -40,10 +39,6 @@ func newHandlers(shortener service.IShortener) *handlers {
 	return &handlers{
 		shortener: shortener,
 	}
-}
-
-func (h *handlers) NotFoundHandler(res http.ResponseWriter, req *http.Request) {
-	res.WriteHeader(http.StatusNotFound)
 }
 
 func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
@@ -77,13 +72,7 @@ func (h *handlers) ShortURLHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(req)
-	shortID, ok := vars["id"]
-	if !ok {
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
+	shortID := chi.URLParam(req, "id")
 	targetURL, err := h.shortener.Extract(shortID)
 	if err != nil {
 		if errors.Is(err, service.ErrShortenerShortIDNotFound) {
