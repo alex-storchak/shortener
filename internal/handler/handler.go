@@ -25,7 +25,7 @@ func Serve(cfg config.Config, shortener service.IShortener) error {
 
 func newRouter(h *handlers) *chi.Mux {
 	r := chi.NewRouter()
-	r.Get("/", h.MainPageHandler)
+	r.Post("/", h.MainPageHandler)
 	r.Get("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
 
 	return r
@@ -50,6 +50,11 @@ func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if len(body) == 0 {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
