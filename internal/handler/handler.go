@@ -12,11 +12,11 @@ import (
 )
 
 func Serve(cfg config.Config, shortener service.IShortener) error {
-	h := newHandlers(shortener)
+	h := newHandlers(shortener, cfg.ShortURLBaseAddr)
 	router := newRouter(h)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf("%s:%s", cfg.ServerHost, cfg.ServerPort),
+		Addr:    cfg.ServerAddr,
 		Handler: router,
 	}
 
@@ -32,12 +32,14 @@ func newRouter(h *handlers) *chi.Mux {
 }
 
 type handlers struct {
-	shortener service.IShortener
+	shortener        service.IShortener
+	shortURLBaseAddr string
 }
 
-func newHandlers(shortener service.IShortener) *handlers {
+func newHandlers(shortener service.IShortener, shortURLBaseAddr string) *handlers {
 	return &handlers{
-		shortener: shortener,
+		shortener:        shortener,
+		shortURLBaseAddr: shortURLBaseAddr,
 	}
 }
 
@@ -64,7 +66,7 @@ func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	shortURL := fmt.Sprintf("http://%s/%s", req.Host, shortID)
+	shortURL := fmt.Sprintf("%s/%s", h.shortURLBaseAddr, shortID)
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)

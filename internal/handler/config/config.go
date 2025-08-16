@@ -1,6 +1,6 @@
 package config
 
 type Config struct {
-	ServerHost string
-	ServerPort string
+	ServerAddr       string
+	ShortURLBaseAddr string
 }
