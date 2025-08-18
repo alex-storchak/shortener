@@ -8,7 +8,7 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/handler/config"
 	"github.com/alex-storchak/shortener/internal/service"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 )
 
 func Serve(cfg config.Config, shortener service.IShortener) error {
@@ -23,11 +23,10 @@ func Serve(cfg config.Config, shortener service.IShortener) error {
 	return srv.ListenAndServe()
 }
 
-func newRouter(h *handlers) *mux.Router {
-	r := mux.NewRouter()
-	r.HandleFunc("/", h.MainPageHandler)
-	r.HandleFunc("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
-	r.NotFoundHandler = http.HandlerFunc(h.NotFoundHandler)
+func newRouter(h *handlers) *chi.Mux {
+	r := chi.NewRouter()
+	r.Post("/", h.MainPageHandler)
+	r.Get("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
 
 	return r
 }
@@ -42,10 +41,6 @@ func newHandlers(shortener service.IShortener) *handlers {
 	}
 }
 
-func (h *handlers) NotFoundHandler(res http.ResponseWriter, req *http.Request) {
-	res.WriteHeader(http.StatusNotFound)
-}
-
 func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		res.WriteHeader(http.StatusMethodNotAllowed)
@@ -55,6 +50,11 @@ func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if len(body) == 0 {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -77,13 +77,7 @@ func (h *handlers) ShortURLHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(req)
-	shortID, ok := vars["id"]
-	if !ok {
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
+	shortID := chi.URLParam(req, "id")
 	targetURL, err := h.shortener.Extract(shortID)
 	if err != nil {
 		if errors.Is(err, service.ErrShortenerShortIDNotFound) {
