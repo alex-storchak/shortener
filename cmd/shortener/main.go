@@ -6,7 +6,9 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/handler"
+	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/service"
+	"github.com/teris-io/shortid"
 )
 
 func main() {
@@ -18,10 +20,16 @@ func main() {
 func run() error {
 	cfg := config.GetConfig()
 
-	shortener, err := service.NewShortener()
+	generator, err := shortid.New(1, shortid.DefaultABC, 1)
 	if err != nil {
-		return errors.New("failed to instantiate shortener: " + err.Error())
+		return errors.New("failed to instantiate shortid generator")
 	}
+	shortIDGenerator := service.NewShortidIDGenerator(generator)
+	shortener := service.NewShortener(
+		shortIDGenerator,
+		repository.NewMapURLStorage(),
+		repository.NewMapURLStorage(),
+	)
 
 	return handler.Serve(cfg.Handler, shortener)
 }

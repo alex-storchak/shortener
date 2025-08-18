@@ -7,12 +7,11 @@ import (
 	"net/http"
 
 	"github.com/alex-storchak/shortener/internal/handler/config"
-	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/gorilla/mux"
 )
 
-func Serve(cfg config.Config, shortener *service.Shortener) error {
+func Serve(cfg config.Config, shortener service.IShortener) error {
 	h := newHandlers(shortener)
 	router := newRouter(h)
 
@@ -27,17 +26,17 @@ func Serve(cfg config.Config, shortener *service.Shortener) error {
 func newRouter(h *handlers) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", h.MainPageHandler)
-	r.HandleFunc("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler).Name("shortUrl")
+	r.HandleFunc("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
 	r.NotFoundHandler = http.HandlerFunc(h.NotFoundHandler)
 
 	return r
 }
 
 type handlers struct {
-	shortener *service.Shortener
+	shortener service.IShortener
 }
 
-func newHandlers(shortener *service.Shortener) *handlers {
+func newHandlers(shortener service.IShortener) *handlers {
 	return &handlers{
 		shortener: shortener,
 	}
@@ -53,12 +52,12 @@ func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	defer req.Body.Close()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	defer req.Body.Close()
 
 	shortID, err := h.shortener.Shorten(string(body))
 	if err != nil {
@@ -87,7 +86,7 @@ func (h *handlers) ShortURLHandler(res http.ResponseWriter, req *http.Request) {
 
 	targetURL, err := h.shortener.Extract(shortID)
 	if err != nil {
-		if errors.Is(err, repository.ErrShortURLNotFound) {
+		if errors.Is(err, service.ErrShortenerShortIDNotFound) {
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}

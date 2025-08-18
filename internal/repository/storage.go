@@ -26,16 +26,16 @@ func (s MapURLStorage) Has(url string) bool {
 func (s MapURLStorage) Get(url string) (string, error) {
 	value, ok := s.storage[url]
 	if !ok {
-		return "", ErrShortURLNotFound
+		return "", ErrURLStorageDataNotFound
 	}
 	return value, nil
 }
 
-func (s MapURLStorage) Set(url string, shortURL string) error {
-	s.storage[url] = shortURL
+func (s MapURLStorage) Set(keyURL, valueURL string) error {
+	s.storage[keyURL] = valueURL
 	return nil
 }
 
 var (
-	ErrShortURLNotFound = errors.New("no data in the storage for the requested url")
+	ErrURLStorageDataNotFound = errors.New("no data in the storage for the requested url")
 )
