@@ -24,11 +24,13 @@ func run() error {
 	if err != nil {
 		return errors.New("failed to instantiate shortid generator")
 	}
-	shortIDGenerator := service.NewShortidIDGenerator(generator)
+	shortIDGenerator := service.NewShortIDGenerator(generator)
+	urlToShortStorage := repository.NewMapURLStorage()
+	shortToURLStorage := repository.NewMapURLStorage()
 	shortener := service.NewShortener(
 		shortIDGenerator,
-		repository.NewMapURLStorage(),
-		repository.NewMapURLStorage(),
+		urlToShortStorage,
+		shortToURLStorage,
 	)
 
 	return handler.Serve(cfg.Handler, shortener)

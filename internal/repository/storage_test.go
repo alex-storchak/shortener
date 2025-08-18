@@ -10,11 +10,11 @@ import (
 func TestNewMapURLStorage(t *testing.T) {
 	tests := []struct {
 		name string
-		want MapURLStorage
+		want *MapURLStorage
 	}{
 		{
 			name: "default creation",
-			want: MapURLStorage{
+			want: &MapURLStorage{
 				storage: make(map[string]string),
 			},
 		},

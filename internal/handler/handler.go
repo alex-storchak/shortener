@@ -83,7 +83,7 @@ func (h *handlers) ShortURLHandler(res http.ResponseWriter, req *http.Request) {
 	targetURL, err := h.shortener.Extract(shortID)
 	if err != nil {
 		if errors.Is(err, service.ErrShortenerShortIDNotFound) {
-			res.WriteHeader(http.StatusBadRequest)
+			res.WriteHeader(http.StatusNotFound)
 			return
 		}
 		res.WriteHeader(http.StatusInternalServerError)

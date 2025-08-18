@@ -136,11 +136,11 @@ func Test_handlers_ShortURLHandler(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "non-existing short url returns 400 (Bad Request)",
+			name:   "non-existing short url returns 404 (Not Found)",
 			method: http.MethodGet,
 			path:   "/non-existing",
 			want: want{
-				code: http.StatusBadRequest,
+				code: http.StatusNotFound,
 			},
 			wantErr: true,
 		},
