@@ -12,18 +12,18 @@ type MapURLStorage struct {
 	storage map[string]string
 }
 
-func NewMapURLStorage() MapURLStorage {
-	return MapURLStorage{
+func NewMapURLStorage() *MapURLStorage {
+	return &MapURLStorage{
 		storage: make(map[string]string),
 	}
 }
 
-func (s MapURLStorage) Has(url string) bool {
+func (s *MapURLStorage) Has(url string) bool {
 	_, ok := s.storage[url]
 	return ok
 }
 
-func (s MapURLStorage) Get(url string) (string, error) {
+func (s *MapURLStorage) Get(url string) (string, error) {
 	value, ok := s.storage[url]
 	if !ok {
 		return "", ErrURLStorageDataNotFound
@@ -31,7 +31,7 @@ func (s MapURLStorage) Get(url string) (string, error) {
 	return value, nil
 }
 
-func (s MapURLStorage) Set(keyURL, valueURL string) error {
+func (s *MapURLStorage) Set(keyURL, valueURL string) error {
 	s.storage[keyURL] = valueURL
 	return nil
 }

@@ -14,13 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type dummyShortener struct {
+type shortenerStub struct {
 	urlStorage      map[string]string
 	shortURLStorage map[string]string
 }
 
-func newDummyShortener() *dummyShortener {
-	return &dummyShortener{
+func newShortenerStub() *shortenerStub {
+	return &shortenerStub{
 		urlStorage: map[string]string{},
 		shortURLStorage: map[string]string{
 			"abcde": "https://existing.com",
@@ -28,11 +28,11 @@ func newDummyShortener() *dummyShortener {
 	}
 }
 
-func (d *dummyShortener) Shorten(url string) (string, error) {
+func (d *shortenerStub) Shorten(url string) (string, error) {
 	return "abcde", nil
 }
 
-func (d *dummyShortener) Extract(shortID string) (string, error) {
+func (d *shortenerStub) Extract(shortID string) (string, error) {
 	if targetURL, ok := d.shortURLStorage[shortID]; ok {
 		return targetURL, nil
 	} else {
@@ -74,7 +74,8 @@ func Test_handlers_MainPageHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &handlers{
-				shortener: newDummyShortener(),
+				shortener:        newShortenerStub(),
+				shortURLBaseAddr: "http://example.com",
 			}
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader("http://existing.com"))
 			w := httptest.NewRecorder()
@@ -135,11 +136,11 @@ func Test_handlers_ShortURLHandler(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "non-existing short url returns 400 (Bad Request)",
+			name:   "non-existing short url returns 404 (Not Found)",
 			method: http.MethodGet,
 			path:   "/non-existing",
 			want: want{
-				code: http.StatusBadRequest,
+				code: http.StatusNotFound,
 			},
 			wantErr: true,
 		},
@@ -147,7 +148,7 @@ func Test_handlers_ShortURLHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &handlers{
-				shortener: newDummyShortener(),
+				shortener: newShortenerStub(),
 			}
 			request := httptest.NewRequest(tt.method, tt.path, nil)
 

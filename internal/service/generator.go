@@ -4,16 +4,16 @@ type IDGenerator interface {
 	Generate() (string, error)
 }
 
-type ShortidIDGenerator struct {
+type ShortIDGenerator struct {
 	idGenerator IDGenerator
 }
 
-func NewShortidIDGenerator(generator IDGenerator) *ShortidIDGenerator {
-	return &ShortidIDGenerator{
+func NewShortIDGenerator(generator IDGenerator) *ShortIDGenerator {
+	return &ShortIDGenerator{
 		idGenerator: generator,
 	}
 }
 
-func (g *ShortidIDGenerator) Generate() (string, error) {
+func (g *ShortIDGenerator) Generate() (string, error) {
 	return g.idGenerator.Generate()
 }
