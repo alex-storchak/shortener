@@ -5,79 +5,203 @@ import (
 	"os"
 	"testing"
 
-	handlerConfig "github.com/alex-storchak/shortener/internal/handler/config"
-	"github.com/stretchr/testify/assert"
+	handlerCfg "github.com/alex-storchak/shortener/internal/handler/config"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestGetConfig(t *testing.T) {
+const (
+	envNameServerAddress = "SERVER_ADDRESS"
+	envNameBaseURL       = "BASE_URL"
+)
+
+type ConfigTestSuite struct {
+	suite.Suite
+	origEnvs        map[string]string
+	envVarsNames    []string
+	origArgs        []string
+	origCommandLine *flag.FlagSet
+}
+
+func (s *ConfigTestSuite) SetupSuite() {
+	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL}
+}
+
+func (s *ConfigTestSuite) setEnvs(envs map[string]string) {
+	for name, val := range envs {
+		if err := os.Setenv(name, val); err != nil {
+			s.T().Fatal(err)
+		}
+	}
+}
+
+func (s *ConfigTestSuite) unsetEnvs(names []string) {
+	for _, name := range names {
+		if err := os.Unsetenv(name); err != nil {
+			s.T().Fatal(err)
+		}
+	}
+}
+
+func (s *ConfigTestSuite) SetupSubTest() {
+	for _, key := range s.envVarsNames {
+		if val, exists := os.LookupEnv(key); exists {
+			s.origEnvs[key] = val
+		}
+		if err := os.Unsetenv(key); err != nil {
+			s.T().Fatal(err)
+		}
+	}
+	s.origArgs = os.Args
+	s.origCommandLine = flag.CommandLine
+}
+
+func (s *ConfigTestSuite) TearDownSubTest() {
+	s.unsetEnvs(s.envVarsNames)
+	for key, val := range s.origEnvs {
+		if err := os.Setenv(key, val); err != nil {
+			s.T().Fatal(err)
+		}
+	}
+	s.origEnvs = make(map[string]string)
+	os.Args = s.origArgs
+	flag.CommandLine = s.origCommandLine
+}
+
+func (s *ConfigTestSuite) TestParseConfig() {
 	tests := []struct {
 		name  string
 		flags []string
-		want  Config
+		envs  map[string]string
+		want  *Config
 	}{
 		{
-			name:  "get config with default flags",
+			name:  "parse config without flags and envs returns default values",
 			flags: []string{},
-			want: Config{
-				Handler: handlerConfig.Config{
-					ServerAddr:       "localhost:8080",
-					ShortURLBaseAddr: "http://localhost:8080",
+			envs:  map[string]string{},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: handlerCfg.DefaultServerAddr,
+					BaseURL:    handlerCfg.DefaultBaseURL,
 				},
 			},
 		},
 		{
-			name: "get config with custom flags",
+			name: "parse config with custom flags without envs returns flags values",
 			flags: []string{
 				"-a=example.com:1111",
 				"-b=http://example.com:1111",
 			},
-			want: Config{
-				Handler: handlerConfig.Config{
-					ServerAddr:       "example.com:1111",
-					ShortURLBaseAddr: "http://example.com:1111",
+			envs: map[string]string{},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: "example.com:1111",
+					BaseURL:    "http://example.com:1111",
 				},
 			},
 		},
 		{
-			name: "get config with custom -a (server address) flag",
+			name: "parse config with custom -a (server address) flag without envs returns -a flag value",
 			flags: []string{
 				"-a=example.com:1111",
 			},
-			want: Config{
-				Handler: handlerConfig.Config{
-					ServerAddr:       "example.com:1111",
-					ShortURLBaseAddr: "http://localhost:8080",
+			envs: map[string]string{},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: "example.com:1111",
+					BaseURL:    handlerCfg.DefaultBaseURL,
 				},
 			},
 		},
 		{
-			name: "get config with custom -b (short url base address) flag",
+			name: "parse config with custom -b (short url base address) flag without envs returns -b flag value",
 			flags: []string{
 				"-b=http://example.com:1111",
 			},
-			want: Config{
-				Handler: handlerConfig.Config{
-					ServerAddr:       "localhost:8080",
-					ShortURLBaseAddr: "http://example.com:1111",
+			envs: map[string]string{},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: handlerCfg.DefaultServerAddr,
+					BaseURL:    "http://example.com:1111",
+				},
+			},
+		},
+		{
+			name:  "parse config with custom envs without flags returns envs values",
+			flags: []string{},
+			envs: map[string]string{
+				envNameServerAddress: "env-example.com:1111",
+				envNameBaseURL:       "http://env-example.com:1111",
+			},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: "env-example.com:1111",
+					BaseURL:    "http://env-example.com:1111",
+				},
+			},
+		},
+		{
+			name: "parse config with custom envs with flags returns envs values",
+			flags: []string{
+				"-a=flags-example.com:1111",
+				"-b=http://flags-example.com:1111",
+			},
+			envs: map[string]string{
+				envNameServerAddress: "env-example.com:1111",
+				envNameBaseURL:       "http://env-example.com:1111",
+			},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: "env-example.com:1111",
+					BaseURL:    "http://env-example.com:1111",
+				},
+			},
+		},
+		{
+			name: "parse config with custom env SERVER_ADDRESS and -b (base url) flag returns env and flag values",
+			flags: []string{
+				"-b=http://flags-example.com:1111",
+			},
+			envs: map[string]string{
+				envNameServerAddress: "env-example.com:1111",
+			},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: "env-example.com:1111",
+					BaseURL:    "http://flags-example.com:1111",
+				},
+			},
+		},
+		{
+			name: "parse config with custom env SERVER_ADDRESS and -a (server address) flag returns env and default values",
+			flags: []string{
+				"-a=flags-example.com:1111",
+			},
+			envs: map[string]string{
+				envNameServerAddress: "env-example.com:1111",
+			},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: "env-example.com:1111",
+					BaseURL:    handlerCfg.DefaultBaseURL,
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oldArgs := os.Args
-			oldCommandLine := flag.CommandLine
-			defer func() {
-				os.Args = oldArgs
-				flag.CommandLine = oldCommandLine
-			}()
-
+		s.Run(tt.name, func() {
+			s.setEnvs(tt.envs)
 			flag.CommandLine = flag.NewFlagSet("test", flag.ExitOnError)
 			testArgs := append([]string{"test"}, tt.flags...)
 			os.Args = testArgs
 
-			got := GetConfig()
-			assert.Equal(t, tt.want, got)
+			got, err := ParseConfig()
+
+			s.Require().NoError(err)
+			s.Assert().Equal(tt.want, got)
 		})
 	}
+}
+
+func TestConfigTestSuite(t *testing.T) {
+	suite.Run(t, new(ConfigTestSuite))
 }

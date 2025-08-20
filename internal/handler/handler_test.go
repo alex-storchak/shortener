@@ -74,8 +74,8 @@ func Test_handlers_MainPageHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &handlers{
-				shortener:        newShortenerStub(),
-				shortURLBaseAddr: "http://example.com",
+				shortener: newShortenerStub(),
+				baseURL:   "http://example.com",
 			}
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader("http://existing.com"))
 			w := httptest.NewRecorder()

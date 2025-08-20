@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Serve(cfg config.Config, shortener service.IShortener) error {
-	h := newHandlers(shortener, cfg.ShortURLBaseAddr)
+func Serve(cfg *config.Config, shortener service.IShortener) error {
+	h := newHandlers(shortener, cfg.BaseURL)
 	router := newRouter(h)
 
 	srv := &http.Server{
@@ -32,14 +32,14 @@ func newRouter(h *handlers) *chi.Mux {
 }
 
 type handlers struct {
-	shortener        service.IShortener
-	shortURLBaseAddr string
+	shortener service.IShortener
+	baseURL   string
 }
 
-func newHandlers(shortener service.IShortener, shortURLBaseAddr string) *handlers {
+func newHandlers(shortener service.IShortener, baseURL string) *handlers {
 	return &handlers{
-		shortener:        shortener,
-		shortURLBaseAddr: shortURLBaseAddr,
+		shortener: shortener,
+		baseURL:   baseURL,
 	}
 }
 
@@ -66,7 +66,7 @@ func (h *handlers) MainPageHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	shortURL := fmt.Sprintf("%s/%s", h.shortURLBaseAddr, shortID)
+	shortURL := fmt.Sprintf("%s/%s", h.baseURL, shortID)
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
