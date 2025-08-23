@@ -21,17 +21,22 @@ func TestFormatDuration(t *testing.T) {
 		{
 			name:     "micro second",
 			duration: 123 * time.Microsecond,
-			want:     "123 µs",
+			want:     "123.00 μs",
 		},
 		{
 			name:     "milli second",
 			duration: 123 * time.Millisecond,
-			want:     "123 ms",
+			want:     "123.00 ms",
 		},
 		{
 			name:     "second",
 			duration: 123 * time.Second,
-			want:     "123 s",
+			want:     "123.00 s",
+		},
+		{
+			name:     "composite",
+			duration: 123*time.Second + 456*time.Millisecond,
+			want:     "123.46 s",
 		},
 	}
 
