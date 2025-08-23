@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 type idGeneratorStub struct {
@@ -137,6 +138,7 @@ func TestShortener_Shorten(t *testing.T) {
 				urlStorage:      newURLStorageStub(tt.urlStorageShouldFail),
 				shortURLStorage: newShortURLStorageStub(tt.shortURLStorageShouldFail),
 				generator:       newIDGeneratorStub(tt.idGeneratorShouldFail),
+				logger:          zap.NewNop(),
 			}
 
 			got, err := s.Shorten(tt.args.url)
@@ -192,6 +194,7 @@ func TestShortener_Extract(t *testing.T) {
 				urlStorage:      newURLStorageStub(false),
 				shortURLStorage: newShortURLStorageStub(tt.shortURLStorageShouldFail),
 				generator:       newIDGeneratorStub(false),
+				logger:          zap.NewNop(),
 			}
 
 			got, err := s.Extract(tt.args.shortID)

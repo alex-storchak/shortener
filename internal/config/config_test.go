@@ -6,12 +6,14 @@ import (
 	"testing"
 
 	handlerCfg "github.com/alex-storchak/shortener/internal/handler/config"
+	loggerCfg "github.com/alex-storchak/shortener/internal/logger/config"
 	"github.com/stretchr/testify/suite"
 )
 
 const (
 	envNameServerAddress = "SERVER_ADDRESS"
 	envNameBaseURL       = "BASE_URL"
+	envNameLogLevel      = "LOG_LEVEL"
 )
 
 type ConfigTestSuite struct {
@@ -23,7 +25,7 @@ type ConfigTestSuite struct {
 }
 
 func (s *ConfigTestSuite) SetupSuite() {
-	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL}
+	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL, envNameLogLevel}
 }
 
 func (s *ConfigTestSuite) setEnvs(envs map[string]string) {
@@ -83,6 +85,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: handlerCfg.DefaultServerAddr,
 					BaseURL:    handlerCfg.DefaultBaseURL,
 				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
+				},
 			},
 		},
 		{
@@ -97,6 +102,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "example.com:1111",
 					BaseURL:    "http://example.com:1111",
 				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
+				},
 			},
 		},
 		{
@@ -109,6 +117,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: handlerCfg.Config{
 					ServerAddr: "example.com:1111",
 					BaseURL:    handlerCfg.DefaultBaseURL,
+				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
 				},
 			},
 		},
@@ -123,6 +134,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: handlerCfg.DefaultServerAddr,
 					BaseURL:    "http://example.com:1111",
 				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
+				},
 			},
 		},
 		{
@@ -136,6 +150,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: handlerCfg.Config{
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    "http://env-example.com:1111",
+				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
 				},
 			},
 		},
@@ -154,6 +171,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    "http://env-example.com:1111",
 				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
+				},
 			},
 		},
 		{
@@ -169,6 +189,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    "http://flags-example.com:1111",
 				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
+				},
 			},
 		},
 		{
@@ -183,6 +206,59 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: handlerCfg.Config{
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    handlerCfg.DefaultBaseURL,
+				},
+				Logger: loggerCfg.Config{
+					LogLevel: loggerCfg.DefaultLogLevel,
+				},
+			},
+		},
+		{
+			name: "parse config with custom env LOG_LEVEL and -l (log level) flag returns env",
+			flags: []string{
+				"-l=error",
+			},
+			envs: map[string]string{
+				envNameLogLevel: "debug",
+			},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: handlerCfg.DefaultServerAddr,
+					BaseURL:    handlerCfg.DefaultBaseURL,
+				},
+				Logger: loggerCfg.Config{
+					LogLevel: "debug",
+				},
+			},
+		},
+		{
+			name:  "parse config with custom env LOG_LEVEL without flags returns env",
+			flags: []string{},
+			envs: map[string]string{
+				envNameLogLevel: "debug",
+			},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: handlerCfg.DefaultServerAddr,
+					BaseURL:    handlerCfg.DefaultBaseURL,
+				},
+				Logger: loggerCfg.Config{
+					LogLevel: "debug",
+				},
+			},
+		},
+		{
+			name: "parse config without env with -l (log level) flag returns flag",
+			flags: []string{
+				"-l=error",
+			},
+			envs: map[string]string{},
+			want: &Config{
+				Handler: handlerCfg.Config{
+					ServerAddr: handlerCfg.DefaultServerAddr,
+					BaseURL:    handlerCfg.DefaultBaseURL,
+				},
+				Logger: loggerCfg.Config{
+					LogLevel: "error",
 				},
 			},
 		},

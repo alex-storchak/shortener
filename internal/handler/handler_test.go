@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 type shortenerStub struct {
@@ -76,6 +77,7 @@ func Test_handlers_MainPageHandler(t *testing.T) {
 			h := &handlers{
 				shortener: newShortenerStub(),
 				baseURL:   "http://example.com",
+				logger:    zap.NewNop(),
 			}
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader("http://existing.com"))
 			w := httptest.NewRecorder()
@@ -149,6 +151,7 @@ func Test_handlers_ShortURLHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &handlers{
 				shortener: newShortenerStub(),
+				logger:    zap.NewNop(),
 			}
 			request := httptest.NewRequest(tt.method, tt.path, nil)
 
