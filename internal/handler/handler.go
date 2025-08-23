@@ -7,10 +7,10 @@ import (
 	"net/http"
 
 	"github.com/alex-storchak/shortener/internal/handler/config"
-	"github.com/alex-storchak/shortener/internal/logger"
+	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 )
 
@@ -28,9 +28,10 @@ func Serve(cfg *config.Config, shortener service.IShortener, logger *zap.Logger)
 
 func newRouter(h *handlers) *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Post("/", logger.RequestLogger(h.MainPageHandler, h.logger))
-	r.Get("/{id:[a-zA-Z0-9_-]+}", logger.RequestLogger(h.ShortURLHandler, h.logger))
+	r.Use(chiMiddleware.Logger)
+	r.Use(middleware.RequestLogger(h.logger))
+	r.Post("/", h.MainPageHandler)
+	r.Get("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
 
 	return r
 }
