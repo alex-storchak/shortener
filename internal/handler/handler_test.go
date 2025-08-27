@@ -2,12 +2,14 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -172,6 +174,71 @@ func Test_handlers_ShortURLHandler(t *testing.T) {
 
 			assert.Equal(t, tt.want.code, res.StatusCode)
 			assert.Equal(t, tt.want.Location, res.Header.Get("Location"))
+		})
+	}
+}
+
+func Test_handlers_ApiShortenHandler(t *testing.T) {
+	type want struct {
+		code        int
+		body        model.ShortenResponse
+		contentType string
+	}
+	tests := []struct {
+		name    string
+		method  string
+		want    want
+		wantErr bool
+	}{
+		{
+			name:   "non POST request returns 405 (Method Not Allowed)",
+			method: http.MethodGet,
+			want: want{
+				code: http.StatusMethodNotAllowed,
+			},
+			wantErr: true,
+		},
+		{
+			name:   "POST request returns 201 (Created)",
+			method: http.MethodPost,
+			want: want{
+				code: http.StatusCreated,
+				body: model.ShortenResponse{
+					ShortURL: "http://example.com/abcde",
+				},
+				contentType: "application/json",
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &handlers{
+				shortener: newShortenerStub(),
+				baseURL:   "http://example.com",
+				logger:    zap.NewNop(),
+			}
+
+			request := httptest.NewRequest(tt.method, "/", strings.NewReader(`{"url":"http://existing.com"}`))
+			request.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			h.APIShortenHandler(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+
+			if tt.wantErr {
+				assert.Equal(t, tt.want.code, res.StatusCode)
+				return
+			}
+
+			var shortenResponse model.ShortenResponse
+			err := json.NewDecoder(res.Body).Decode(&shortenResponse)
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.code, res.StatusCode)
+			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.body, shortenResponse)
 		})
 	}
 }
