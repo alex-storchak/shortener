@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,151 +10,75 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestNewMapURLStorage(t *testing.T) {
+func TestFileURLStorage(t *testing.T) {
+	tmpDir := t.TempDir()
+	testDBFile, err := os.CreateTemp(tmpDir, "file_db*.txt")
+	require.NoError(t, err)
+	defer os.Remove(testDBFile.Name())
+
+	testRecord := FileURLStorageRecord{
+		UUID:        1,
+		ShortURL:    "abcde",
+		OriginalURL: "https://example.com",
+	}
+	data, err := json.Marshal(testRecord)
+	require.NoError(t, err)
+	dataWithNewline := append(data, '\n')
+	os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
+
 	tests := []struct {
-		name string
-		want *MapURLStorage
+		name            string
+		fileStoragePath string
+		hasRecord       bool
+		wantShortURL    string
+		wantOrigURL     string
 	}{
 		{
-			name: "default creation",
-			want: &MapURLStorage{
-				storage: make(map[string]string),
-				logger:  zap.NewNop(),
-			},
+			name:            "return preload record from storage file",
+			fileStoragePath: testDBFile.Name(),
+			hasRecord:       true,
+			wantShortURL:    "abcde",
+			wantOrigURL:     "https://example.com",
+		},
+		{
+			name:            "return non-existing url from storage after set",
+			fileStoragePath: testDBFile.Name(),
+			hasRecord:       false,
+			wantShortURL:    "some_non_existing",
+			wantOrigURL:     "https://non-existing.com",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, NewMapURLStorage(zap.NewNop()))
-		})
-	}
-}
+			storage, err := NewFileURLStorage(tt.fileStoragePath, zap.NewNop())
+			require.NoError(t, err)
 
-func TestMapURLStorage_Has(t *testing.T) {
-	storage := MapURLStorage{
-		storage: map[string]string{
-			"https://existing.com": "http://localhost:8080/EwHXdJfB",
-		},
-		logger: zap.NewNop(),
-	}
-
-	tests := []struct {
-		name string
-		url  string
-		want bool
-	}{
-		{
-			"has url",
-			"https://existing.com",
-			true,
-		},
-		{
-			"no url",
-			"https://not-existing.com",
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := storage.Has(tt.url)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestMapURLStorage_Get(t *testing.T) {
-	storage := MapURLStorage{
-		storage: map[string]string{
-			"https://existing.com": "http://localhost:8080/EwHXdJfB",
-		},
-		logger: zap.NewNop(),
-	}
-
-	tests := []struct {
-		name    string
-		url     string
-		err     error
-		want    string
-		wantErr bool
-	}{
-		{
-			"has url",
-			"https://existing.com",
-			nil,
-			"http://localhost:8080/EwHXdJfB",
-			false,
-		},
-		{
-			"no url error",
-			"https://not-existing.com",
-			ErrURLStorageDataNotFound,
-			"",
-			true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := storage.Get(tt.url)
-			if tt.wantErr {
-				assert.ErrorIs(t, err, tt.err)
+			if tt.hasRecord {
+				assert.True(t, storage.Has(tt.wantShortURL, ShortURLType))
+				assert.True(t, storage.Has(tt.wantOrigURL, OrigURLType))
 			} else {
+				assert.False(t, storage.Has(tt.wantShortURL, ShortURLType))
+				assert.False(t, storage.Has(tt.wantOrigURL, OrigURLType))
+
+				err := storage.Set(tt.wantOrigURL, tt.wantShortURL)
 				require.NoError(t, err)
-				assert.Equal(t, tt.want, got)
+
+				assert.True(t, storage.Has(tt.wantShortURL, ShortURLType))
+				assert.True(t, storage.Has(tt.wantOrigURL, OrigURLType))
+
+				origURL, err := storage.Get(tt.wantShortURL, ShortURLType)
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantOrigURL, origURL)
+
+				shortURL, err := storage.Get(tt.wantOrigURL, OrigURLType)
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantShortURL, shortURL)
+
+				newStorage, err := NewFileURLStorage(tt.fileStoragePath, zap.NewNop())
+				require.NoError(t, err)
+				assert.True(t, newStorage.Has(tt.wantShortURL, ShortURLType))
+				assert.True(t, newStorage.Has(tt.wantOrigURL, OrigURLType))
 			}
-		})
-	}
-}
-
-func TestMapURLStorage_Set(t *testing.T) {
-	storage := MapURLStorage{
-		storage: make(map[string]string),
-		logger:  zap.NewNop(),
-	}
-
-	tests := []struct {
-		name     string
-		url      string
-		shortURL string
-	}{
-		{
-			"set url",
-			"https://existing.com",
-			"http://localhost:8080/EwHXdJfB",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := storage.Set(tt.url, tt.shortURL)
-			require.NoError(t, err)
-
-			got, ok := storage.storage[tt.url]
-			require.True(t, ok)
-			assert.Equal(t, tt.shortURL, got)
-		})
-	}
-}
-
-func TestMapURLStorage_allMethods(t *testing.T) {
-	tests := []struct {
-		name     string
-		url      string
-		shortURL string
-	}{
-		{
-			name:     "set url",
-			url:      "https://existing.com",
-			shortURL: "http://localhost:8080/EwHXdJfB",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			storage := NewMapURLStorage(zap.NewNop())
-			err := storage.Set(tt.url, tt.shortURL)
-			require.NoError(t, err)
-			got, err := storage.Get(tt.url)
-			require.NoError(t, err)
-			assert.Equal(t, tt.shortURL, got)
 		})
 	}
 }

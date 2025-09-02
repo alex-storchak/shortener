@@ -7,6 +7,7 @@ import (
 
 	handlerCfg "github.com/alex-storchak/shortener/internal/handler/config"
 	loggerCfg "github.com/alex-storchak/shortener/internal/logger/config"
+	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -14,6 +15,7 @@ const (
 	envNameServerAddress = "SERVER_ADDRESS"
 	envNameBaseURL       = "BASE_URL"
 	envNameLogLevel      = "LOG_LEVEL"
+	envFileStoragePath   = "FILE_STORAGE_PATH"
 )
 
 type ConfigTestSuite struct {
@@ -25,7 +27,7 @@ type ConfigTestSuite struct {
 }
 
 func (s *ConfigTestSuite) SetupSuite() {
-	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL, envNameLogLevel}
+	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL, envNameLogLevel, envFileStoragePath}
 }
 
 func (s *ConfigTestSuite) setEnvs(envs map[string]string) {
@@ -88,6 +90,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
 				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
 			},
 		},
 		{
@@ -95,6 +100,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			flags: []string{
 				"-a=example.com:1111",
 				"-b=http://example.com:1111",
+				"-f=./data/some_file.json",
 			},
 			envs: map[string]string{},
 			want: &Config{
@@ -104,6 +110,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
+				},
+				Repository: repoCfg.Config{
+					FileStoragePath: "./data/some_file.json",
 				},
 			},
 		},
@@ -121,6 +130,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
 				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
 			},
 		},
 		{
@@ -137,6 +149,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
 				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
 			},
 		},
 		{
@@ -145,6 +160,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			envs: map[string]string{
 				envNameServerAddress: "env-example.com:1111",
 				envNameBaseURL:       "http://env-example.com:1111",
+				envFileStoragePath:   "./data/some_file.json",
 			},
 			want: &Config{
 				Handler: handlerCfg.Config{
@@ -153,6 +169,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
+				},
+				Repository: repoCfg.Config{
+					FileStoragePath: "./data/some_file.json",
 				},
 			},
 		},
@@ -161,10 +180,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			flags: []string{
 				"-a=flags-example.com:1111",
 				"-b=http://flags-example.com:1111",
+				"-f=./data/some_file.json",
 			},
 			envs: map[string]string{
 				envNameServerAddress: "env-example.com:1111",
 				envNameBaseURL:       "http://env-example.com:1111",
+				envFileStoragePath:   "./data/some_another_file.json",
 			},
 			want: &Config{
 				Handler: handlerCfg.Config{
@@ -173,6 +194,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
+				},
+				Repository: repoCfg.Config{
+					FileStoragePath: "./data/some_another_file.json",
 				},
 			},
 		},
@@ -192,6 +216,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
 				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
 			},
 		},
 		{
@@ -209,6 +236,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: loggerCfg.Config{
 					LogLevel: loggerCfg.DefaultLogLevel,
+				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
 				},
 			},
 		},
@@ -228,6 +258,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger: loggerCfg.Config{
 					LogLevel: "debug",
 				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
 			},
 		},
 		{
@@ -244,6 +277,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger: loggerCfg.Config{
 					LogLevel: "debug",
 				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
 			},
 		},
 		{
@@ -259,6 +295,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: loggerCfg.Config{
 					LogLevel: "error",
+				},
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
 				},
 			},
 		},

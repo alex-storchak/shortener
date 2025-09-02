@@ -44,12 +44,19 @@ func run() error {
 		return errors.New("failed to instantiate shortid generator")
 	}
 	shortIDGenerator := service.NewShortIDGenerator(generator)
-	urlToShortStorage := repository.NewMapURLStorage(zLogger)
-	shortToURLStorage := repository.NewMapURLStorage(zLogger)
+	urlStorage, err := repository.NewFileURLStorage(cfg.Repository.FileStoragePath, zLogger)
+	if err != nil {
+		zLogger.Error("Failed to instantiate url storage",
+			zap.Error(err),
+			zap.String("package", "main"),
+		)
+		return errors.New("failed to instantiate url storage")
+	}
+	defer urlStorage.Close()
+
 	shortener := service.NewShortener(
 		shortIDGenerator,
-		urlToShortStorage,
-		shortToURLStorage,
+		urlStorage,
 		zLogger,
 	)
 

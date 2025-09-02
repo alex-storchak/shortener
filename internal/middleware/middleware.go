@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alex-storchak/shortener/internal/service"
+	"github.com/alex-storchak/shortener/internal/helper"
 	"go.uber.org/zap"
 )
 
@@ -55,7 +55,7 @@ func RequestLogger(logger *zap.Logger) func(http.Handler) http.Handler {
 			next.ServeHTTP(&lw, r)
 
 			duration := time.Since(start)
-			fmtDuration := service.FormatDuration(duration)
+			fmtDuration := helper.FormatDuration(duration)
 
 			logger.Info("got incoming HTTP request",
 				zap.String("method", r.Method),
