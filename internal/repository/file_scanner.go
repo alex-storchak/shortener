@@ -22,7 +22,7 @@ func NewFileScanner(logger *zap.Logger, parser FileRecordParser) *FileScanner {
 	}
 }
 
-func (s *FileScanner) scan(file *os.File) (fileRecords, error) {
+func (s *FileScanner) scan(file *os.File) (*fileRecords, error) {
 	scanner := bufio.NewScanner(file)
 	var records fileRecords
 	for scanner.Scan() {
@@ -46,5 +46,5 @@ func (s *FileScanner) scan(file *os.File) (fileRecords, error) {
 		s.logger.Error("scanner error", zap.Error(err))
 		return nil, err
 	}
-	return records, nil
+	return &records, nil
 }

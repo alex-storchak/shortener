@@ -23,7 +23,7 @@ type FileURLStorage struct {
 	fileMgr  *FileManager
 	fileScnr *FileScanner
 	uuidMgr  *UUIDManager
-	records  fileRecords
+	records  *fileRecords
 }
 
 func NewFileURLStorage(
@@ -82,7 +82,7 @@ func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 		zap.String("url", url),
 		zap.String("searchByType", searchByType),
 	)
-	for _, record := range s.records {
+	for _, record := range *s.records {
 		if searchByType == OrigURLType && record.OriginalURL == url {
 			return record.ShortURL, nil
 		} else if searchByType == ShortURLType && record.ShortURL == url {
@@ -102,7 +102,7 @@ func (s *FileURLStorage) Set(originalURL, shortURL string) error {
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	}
-	s.records = append(s.records, record)
+	*s.records = append(*s.records, record)
 	if err := s.persistToFile(record); err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (s *FileURLStorage) Set(originalURL, shortURL string) error {
 
 func (s *FileURLStorage) initUUIDMgr() {
 	var maxUUID uint64 = 0
-	for _, rec := range s.records {
+	for _, rec := range *s.records {
 		if rec.UUID > maxUUID {
 			maxUUID = rec.UUID
 		}
@@ -147,9 +147,60 @@ func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
 		return err
 	}
 
+	// todo: удалить разделение
+	//file, useDefault, err := s.openRestoreFile(useDefault)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//records, _, err := s.scanRestoreFile(file, useDefault)
+	//if err != nil {
+	//	return err
+	//}
+
 	s.records = records
 	return nil
 }
+
+// todo: удалить разделение
+//func (s *FileURLStorage) openRestoreFile(useDefault bool) (*os.File, bool, error) {
+//	file, err := s.fileMgr.open(useDefault)
+//	if err != nil && !useDefault {
+//		s.logger.Warn("Can't restore from requested file, trying default", zap.Error(err))
+//		file, useDefault, err := s.openRestoreFile(true)
+//		if err != nil {
+//			s.logger.Error("Failed to restore from default file", zap.Error(err))
+//			return nil, useDefault, err
+//		}
+//		return file, useDefault, nil
+//	} else if err != nil {
+//		return nil, useDefault, err
+//	}
+//	return file, useDefault, nil
+//}
+//
+//func (s *FileURLStorage) scanRestoreFile(file *os.File, useDefault bool) (*fileRecords, bool, error) {
+//	records, err := s.fileScnr.scan(file)
+//	if err != nil && !useDefault {
+//		s.logger.Warn("Can't scan data from requested file, trying default", zap.Error(err))
+//		s.fileMgr.close()
+//		file, useDefault, err := s.openRestoreFile(true)
+//		if err != nil {
+//			return nil, useDefault, err
+//		}
+//		records, useDefault, err := s.scanRestoreFile(file, true)
+//		if err != nil {
+//			s.fileMgr.close()
+//			s.logger.Error("Failed to scan data from default file", zap.Error(err))
+//			return nil, useDefault, err
+//		}
+//		return records, useDefault, nil
+//	} else if err != nil {
+//		s.fileMgr.close()
+//		return nil, useDefault, err
+//	}
+//	return records, useDefault, nil
+//}
 
 var (
 	ErrURLStorageDataNotFound = errors.New("no data in the storage for the requested url")

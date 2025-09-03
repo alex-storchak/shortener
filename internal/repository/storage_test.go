@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
@@ -22,7 +23,9 @@ type testCaseData struct {
 func TestFileURLStorage(t *testing.T) {
 	testDBFile := createTmpStorageFile(t)
 	defer os.Remove(testDBFile.Name())
-	fillStorageFile(t, testDBFile)
+
+	badTestDBFile := createTmpStorageFile(t)
+	defer os.Remove(badTestDBFile.Name())
 
 	tests := []testCaseData{
 		{
@@ -39,22 +42,6 @@ func TestFileURLStorage(t *testing.T) {
 			wantShortURL:    "some_non_existing",
 			wantOrigURL:     "https://non-existing.com",
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, getTestFunc(tt))
-	}
-}
-
-func TestFileURLStorageFallback(t *testing.T) {
-	testDBFile := createTmpStorageFile(t)
-	defer os.Remove(testDBFile.Name())
-	fillStorageFile(t, testDBFile)
-
-	badTestDBFile := createTmpStorageFile(t)
-	defer os.Remove(badTestDBFile.Name())
-	fillBadStorageFile(t, badTestDBFile)
-
-	tests := []testCaseData{
 		{
 			name:            "recovery storage because of bad file path return non-existing url from storage after set",
 			fileStoragePath: "/non-existing/path",
@@ -73,37 +60,36 @@ func TestFileURLStorageFallback(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, getTestFunc(tt))
-	}
-}
+		t.Run(tt.name, func(t *testing.T) {
+			fillStorageFile(t, testDBFile)
+			fillBadStorageFile(t, badTestDBFile)
 
-func getTestFunc(tt testCaseData) func(t *testing.T) {
-	return func(t *testing.T) {
-		lgr := zap.NewNop()
-		fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
-		frp := FileRecordParser{}
-		fs := NewFileScanner(lgr, frp)
-		um := NewUUIDManager(lgr)
-		storage, err := NewFileURLStorage(lgr, fm, fs, um)
-		require.NoError(t, err)
+			lgr := zap.NewNop()
+			fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
+			frp := FileRecordParser{}
+			fs := NewFileScanner(lgr, frp)
+			um := NewUUIDManager(lgr)
+			storage, err := NewFileURLStorage(lgr, fm, fs, um)
+			require.NoError(t, err)
 
-		if tt.hasRecord {
+			if tt.hasRecord {
+				assertStorageHasURL(t, tt, storage)
+				return
+			}
+
+			assertStorageDoesNotHaveURL(t, tt, storage)
+
+			err = storage.Set(tt.wantOrigURL, tt.wantShortURL)
+			require.NoError(t, err)
+
 			assertStorageHasURL(t, tt, storage)
-			return
-		}
 
-		assertStorageDoesNotHaveURL(t, tt, storage)
-
-		err = storage.Set(tt.wantOrigURL, tt.wantShortURL)
-		require.NoError(t, err)
-
-		assertStorageHasURL(t, tt, storage)
-
-		fm = NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
-		um = NewUUIDManager(lgr)
-		newStorage, err := NewFileURLStorage(lgr, fm, fs, um)
-		require.NoError(t, err)
-		assertStorageHasURL(t, tt, newStorage)
+			fm = NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
+			um = NewUUIDManager(lgr)
+			newStorage, err := NewFileURLStorage(lgr, fm, fs, um)
+			require.NoError(t, err)
+			assertStorageHasURL(t, tt, newStorage)
+		})
 	}
 }
 
@@ -119,8 +105,10 @@ func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
 
 func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {
 	_, err := storage.Get(tt.wantShortURL, ShortURLType)
+	fmt.Printf("error1: %v\n", err)
 	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
 	_, err = storage.Get(tt.wantOrigURL, OrigURLType)
+	fmt.Printf("error2: %v\n", err)
 	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
 }
 
