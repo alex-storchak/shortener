@@ -31,7 +31,7 @@ func newShortenerStub() *shortenerStub {
 	}
 }
 
-func (d *shortenerStub) Shorten(url string) (string, error) {
+func (d *shortenerStub) Shorten(_ string) (string, error) {
 	return "abcde", nil
 }
 

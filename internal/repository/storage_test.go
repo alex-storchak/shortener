@@ -143,7 +143,7 @@ func fillStorageFile(t *testing.T, testDBFile *os.File) {
 	os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
 }
 
-func fillBadStorageFile(t *testing.T, testDBFile *os.File) {
+func fillBadStorageFile(_ *testing.T, testDBFile *os.File) {
 	data := []byte("foo")
 	os.WriteFile(testDBFile.Name(), data, 0666)
 }
