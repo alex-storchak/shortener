@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/alex-storchak/shortener/internal/model"
-	"github.com/alex-storchak/shortener/internal/service"
+	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,7 +39,7 @@ func (d *shortenerStub) Extract(shortID string) (string, error) {
 	if targetURL, ok := d.shortURLStorage[shortID]; ok {
 		return targetURL, nil
 	} else {
-		return "", service.ErrShortenerShortIDNotFound
+		return "", repository.ErrURLStorageDataNotFound
 	}
 }
 

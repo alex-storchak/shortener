@@ -49,22 +49,13 @@ func newURLStorageStub(setMethodShouldFail bool) *urlStorageStub {
 	}
 }
 
-func (d *urlStorageStub) Has(url, urlType string) bool {
-	if urlType == repository.OrigURLType {
-		return d.storage[0].origURL == url
-	} else if urlType == repository.ShortURLType {
-		return d.storage[0].shortURL == url
-	}
-	return false
-}
-
 func (d *urlStorageStub) Get(url, searchByType string) (string, error) {
 	if searchByType == repository.OrigURLType && d.storage[0].origURL == url {
 		return d.storage[0].shortURL, nil
 	} else if searchByType == repository.ShortURLType && d.storage[0].shortURL == url {
 		return d.storage[0].origURL, nil
 	}
-	return "", ErrShortenerShortIDNotFound
+	return "", repository.ErrURLStorageDataNotFound
 }
 
 func (d *urlStorageStub) Set(_, _ string) error {
@@ -173,7 +164,7 @@ func TestShortener_Extract(t *testing.T) {
 			args: args{
 				shortID: "non-existing",
 			},
-			err:     ErrShortenerShortIDNotFound,
+			err:     repository.ErrURLStorageDataNotFound,
 			want:    "",
 			wantErr: true,
 		},

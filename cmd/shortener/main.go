@@ -9,6 +9,7 @@ import (
 	"github.com/alex-storchak/shortener/internal/handler"
 	"github.com/alex-storchak/shortener/internal/logger"
 	"github.com/alex-storchak/shortener/internal/repository"
+	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/teris-io/shortid"
 	"go.uber.org/zap"
@@ -34,7 +35,7 @@ func run() error {
 	defer zLogger.Sync()
 	zLogger.Info("logger initialized")
 
-	// initialize shortener
+	// initialize shortIDGenerator
 	generator, err := shortid.New(1, shortid.DefaultABC, 1)
 	if err != nil {
 		zLogger.Error("Failed to instantiate shortid generator",
@@ -44,7 +45,13 @@ func run() error {
 		return errors.New("failed to instantiate shortid generator")
 	}
 	shortIDGenerator := service.NewShortIDGenerator(generator)
-	urlStorage, err := repository.NewFileURLStorage(cfg.Repository.FileStoragePath, zLogger)
+
+	// initialize urlStorage
+	fm := repository.NewFileManager(cfg.Repository.FileStoragePath, repoCfg.DefaultFileStoragePath, zLogger)
+	frp := repository.FileRecordParser{}
+	fs := repository.NewFileScanner(zLogger, frp)
+	um := repository.NewUUIDManager(zLogger)
+	urlStorage, err := repository.NewFileURLStorage(zLogger, fm, fs, um)
 	if err != nil {
 		zLogger.Error("Failed to instantiate url storage",
 			zap.Error(err),
@@ -54,6 +61,7 @@ func run() error {
 	}
 	defer urlStorage.Close()
 
+	// initialize shortener
 	shortener := service.NewShortener(
 		shortIDGenerator,
 		urlStorage,

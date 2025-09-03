@@ -34,12 +34,16 @@ func NewShortener(
 }
 
 func (s *Shortener) Shorten(url string) (string, error) {
-	if s.urlStorage.Has(url, repository.OrigURLType) {
+	shortID, err := s.urlStorage.Get(url, repository.OrigURLType)
+	if err == nil {
 		s.logger.Debug("url already exists in the storage", zap.String("url", url))
-		return s.urlStorage.Get(url, repository.OrigURLType)
+		return shortID, nil
+	} else if err != repository.ErrURLStorageDataNotFound {
+		s.logger.Error("error retrieving url", zap.Error(err))
+		return "", err
 	}
 
-	shortID, err := s.generator.Generate()
+	shortID, err = s.generator.Generate()
 	s.logger.Debug("generated short id", zap.String("shortID", shortID))
 	if err != nil {
 		s.logger.Error("failed to generate short id", zap.Error(err))
@@ -53,16 +57,14 @@ func (s *Shortener) Shorten(url string) (string, error) {
 }
 
 func (s *Shortener) Extract(shortID string) (string, error) {
-	if s.urlStorage.Has(shortID, repository.ShortURLType) {
-		s.logger.Debug("short id already exists in the storage")
-		return s.urlStorage.Get(shortID, repository.ShortURLType)
+	origURL, err := s.urlStorage.Get(shortID, repository.ShortURLType)
+	if err != nil {
+		return "", err
 	}
-	s.logger.Debug("short id not found in the storage")
-	return "", ErrShortenerShortIDNotFound
+	return origURL, nil
 }
 
 var (
 	ErrShortenerGenerationShortIDFailed    = errors.New("failed to generate short id")
 	ErrShortenerSetBindingURLStorageFailed = errors.New("failed to set url binding in the urlStorage")
-	ErrShortenerShortIDNotFound            = errors.New("short id binding not found in the urlStorage")
 )

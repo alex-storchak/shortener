@@ -116,7 +116,7 @@ func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	}, nil
 }
 
-func (c gzipReader) Read(p []byte) (n int, err error) {
+func (c *gzipReader) Read(p []byte) (n int, err error) {
 	return c.gzr.Read(p)
 }
 

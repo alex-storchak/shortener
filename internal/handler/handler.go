@@ -10,6 +10,7 @@ import (
 	"github.com/alex-storchak/shortener/internal/handler/config"
 	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -105,12 +106,11 @@ func (h *handlers) ShortURLHandler(res http.ResponseWriter, req *http.Request) {
 	h.logger.Debug("short ID from request", zap.String("shortID", shortID))
 
 	targetURL, err := h.shortener.Extract(shortID)
-	if err != nil {
-		if errors.Is(err, service.ErrShortenerShortIDNotFound) {
-			h.logger.Info("short ID not found", zap.Error(err))
-			res.WriteHeader(http.StatusNotFound)
-			return
-		}
+	if errors.Is(err, repository.ErrURLStorageDataNotFound) {
+		h.logger.Info("short ID not found", zap.Error(err))
+		res.WriteHeader(http.StatusNotFound)
+		return
+	} else if err != nil {
 		h.logger.Error("failed to extract url", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return

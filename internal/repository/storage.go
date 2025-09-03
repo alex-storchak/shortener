@@ -1,13 +1,8 @@
 package repository
 
 import (
-	"bufio"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"os"
 
-	"github.com/alex-storchak/shortener/internal/helper"
 	"go.uber.org/zap"
 )
 
@@ -17,100 +12,59 @@ const (
 )
 
 type URLStorage interface {
-	Has(url, urlType string) bool
 	Get(url, searchByType string) (string, error)
 	Set(originalURL, shortURL string) error
 }
 
-type FileURLStorageRecord struct {
-	UUID        uint64 `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
-
-type FileURLStorageRecords []FileURLStorageRecord
+type fileRecords []fileRecord
 
 type FileURLStorage struct {
-	dbFile  *os.File
-	writer  *bufio.Writer
-	records FileURLStorageRecords
-	maxUUID uint64
-	logger  *zap.Logger
+	logger   *zap.Logger
+	fileMgr  *FileManager
+	fileScnr *FileScanner
+	uuidMgr  *UUIDManager
+	records  fileRecords
 }
 
-func NewFileURLStorage(fileStoragePath string, logger *zap.Logger) (*FileURLStorage, error) {
+func NewFileURLStorage(
+	logger *zap.Logger,
+	fm *FileManager,
+	fs *FileScanner,
+	um *UUIDManager,
+) (*FileURLStorage, error) {
 	logger = logger.With(
 		zap.String("component", "storage"),
 	)
 
-	fileStoragePath, err := helper.GetAbsFilePath(fileStoragePath)
-	logger.Debug("Storage absolute file path", zap.String("path", fileStoragePath))
-	if err != nil {
-		logger.Error("Can't get absolute file path for file storage path", zap.String("path", fileStoragePath))
+	storage := &FileURLStorage{
+		logger:   logger,
+		fileMgr:  fm,
+		fileScnr: fs,
+		uuidMgr:  um,
+	}
+
+	if err := storage.restoreFromFile(false); err != nil {
+		logger.Error("failed to restore storage from file", zap.Error(err))
 		return nil, err
 	}
-
-	dbFile, err := os.OpenFile(fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		logger.Error("Can't open file storage path")
-		return nil, err
-	}
-	scanner := bufio.NewScanner(dbFile)
-
-	var records FileURLStorageRecords
-	var maxUUID uint64 = 0
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-
-		var record FileURLStorageRecord
-		if err := json.Unmarshal(line, &record); err != nil {
-			return nil, fmt.Errorf("error parsing line '%s': %v", string(line), err)
-		}
-		maxUUID = record.UUID
-		records = append(records, record)
-	}
-	logger.Debug("Storage maxUUID", zap.Uint64("maxUUID", maxUUID))
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return &FileURLStorage{
-		dbFile:  dbFile,
-		writer:  bufio.NewWriter(dbFile),
-		records: records,
-		maxUUID: maxUUID,
-		logger:  logger,
-	}, nil
+	storage.initUUIDMgr()
+	return storage, nil
 }
 
 func (s *FileURLStorage) Close() error {
 	s.logger.Info("Closing storage file")
-	return s.dbFile.Close()
+	return s.fileMgr.close()
 }
 
-func (s *FileURLStorage) nextUUID() uint64 {
-	s.maxUUID++
-	s.logger.Debug("Next UUID for record", zap.Uint64("UUID", s.maxUUID))
-	return s.maxUUID
-}
-
-func (s *FileURLStorage) storeRecord(record FileURLStorageRecord) error {
-	data, err := json.Marshal(&record)
+func (s *FileURLStorage) persistToFile(record fileRecord) error {
+	data, err := record.toJSON()
 	if err != nil {
-		s.logger.Error("Can't marshal record for store", zap.Error(err))
+		s.logger.Error("Can't prepare record for store", zap.Error(err))
 		return err
 	}
 
-	if _, err := s.writer.Write(data); err != nil {
-		s.logger.Error("Can't store record", zap.Error(err))
-		return err
-	}
-	if err := s.writer.WriteByte('\n'); err != nil {
-		s.logger.Error("Can't add line break in storage", zap.Error(err))
+	if err := s.fileMgr.writeData(data); err != nil {
+		s.logger.Error("Can't persist record to file", zap.Error(err))
 		return err
 	}
 
@@ -119,22 +73,8 @@ func (s *FileURLStorage) storeRecord(record FileURLStorageRecord) error {
 		zap.String("OriginalURL", record.OriginalURL),
 		zap.String("ShortURL", record.ShortURL),
 	)
-	return s.writer.Flush()
-}
 
-func (s *FileURLStorage) Has(url, urlType string) bool {
-	s.logger.Debug("Checking if url exists",
-		zap.String("url", url),
-		zap.String("urlType", urlType),
-	)
-	for _, record := range s.records {
-		if urlType == OrigURLType && record.OriginalURL == url {
-			return true
-		} else if urlType == ShortURLType && record.ShortURL == url {
-			return true
-		}
-	}
-	return false
+	return nil
 }
 
 func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
@@ -157,15 +97,57 @@ func (s *FileURLStorage) Set(originalURL, shortURL string) error {
 		zap.String("originalURL", originalURL),
 		zap.String("shortURL", shortURL),
 	)
-	record := FileURLStorageRecord{
-		UUID:        s.nextUUID(),
+	record := fileRecord{
+		UUID:        s.uuidMgr.next(),
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	}
 	s.records = append(s.records, record)
-	if err := s.storeRecord(record); err != nil {
+	if err := s.persistToFile(record); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *FileURLStorage) initUUIDMgr() {
+	var maxUUID uint64 = 0
+	for _, rec := range s.records {
+		if rec.UUID > maxUUID {
+			maxUUID = rec.UUID
+		}
+	}
+	s.uuidMgr.init(maxUUID)
+}
+
+func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
+	file, err := s.fileMgr.open(useDefault)
+	if err != nil && !useDefault {
+		s.logger.Warn("Can't restore from requested file, trying default", zap.Error(err))
+		if err := s.restoreFromFile(true); err != nil {
+			s.logger.Error("Failed to restore from default file", zap.Error(err))
+			return err
+		}
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	records, err := s.fileScnr.scan(file)
+	if err != nil && !useDefault {
+		s.logger.Warn("Can't scan data from requested file, trying default", zap.Error(err))
+		s.fileMgr.close()
+		if err := s.restoreFromFile(true); err != nil {
+			s.fileMgr.close()
+			s.logger.Error("Failed to scan data from default file", zap.Error(err))
+			return err
+		}
+		return nil
+	} else if err != nil {
+		s.fileMgr.close()
+		return err
+	}
+
+	s.records = records
 	return nil
 }
 
