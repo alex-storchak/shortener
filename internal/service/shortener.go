@@ -8,8 +8,8 @@ import (
 )
 
 type IShortener interface {
-	Shorten(url string) (string, error)
-	Extract(shortID string) (string, error)
+	Shorten(url string) (shortID string, err error)
+	Extract(shortID string) (OrigURL string, err error)
 }
 
 type Shortener struct {

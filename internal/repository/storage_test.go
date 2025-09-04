@@ -2,7 +2,6 @@ package repository
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"testing"
 
@@ -105,10 +104,8 @@ func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
 
 func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {
 	_, err := storage.Get(tt.wantShortURL, ShortURLType)
-	fmt.Printf("error1: %v\n", err)
 	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
 	_, err = storage.Get(tt.wantOrigURL, OrigURLType)
-	fmt.Printf("error2: %v\n", err)
 	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
 }
 
@@ -128,10 +125,10 @@ func fillStorageFile(t *testing.T, testDBFile *os.File) {
 	data, err := json.Marshal(testRecord)
 	require.NoError(t, err)
 	dataWithNewline := append(data, '\n')
-	os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
+	_ = os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
 }
 
 func fillBadStorageFile(_ *testing.T, testDBFile *os.File) {
 	data := []byte("foo")
-	os.WriteFile(testDBFile.Name(), data, 0666)
+	_ = os.WriteFile(testDBFile.Name(), data, 0666)
 }

@@ -59,45 +59,24 @@ func TestGzipMiddleware(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				defer r.Body.Close()
-				body, err := io.ReadAll(r.Body)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				w.Header().Set("Content-Type", tt.contentType)
-				w.WriteHeader(http.StatusOK)
-				w.Write(body)
-			})
+			handler := newTestHandler(tt.contentType)
 			gzippedHandler := GzipMiddleware(zap.NewNop())(handler)
 
-			var buf *bytes.Buffer
-			if tt.contentEncoding != "" {
-				buf = bytes.NewBuffer(nil)
-				zb := gzip.NewWriter(buf)
-				_, err := zb.Write([]byte(tt.body))
-				require.NoError(t, err)
-				err = zb.Close()
-				require.NoError(t, err)
-			} else {
-				buf = bytes.NewBufferString(tt.body)
-			}
+			buf, err := makeRequestBody(tt.body, tt.contentEncoding)
+			require.NoError(t, err)
 
-			req := httptest.NewRequest("POST", "/", buf)
+			req := httptest.NewRequest(http.MethodPost, "/", buf)
 			req.Header.Set("Accept-Encoding", tt.acceptEncoding)
 			req.Header.Set("Content-Type", tt.contentType)
 			req.Header.Set("Content-Encoding", tt.contentEncoding)
-
 			rr := httptest.NewRecorder()
+
 			gzippedHandler.ServeHTTP(rr, req)
 
 			encoding := rr.Header().Get("Content-Encoding")
 			assert.Equal(t, tt.expectedEncoding, encoding)
-
 			if tt.shouldCompress {
 				assert.True(t, isValidGzip(rr.Body.Bytes()))
-
 				decompressed, err := decompressGzip(rr.Body.Bytes())
 				require.NoError(t, err)
 				assert.Equal(t, tt.body, string(decompressed))
@@ -106,6 +85,35 @@ func TestGzipMiddleware(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newTestHandler(contentType string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", contentType)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	})
+}
+
+func makeRequestBody(body string, contentEncoding string) (*bytes.Buffer, error) {
+	if contentEncoding == "gzip" {
+		buf := bytes.NewBuffer(nil)
+		zw := gzip.NewWriter(buf)
+		if _, err := zw.Write([]byte(body)); err != nil {
+			return nil, err
+		}
+		if err := zw.Close(); err != nil {
+			return nil, err
+		}
+		return buf, nil
+	}
+	return bytes.NewBufferString(body), nil
 }
 
 func isValidGzip(data []byte) bool {
