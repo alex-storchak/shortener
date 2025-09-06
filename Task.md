@@ -148,3 +148,14 @@ Content-Length: 30
 - github.com/pquerna/ffjson
 - github.com/labstack/echo
 - github.com/goccy/go-json
+
+# Инкремент 8
+
+Добавьте поддержку `gzip` в ваш сервис. 
+Научите его:
+- Принимать запросы в сжатом формате (с HTTP-заголовком `Content-Encoding`).
+- Отдавать сжатый ответ клиенту, который поддерживает обработку сжатых ответов (с HTTP-заголовком `Accept-Encoding`).
+
+Функция сжатия должна работать для контента с типами `application/json` и `text/html`.
+
+Вспомните middleware из урока про HTTP-сервер, это может вам помочь.

@@ -33,6 +33,7 @@ func newRouter(h *handlers) *chi.Mux {
 
 	r.Use(chiMiddleware.Logger)
 	r.Use(middleware.RequestLogger(h.logger))
+	r.Use(middleware.GzipMiddleware(h.logger))
 
 	r.Post("/", h.MainPageHandler)
 	r.Get("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
