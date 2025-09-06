@@ -29,7 +29,7 @@ func NewShortener(
 	}
 }
 
-func (s Shortener) Shorten(url string) (string, error) {
+func (s *Shortener) Shorten(url string) (string, error) {
 	if s.urlStorage.Has(url) {
 		return s.urlStorage.Get(url)
 	}
@@ -48,7 +48,7 @@ func (s Shortener) Shorten(url string) (string, error) {
 	return shortID, nil
 }
 
-func (s Shortener) Extract(shortID string) (string, error) {
+func (s *Shortener) Extract(shortID string) (string, error) {
 	if s.shortURLStorage.Has(shortID) {
 		return s.shortURLStorage.Get(shortID)
 	}

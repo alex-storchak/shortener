@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/alex-storchak/shortener/internal/config"
@@ -18,7 +19,10 @@ func main() {
 }
 
 func run() error {
-	cfg := config.GetConfig()
+	cfg, err := config.ParseConfig()
+	if err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
 
 	generator, err := shortid.New(1, shortid.DefaultABC, 1)
 	if err != nil {
@@ -33,5 +37,5 @@ func run() error {
 		shortToURLStorage,
 	)
 
-	return handler.Serve(cfg.Handler, shortener)
+	return handler.Serve(&cfg.Handler, shortener)
 }
