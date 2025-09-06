@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/handler/config"
 	"github.com/alex-storchak/shortener/internal/middleware"
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -28,10 +30,13 @@ func Serve(cfg *config.Config, shortener service.IShortener, logger *zap.Logger)
 
 func newRouter(h *handlers) *chi.Mux {
 	r := chi.NewRouter()
+
 	r.Use(chiMiddleware.Logger)
 	r.Use(middleware.RequestLogger(h.logger))
+
 	r.Post("/", h.MainPageHandler)
 	r.Get("/{id:[a-zA-Z0-9_-]+}", h.ShortURLHandler)
+	r.Post("/api/shorten", h.APIShortenHandler)
 
 	return r
 }
@@ -109,7 +114,62 @@ func (h *handlers) ShortURLHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	h.logger.Debug("target URL", zap.String("url", targetURL))
 
 	res.Header().Set("Location", targetURL)
 	res.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (h *handlers) APIShortenHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		h.logger.Info("non POST request for the api method `shorten`")
+		res.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if req.Header.Get("Content-Type") != "application/json" {
+		h.logger.Error("Header `Content-type` must be `application/json`")
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Debug("decoding api/shorten request reqBody")
+	var reqBody model.ShortenRequest
+	dec := json.NewDecoder(req.Body)
+	if err := dec.Decode(&reqBody); err != nil {
+		h.logger.Debug("cannot decode api/shorten request JSON reqBody", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if len(reqBody.OrigURL) == 0 {
+		h.logger.Info("Empty URL requested for shorten")
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	shortID, err := h.shortener.Shorten(reqBody.OrigURL)
+	if err != nil {
+		h.logger.Error("failed to shorten url", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	shortURL := fmt.Sprintf("%s/%s", h.baseURL, shortID)
+	h.logger.Debug("shortened url", zap.String("url", shortURL))
+
+	resBody := model.ShortenResponse{
+		ShortURL: shortURL,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+
+	enc := json.NewEncoder(res)
+	if err := enc.Encode(resBody); err != nil {
+		h.logger.Debug("error encoding response", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	h.logger.Debug("sending HTTP 201 response")
 }

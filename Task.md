@@ -95,4 +95,56 @@ Location: https://practicum.yandex.ru/
 - go.uber.org/zap,
 - github.com/sirupsen/logrus.
 
-Все сообщения логгера должны быть на уровне Info.
+Все сообщения логгера должны быть на уровне `Info`.
+
+# Инкремент 7
+
+Добавьте в код сервера новый эндпоинт `POST /api/shorten`, который будет принимать в теле запроса
+JSON-объект
+```json
+{
+    "url": "<some_url>"
+}
+``` 
+и возвращать в ответ объект
+```json
+{
+  "result": "<short_url>"
+}
+```
+
+Запрос может иметь такой вид:
+
+```http request
+POST http://localhost:8080/api/shorten HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "url": "https://practicum.yandex.ru"
+}
+```
+
+Ответ может быть таким:
+
+```
+HTTP/1.1 201 OK
+Content-Type: application/json
+Content-Length: 30
+
+{
+    "result": "http://localhost:8080/EwHXdJfB"
+}
+```
+
+Удостоверьтесь, что в ответе от сервера присутствует HTTP-заголовок `Content-Type` со значением `application/json`.
+Он указывает клиенту, в каком формате передано тело ответа.
+
+Также не забудьте добавить тесты на новый эндпоинт, как и на предыдущие.
+
+При реализации задействуйте одну из распространённых библиотек:
+- encoding/json
+- github.com/mailru/easyjson
+- github.com/pquerna/ffjson
+- github.com/labstack/echo
+- github.com/goccy/go-json
