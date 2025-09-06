@@ -6,52 +6,148 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	ShortURLType = `shortURL`
+	OrigURLType  = `originalURL`
+)
+
 type URLStorage interface {
-	Has(url string) bool
-	Get(url string) (string, error)
-	Set(url string, shortURL string) error
+	Get(url, searchByType string) (string, error)
+	Set(originalURL, shortURL string) error
 }
 
-type MapURLStorage struct {
-	storage map[string]string
-	logger  *zap.Logger
+type fileRecords []fileRecord
+
+type FileURLStorage struct {
+	logger   *zap.Logger
+	fileMgr  *FileManager
+	fileScnr *FileScanner
+	uuidMgr  *UUIDManager
+	records  *fileRecords
 }
 
-func NewMapURLStorage(logger *zap.Logger) *MapURLStorage {
+func NewFileURLStorage(
+	logger *zap.Logger,
+	fm *FileManager,
+	fs *FileScanner,
+	um *UUIDManager,
+) (*FileURLStorage, error) {
 	logger = logger.With(
 		zap.String("component", "storage"),
 	)
-	return &MapURLStorage{
-		storage: make(map[string]string),
-		logger:  logger,
+
+	storage := &FileURLStorage{
+		logger:   logger,
+		fileMgr:  fm,
+		fileScnr: fs,
+		uuidMgr:  um,
 	}
+
+	if err := storage.restoreFromFile(false); err != nil {
+		logger.Error("failed to restore storage from file", zap.Error(err))
+		return nil, err
+	}
+	storage.initUUIDMgr()
+	return storage, nil
 }
 
-func (s *MapURLStorage) Has(url string) bool {
-	_, ok := s.storage[url]
-	s.logger.Debug("result of checking url in storage",
+func (s *FileURLStorage) Close() error {
+	s.logger.Info("Closing storage file")
+	return s.fileMgr.close()
+}
+
+func (s *FileURLStorage) persistToFile(record fileRecord) error {
+	data, err := record.toJSON()
+	if err != nil {
+		s.logger.Error("Can't prepare record for store", zap.Error(err))
+		return err
+	}
+
+	if err := s.fileMgr.writeData(data); err != nil {
+		s.logger.Error("Can't persist record to file", zap.Error(err))
+		return err
+	}
+
+	s.logger.Info("Stored record",
+		zap.Uint64("UUID", record.UUID),
+		zap.String("OriginalURL", record.OriginalURL),
+		zap.String("ShortURL", record.ShortURL),
+	)
+
+	return nil
+}
+
+func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
+	s.logger.Debug("Getting url from storage by type",
 		zap.String("url", url),
-		zap.Bool("ok", ok),
+		zap.String("searchByType", searchByType),
 	)
-	return ok
-}
-
-func (s *MapURLStorage) Get(url string) (string, error) {
-	value, ok := s.storage[url]
-	if !ok {
-		s.logger.Debug("no data in the storage for the requested url", zap.String("url", url))
-		return "", ErrURLStorageDataNotFound
+	for _, record := range *s.records {
+		if searchByType == OrigURLType && record.OriginalURL == url {
+			return record.ShortURL, nil
+		} else if searchByType == ShortURLType && record.ShortURL == url {
+			return record.OriginalURL, nil
+		}
 	}
-	s.logger.Debug("got value from storage", zap.String("url", url), zap.String("value", value))
-	return value, nil
+	return "", ErrURLStorageDataNotFound
 }
 
-func (s *MapURLStorage) Set(keyURL, valueURL string) error {
-	s.storage[keyURL] = valueURL
-	s.logger.Debug("set value in storage",
-		zap.String("keyURL", keyURL),
-		zap.String("valueURL", valueURL),
+func (s *FileURLStorage) Set(originalURL, shortURL string) error {
+	s.logger.Debug("Setting url to storage",
+		zap.String("originalURL", originalURL),
+		zap.String("shortURL", shortURL),
 	)
+	record := fileRecord{
+		UUID:        s.uuidMgr.next(),
+		ShortURL:    shortURL,
+		OriginalURL: originalURL,
+	}
+	*s.records = append(*s.records, record)
+	if err := s.persistToFile(record); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *FileURLStorage) initUUIDMgr() {
+	var maxUUID uint64 = 0
+	for _, rec := range *s.records {
+		if rec.UUID > maxUUID {
+			maxUUID = rec.UUID
+		}
+	}
+	s.uuidMgr.init(maxUUID)
+}
+
+func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
+	file, err := s.fileMgr.open(useDefault)
+	if err != nil && !useDefault {
+		s.logger.Warn("Can't restore from requested file, trying default", zap.Error(err))
+		if err := s.restoreFromFile(true); err != nil {
+			s.logger.Error("Failed to restore from default file", zap.Error(err))
+			return err
+		}
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	records, err := s.fileScnr.scan(file)
+	if err != nil && !useDefault {
+		s.logger.Warn("Can't scan data from requested file, trying default", zap.Error(err))
+		s.fileMgr.close()
+		if err := s.restoreFromFile(true); err != nil {
+			s.fileMgr.close()
+			s.logger.Error("Failed to scan data from default file", zap.Error(err))
+			return err
+		}
+		return nil
+	} else if err != nil {
+		s.fileMgr.close()
+		return err
+	}
+
+	s.records = records
 	return nil
 }
 

@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,151 +10,125 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestNewMapURLStorage(t *testing.T) {
-	tests := []struct {
-		name string
-		want *MapURLStorage
-	}{
-		{
-			name: "default creation",
-			want: &MapURLStorage{
-				storage: make(map[string]string),
-				logger:  zap.NewNop(),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, NewMapURLStorage(zap.NewNop()))
-		})
-	}
+type testCaseData struct {
+	name            string
+	fileStoragePath string
+	dfltStoragePath string
+	hasRecord       bool
+	wantShortURL    string
+	wantOrigURL     string
 }
 
-func TestMapURLStorage_Has(t *testing.T) {
-	storage := MapURLStorage{
-		storage: map[string]string{
-			"https://existing.com": "http://localhost:8080/EwHXdJfB",
-		},
-		logger: zap.NewNop(),
-	}
+func TestFileURLStorage(t *testing.T) {
+	testDBFile := createTmpStorageFile(t)
+	defer os.Remove(testDBFile.Name())
 
-	tests := []struct {
-		name string
-		url  string
-		want bool
-	}{
+	badTestDBFile := createTmpStorageFile(t)
+	defer os.Remove(badTestDBFile.Name())
+
+	tests := []testCaseData{
 		{
-			"has url",
-			"https://existing.com",
-			true,
+			name:            "return preload record from storage file",
+			fileStoragePath: testDBFile.Name(),
+			hasRecord:       true,
+			wantShortURL:    "abcde",
+			wantOrigURL:     "https://example.com",
 		},
 		{
-			"no url",
-			"https://not-existing.com",
-			false,
+			name:            "return non-existing url from storage after set",
+			fileStoragePath: testDBFile.Name(),
+			hasRecord:       false,
+			wantShortURL:    "some_non_existing",
+			wantOrigURL:     "https://non-existing.com",
+		},
+		{
+			name:            "recovery storage because of bad file path return non-existing url from storage after set",
+			fileStoragePath: "/non-existing/path",
+			dfltStoragePath: testDBFile.Name(),
+			hasRecord:       false,
+			wantShortURL:    "some_non_existing",
+			wantOrigURL:     "https://non-existing.com",
+		},
+		{
+			name:            "recovery storage because of bad file content return non-existing url from storage after set",
+			fileStoragePath: badTestDBFile.Name(),
+			dfltStoragePath: testDBFile.Name(),
+			hasRecord:       false,
+			wantShortURL:    "some_non_existing",
+			wantOrigURL:     "https://non-existing.com",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := storage.Has(tt.url)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
+			fillStorageFile(t, testDBFile)
+			fillBadStorageFile(t, badTestDBFile)
 
-func TestMapURLStorage_Get(t *testing.T) {
-	storage := MapURLStorage{
-		storage: map[string]string{
-			"https://existing.com": "http://localhost:8080/EwHXdJfB",
-		},
-		logger: zap.NewNop(),
-	}
+			lgr := zap.NewNop()
+			fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
+			frp := FileRecordParser{}
+			fs := NewFileScanner(lgr, frp)
+			um := NewUUIDManager(lgr)
+			storage, err := NewFileURLStorage(lgr, fm, fs, um)
+			require.NoError(t, err)
 
-	tests := []struct {
-		name    string
-		url     string
-		err     error
-		want    string
-		wantErr bool
-	}{
-		{
-			"has url",
-			"https://existing.com",
-			nil,
-			"http://localhost:8080/EwHXdJfB",
-			false,
-		},
-		{
-			"no url error",
-			"https://not-existing.com",
-			ErrURLStorageDataNotFound,
-			"",
-			true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := storage.Get(tt.url)
-			if tt.wantErr {
-				assert.ErrorIs(t, err, tt.err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.want, got)
+			if tt.hasRecord {
+				assertStorageHasURL(t, tt, storage)
+				return
 			}
+
+			assertStorageDoesNotHaveURL(t, tt, storage)
+
+			err = storage.Set(tt.wantOrigURL, tt.wantShortURL)
+			require.NoError(t, err)
+
+			assertStorageHasURL(t, tt, storage)
+
+			fm = NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
+			um = NewUUIDManager(lgr)
+			newStorage, err := NewFileURLStorage(lgr, fm, fs, um)
+			require.NoError(t, err)
+			assertStorageHasURL(t, tt, newStorage)
 		})
 	}
 }
 
-func TestMapURLStorage_Set(t *testing.T) {
-	storage := MapURLStorage{
-		storage: make(map[string]string),
-		logger:  zap.NewNop(),
-	}
+func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
+	origURL, err := storage.Get(tt.wantShortURL, ShortURLType)
+	require.NoError(t, err)
+	assert.Equal(t, tt.wantOrigURL, origURL)
 
-	tests := []struct {
-		name     string
-		url      string
-		shortURL string
-	}{
-		{
-			"set url",
-			"https://existing.com",
-			"http://localhost:8080/EwHXdJfB",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := storage.Set(tt.url, tt.shortURL)
-			require.NoError(t, err)
-
-			got, ok := storage.storage[tt.url]
-			require.True(t, ok)
-			assert.Equal(t, tt.shortURL, got)
-		})
-	}
+	shortURL, err := storage.Get(tt.wantOrigURL, OrigURLType)
+	require.NoError(t, err)
+	assert.Equal(t, tt.wantShortURL, shortURL)
 }
 
-func TestMapURLStorage_allMethods(t *testing.T) {
-	tests := []struct {
-		name     string
-		url      string
-		shortURL string
-	}{
-		{
-			name:     "set url",
-			url:      "https://existing.com",
-			shortURL: "http://localhost:8080/EwHXdJfB",
-		},
-	}
+func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {
+	_, err := storage.Get(tt.wantShortURL, ShortURLType)
+	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
+	_, err = storage.Get(tt.wantOrigURL, OrigURLType)
+	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			storage := NewMapURLStorage(zap.NewNop())
-			err := storage.Set(tt.url, tt.shortURL)
-			require.NoError(t, err)
-			got, err := storage.Get(tt.url)
-			require.NoError(t, err)
-			assert.Equal(t, tt.shortURL, got)
-		})
+func createTmpStorageFile(t *testing.T) *os.File {
+	tmpDir := t.TempDir()
+	testDBFile, err := os.CreateTemp(tmpDir, "file_db*.txt")
+	require.NoError(t, err)
+	return testDBFile
+}
+
+func fillStorageFile(t *testing.T, testDBFile *os.File) {
+	testRecord := fileRecord{
+		UUID:        1,
+		ShortURL:    "abcde",
+		OriginalURL: "https://example.com",
 	}
+	data, err := json.Marshal(testRecord)
+	require.NoError(t, err)
+	dataWithNewline := append(data, '\n')
+	_ = os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
+}
+
+func fillBadStorageFile(_ *testing.T, testDBFile *os.File) {
+	data := []byte("foo")
+	_ = os.WriteFile(testDBFile.Name(), data, 0666)
 }

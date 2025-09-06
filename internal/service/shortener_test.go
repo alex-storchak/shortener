@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -28,41 +29,36 @@ func (d *idGeneratorStub) Generate() (string, error) {
 
 type urlStorageStub struct {
 	setMethodShouldFail bool
-	storage             map[string]string
+	storage             []urlStorageStubRecord
+}
+
+type urlStorageStubRecord struct {
+	shortURL string
+	origURL  string
 }
 
 func newURLStorageStub(setMethodShouldFail bool) *urlStorageStub {
 	return &urlStorageStub{
 		setMethodShouldFail: setMethodShouldFail,
-		storage: map[string]string{
-			"http://existing.com": "abcde",
+		storage: []urlStorageStubRecord{
+			{
+				shortURL: "abcde",
+				origURL:  "http://existing.com",
+			},
 		},
 	}
 }
 
-func newShortURLStorageStub(setMethodShouldFail bool) *urlStorageStub {
-	return &urlStorageStub{
-		setMethodShouldFail: setMethodShouldFail,
-		storage: map[string]string{
-			"abcde": "http://existing.com",
-		},
+func (d *urlStorageStub) Get(url, searchByType string) (string, error) {
+	if searchByType == repository.OrigURLType && d.storage[0].origURL == url {
+		return d.storage[0].shortURL, nil
+	} else if searchByType == repository.ShortURLType && d.storage[0].shortURL == url {
+		return d.storage[0].origURL, nil
 	}
+	return "", repository.ErrURLStorageDataNotFound
 }
 
-func (d *urlStorageStub) Has(url string) bool {
-	_, ok := d.storage[url]
-	return ok
-}
-
-func (d *urlStorageStub) Get(url string) (string, error) {
-	if targetURL, ok := d.storage[url]; ok {
-		return targetURL, nil
-	} else {
-		return "", errors.New("no data in the storage for the requested url")
-	}
-}
-
-func (d *urlStorageStub) Set(urlKey, urlValue string) error {
+func (d *urlStorageStub) Set(_, _ string) error {
 	if d.setMethodShouldFail {
 		return errors.New("set method should fail")
 	}
@@ -74,14 +70,13 @@ func TestShortener_Shorten(t *testing.T) {
 		url string
 	}
 	tests := []struct {
-		name                      string
-		args                      args
-		idGeneratorShouldFail     bool
-		urlStorageShouldFail      bool
-		shortURLStorageShouldFail bool
-		err                       error
-		want                      string
-		wantErr                   bool
+		name                  string
+		args                  args
+		idGeneratorShouldFail bool
+		urlStorageShouldFail  bool
+		err                   error
+		want                  string
+		wantErr               bool
 	}{
 		{
 			name: "returns new short id if storage is empty",
@@ -121,24 +116,13 @@ func TestShortener_Shorten(t *testing.T) {
 			want:                 "",
 			wantErr:              true,
 		},
-		{
-			name: "returns error if failed to set binding in shortURLStorage",
-			args: args{
-				url: "http://non-existing.com",
-			},
-			shortURLStorageShouldFail: true,
-			err:                       ErrShortenerSetBindingShortURLStorageFailed,
-			want:                      "",
-			wantErr:                   true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Shortener{
-				urlStorage:      newURLStorageStub(tt.urlStorageShouldFail),
-				shortURLStorage: newShortURLStorageStub(tt.shortURLStorageShouldFail),
-				generator:       newIDGeneratorStub(tt.idGeneratorShouldFail),
-				logger:          zap.NewNop(),
+				urlStorage: newURLStorageStub(tt.urlStorageShouldFail),
+				generator:  newIDGeneratorStub(tt.idGeneratorShouldFail),
+				logger:     zap.NewNop(),
 			}
 
 			got, err := s.Shorten(tt.args.url)
@@ -160,12 +144,11 @@ func TestShortener_Extract(t *testing.T) {
 		shortID string
 	}
 	tests := []struct {
-		name                      string
-		args                      args
-		shortURLStorageShouldFail bool
-		err                       error
-		want                      string
-		wantErr                   bool
+		name    string
+		args    args
+		err     error
+		want    string
+		wantErr bool
 	}{
 		{
 			name: "extract url from storage if exists",
@@ -177,24 +160,22 @@ func TestShortener_Extract(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "returns error if generation of short id is failed",
+			name: "returns error if extracting by short id is failed",
 			args: args{
 				shortID: "non-existing",
 			},
-			shortURLStorageShouldFail: true,
-			err:                       ErrShortenerShortIDNotFound,
-			want:                      "",
-			wantErr:                   true,
+			err:     repository.ErrURLStorageDataNotFound,
+			want:    "",
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Shortener{
-				urlStorage:      newURLStorageStub(false),
-				shortURLStorage: newShortURLStorageStub(tt.shortURLStorageShouldFail),
-				generator:       newIDGeneratorStub(false),
-				logger:          zap.NewNop(),
+				urlStorage: newURLStorageStub(false),
+				generator:  newIDGeneratorStub(false),
+				logger:     zap.NewNop(),
 			}
 
 			got, err := s.Extract(tt.args.shortID)
