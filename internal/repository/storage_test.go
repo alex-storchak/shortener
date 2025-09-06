@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestNewMapURLStorage(t *testing.T) {
@@ -16,12 +17,13 @@ func TestNewMapURLStorage(t *testing.T) {
 			name: "default creation",
 			want: &MapURLStorage{
 				storage: make(map[string]string),
+				logger:  zap.NewNop(),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, NewMapURLStorage())
+			assert.Equal(t, tt.want, NewMapURLStorage(zap.NewNop()))
 		})
 	}
 }
@@ -31,6 +33,7 @@ func TestMapURLStorage_Has(t *testing.T) {
 		storage: map[string]string{
 			"https://existing.com": "http://localhost:8080/EwHXdJfB",
 		},
+		logger: zap.NewNop(),
 	}
 
 	tests := []struct {
@@ -62,6 +65,7 @@ func TestMapURLStorage_Get(t *testing.T) {
 		storage: map[string]string{
 			"https://existing.com": "http://localhost:8080/EwHXdJfB",
 		},
+		logger: zap.NewNop(),
 	}
 
 	tests := []struct {
@@ -102,6 +106,7 @@ func TestMapURLStorage_Get(t *testing.T) {
 func TestMapURLStorage_Set(t *testing.T) {
 	storage := MapURLStorage{
 		storage: make(map[string]string),
+		logger:  zap.NewNop(),
 	}
 
 	tests := []struct {
@@ -142,7 +147,7 @@ func TestMapURLStorage_allMethods(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := NewMapURLStorage()
+			storage := NewMapURLStorage(zap.NewNop())
 			err := storage.Set(tt.url, tt.shortURL)
 			require.NoError(t, err)
 			got, err := storage.Get(tt.url)
