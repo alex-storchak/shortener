@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 
 	"github.com/alex-storchak/shortener/internal/config"
+	pkgDB "github.com/alex-storchak/shortener/internal/db"
 	"github.com/alex-storchak/shortener/internal/handler"
 	"github.com/alex-storchak/shortener/internal/logger"
 	"github.com/alex-storchak/shortener/internal/middleware"
@@ -49,7 +51,14 @@ func run() error {
 
 	shortener := service.NewShortener(shortIDGenerator, urlStorage, zLogger)
 
-	handlers := initHandlers(cfg, zLogger, shortener)
+	db, err := initDB(cfg)
+	if err != nil {
+		zLogger.Error("Failed to instantiate database", zap.Error(err), zap.String("package", "main"))
+		return err
+	}
+	defer db.Close()
+
+	handlers := initHandlers(cfg, zLogger, shortener, db)
 	middlewares := initMiddlewares(zLogger)
 
 	return handler.Serve(&cfg.Handler, handlers, middlewares)
@@ -72,6 +81,14 @@ func initLogger(cfg *config.Config) (*zap.Logger, error) {
 	return zLogger, nil
 }
 
+func initDB(cfg *config.Config) (*sql.DB, error) {
+	db, err := pkgDB.GetInstance(&cfg.DB)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize db: %w", err)
+	}
+	return db, nil
+}
+
 func initShortIDGenerator() (*service.ShortIDGenerator, error) {
 	generator, err := shortid.New(1, shortid.DefaultABC, 1)
 	if err != nil {
@@ -92,7 +109,12 @@ func initURLStorage(cfg *config.Config, zLogger *zap.Logger) (*repository.FileUR
 	return urlStorage, nil
 }
 
-func initHandlers(cfg *config.Config, zLogger *zap.Logger, shortener service.IShortener) *handler.Handlers {
+func initHandlers(
+	cfg *config.Config,
+	zLogger *zap.Logger,
+	shortener service.IShortener,
+	db *sql.DB,
+) *handler.Handlers {
 	shortenCore := service.NewShortenCore(shortener, cfg.Handler.BaseURL, zLogger)
 
 	mainPageService := service.NewMainPageService(shortenCore, zLogger)
@@ -106,10 +128,14 @@ func initHandlers(cfg *config.Config, zLogger *zap.Logger, shortener service.ISh
 	jsonEncoder := service.JSONEncoder{}
 	apiShortenHandler := handler.NewAPIShortenHandler(apiShortenService, jsonEncoder, zLogger)
 
+	pingDBService := service.NewPingDBService(db, zLogger)
+	pingDBHandler := handler.NewPingDBHandler(pingDBService, zLogger)
+
 	return &handler.Handlers{
 		mainPageHandler,
 		shortURLHandler,
 		apiShortenHandler,
+		pingDBHandler,
 	}
 }
 
