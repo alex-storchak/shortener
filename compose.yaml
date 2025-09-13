@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16-bookworm
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: StrongPassword01
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data
+    ports:
+      - "54320:5432"
+#    networks:
+#      - postgres-net
+
+#  adminer:
+#    image: adminer
+#    restart: always
+#    ports:
+#      - "8090:8080"
+##    networks:
+##      - postgres-net
+
+#networks:
+#  postgres-net:
+#    driver: bridge
