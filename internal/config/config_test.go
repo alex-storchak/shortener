@@ -82,7 +82,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 		LogLevel: loggerCfg.DefaultLogLevel,
 	}
 	dfltRepoCfg := repoCfg.Config{
-		FileStoragePath: repoCfg.DefaultFileStoragePath,
+		FileStorage: repoCfg.FileStorage{
+			Path: repoCfg.DefaultFileStoragePath,
+		},
 	}
 	dfltDBCfg := dbCfg.Config{
 		DSN: dbCfg.DefaultDatabaseDSN,
@@ -121,7 +123,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: dfltLoggerCfg,
 				Repository: repoCfg.Config{
-					FileStoragePath: "./data/some_file.json",
+					FileStorage: repoCfg.FileStorage{
+						Path: "./data/some_file.json",
+					},
 				},
 				DB: dbCfg.Config{DSN: "postgres:flagsDSN"},
 			},
@@ -173,7 +177,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: dfltLoggerCfg,
 				Repository: repoCfg.Config{
-					FileStoragePath: "./data/some_file.json",
+					FileStorage: repoCfg.FileStorage{
+						Path: "./data/some_file.json",
+					},
 				},
 				DB: dfltDBCfg,
 			},
@@ -197,7 +203,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Logger: dfltLoggerCfg,
 				Repository: repoCfg.Config{
-					FileStoragePath: "./data/some_another_file.json",
+					FileStorage: repoCfg.FileStorage{
+						Path: "./data/some_another_file.json",
+					},
 				},
 				DB: dfltDBCfg,
 			},
@@ -297,7 +305,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: dfltHandlerCfg,
 				Logger:  dfltLoggerCfg,
 				Repository: repoCfg.Config{
-					FileStoragePath: "./data/env_file.json",
+					FileStorage: repoCfg.FileStorage{
+						Path: "./data/env_file.json",
+					},
 				},
 				DB: dfltDBCfg,
 			},
@@ -312,7 +322,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: dfltHandlerCfg,
 				Logger:  dfltLoggerCfg,
 				Repository: repoCfg.Config{
-					FileStoragePath: "./data/env_file.json",
+					FileStorage: repoCfg.FileStorage{
+						Path: "./data/env_file.json",
+					},
 				},
 				DB: dfltDBCfg,
 			},
@@ -327,7 +339,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: dfltHandlerCfg,
 				Logger:  dfltLoggerCfg,
 				Repository: repoCfg.Config{
-					FileStoragePath: "./data/flags_file.json",
+					FileStorage: repoCfg.FileStorage{
+						Path: "./data/flags_file.json",
+					},
 				},
 				DB: dfltDBCfg,
 			},
@@ -341,12 +355,10 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envDatabaseDSN: "postgres:envDSN",
 			},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger:  dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
-				DB: dbCfg.Config{DSN: "postgres:envDSN"},
+				Handler:    dfltHandlerCfg,
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dbCfg.Config{DSN: "postgres:envDSN"},
 			},
 		},
 		{
@@ -356,12 +368,10 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envDatabaseDSN: "postgres:envDSN",
 			},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger:  dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
-				DB: dbCfg.Config{DSN: "postgres:envDSN"},
+				Handler:    dfltHandlerCfg,
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dbCfg.Config{DSN: "postgres:envDSN"},
 			},
 		},
 		{
@@ -371,12 +381,10 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger:  dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
-				DB: dbCfg.Config{DSN: "postgres:flagsDSN"},
+				Handler:    dfltHandlerCfg,
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dbCfg.Config{DSN: "postgres:flagsDSN"},
 			},
 		},
 	}
