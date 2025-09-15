@@ -16,6 +16,9 @@ import (
 	"github.com/alex-storchak/shortener/internal/repository"
 	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
 	"github.com/alex-storchak/shortener/internal/service"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/teris-io/shortid"
 	"go.uber.org/zap"
 )
@@ -44,7 +47,7 @@ func run() error {
 		return err
 	}
 
-	db, err := initDB(cfg)
+	db, err := initDB(cfg, zLogger)
 	if err != nil {
 		zLogger.Error("Failed to instantiate database", zap.Error(err), zap.String("package", "main"))
 		return err
@@ -85,12 +88,34 @@ func initLogger(cfg *config.Config) (*zap.Logger, error) {
 	return zLogger, nil
 }
 
-func initDB(cfg *config.Config) (*sql.DB, error) {
+func initDB(cfg *config.Config, zLogger *zap.Logger) (*sql.DB, error) {
+	if err := applyMigrations(cfg.DB.DSN, zLogger); err != nil {
+		zLogger.Error("Failed to apply migrations", zap.Error(err), zap.String("package", "main"))
+		return nil, err
+	}
 	db, err := pkgDB.GetInstance(&cfg.DB)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize db: %w", err)
 	}
 	return db, nil
+}
+
+func applyMigrations(dsn string, zLogger *zap.Logger) error {
+	m, err := migrate.New(
+		"file://migrations",
+		dsn,
+	)
+	if err != nil {
+		zLogger.Error("Failed to initialize database for migrations", zap.Error(err), zap.String("package", "main"))
+		return err
+	}
+	err = m.Up()
+	if errors.Is(err, migrate.ErrNoChange) {
+		zLogger.Info("No new migrations to apply")
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
 
 func initShortIDGenerator() (*service.ShortIDGenerator, error) {
