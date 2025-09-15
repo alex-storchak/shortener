@@ -89,6 +89,10 @@ func initLogger(cfg *config.Config) (*zap.Logger, error) {
 }
 
 func initDB(cfg *config.Config, zLogger *zap.Logger) (*sql.DB, error) {
+	if strings.TrimSpace(cfg.DB.DSN) == "" {
+		zLogger.Info("DB DSN is empty, skipping db initialization")
+		return nil, nil
+	}
 	if err := applyMigrations(cfg.DB.DSN, zLogger); err != nil {
 		zLogger.Error("Failed to apply migrations", zap.Error(err), zap.String("package", "main"))
 		return nil, err
