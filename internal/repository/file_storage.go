@@ -99,6 +99,18 @@ func (s *FileURLStorage) Set(origURL, shortURL string) error {
 	return nil
 }
 
+func (s *FileURLStorage) BatchSet(binds *[]URLBind) error {
+	s.logger.Debug("Setting batch of url bindings to storage",
+		zap.Int("count", len(*binds)),
+	)
+	for _, b := range *binds {
+		if err := s.Set(b.OrigURL, b.ShortID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *FileURLStorage) initUUIDMgr() {
 	var maxUUID uint64 = 0
 	for _, rec := range *s.records {

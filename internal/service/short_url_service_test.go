@@ -21,6 +21,9 @@ func (s *stubExpandShortener) Shorten(_ string) (string, error) {
 func (s *stubExpandShortener) Extract(_ string) (string, error) {
 	return s.retURL, s.retErr
 }
+func (s *stubExpandShortener) ShortenBatch(_ *[]string) (*[]string, error) {
+	return nil, nil
+}
 
 func TestShortURLService_Expand(t *testing.T) {
 	tests := []struct {

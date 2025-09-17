@@ -22,6 +22,10 @@ func (s *stubShortener) Extract(_ string) (string, error) {
 	return "", errors.New("")
 }
 
+func (s *stubShortener) ShortenBatch(_ *[]string) (*[]string, error) {
+	return nil, nil
+}
+
 func TestShortenCore_Shorten(t *testing.T) {
 	tests := []struct {
 		name         string

@@ -22,6 +22,21 @@ func (d JSONRequestDecoder) Decode(r io.Reader) (model.ShortenRequest, error) {
 	return req, nil
 }
 
+type IJSONBatchRequestDecoder interface {
+	DecodeBatch(io.Reader) (*[]model.BatchShortenRequestItem, error)
+}
+
+type JSONBatchRequestDecoder struct{}
+
+func (d JSONBatchRequestDecoder) DecodeBatch(r io.Reader) (*[]model.BatchShortenRequestItem, error) {
+	var req []model.BatchShortenRequestItem
+	dec := json.NewDecoder(r)
+	if err := dec.Decode(&req); err != nil {
+		return nil, err
+	}
+	return &req, nil
+}
+
 type IJSONEncoder interface {
 	Encode(io.Writer, any) error
 }

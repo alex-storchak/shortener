@@ -28,8 +28,9 @@ func (d *idGeneratorStub) Generate() (string, error) {
 }
 
 type urlStorageStub struct {
-	setMethodShouldFail bool
-	storage             []urlStorageStubRecord
+	setMethodShouldFail      bool
+	setBatchMethodShouldFail bool
+	storage                  []urlStorageStubRecord
 }
 
 type urlStorageStubRecord struct {
@@ -37,9 +38,13 @@ type urlStorageStubRecord struct {
 	origURL  string
 }
 
-func newURLStorageStub(setMethodShouldFail bool) *urlStorageStub {
+func newURLStorageStub(
+	setMethodShouldFail bool,
+	setBatchMethodShouldFail bool,
+) *urlStorageStub {
 	return &urlStorageStub{
-		setMethodShouldFail: setMethodShouldFail,
+		setMethodShouldFail:      setMethodShouldFail,
+		setBatchMethodShouldFail: setBatchMethodShouldFail,
 		storage: []urlStorageStubRecord{
 			{
 				shortURL: "abcde",
@@ -65,6 +70,12 @@ func (d *urlStorageStub) Set(_, _ string) error {
 	return nil
 }
 
+func (d *urlStorageStub) BatchSet(_ *[]repository.URLBind) error {
+	if d.setBatchMethodShouldFail {
+		return errors.New("set batch method should fail")
+	}
+	return nil
+}
 func TestShortener_Shorten(t *testing.T) {
 	type args struct {
 		url string
@@ -120,7 +131,7 @@ func TestShortener_Shorten(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Shortener{
-				urlStorage: newURLStorageStub(tt.urlStorageShouldFail),
+				urlStorage: newURLStorageStub(tt.urlStorageShouldFail, false),
 				generator:  newIDGeneratorStub(tt.idGeneratorShouldFail),
 				logger:     zap.NewNop(),
 			}
@@ -173,7 +184,7 @@ func TestShortener_Extract(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Shortener{
-				urlStorage: newURLStorageStub(false),
+				urlStorage: newURLStorageStub(false, false),
 				generator:  newIDGeneratorStub(false),
 				logger:     zap.NewNop(),
 			}
@@ -187,6 +198,67 @@ func TestShortener_Extract(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tt.err)
 				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestShortener_ShortenBatch(t *testing.T) {
+	tests := []struct {
+		name                  string
+		urls                  []string
+		idGeneratorShouldFail bool
+		batchSetShouldFail    bool
+		want                  []string
+		wantErr               bool
+		err                   error
+	}{
+		{
+			name: "success returns ids for existing and new",
+			urls: []string{"http://existing.com", "https://non-existing.com"},
+			want: []string{"abcde", "abcde"},
+		},
+		{
+			name:    "returns ErrEmptyInputURL when any url is empty",
+			urls:    []string{""},
+			wantErr: true,
+			err:     ErrEmptyInputURL,
+		},
+		{
+			name:                  "returns ErrShortenerGenerationShortIDFailed when generator fails",
+			urls:                  []string{"https://non-existing.com"},
+			idGeneratorShouldFail: true,
+			wantErr:               true,
+			err:                   ErrShortenerGenerationShortIDFailed,
+		},
+		{
+			name:               "returns ErrShortenerSetBindingURLStorageFailed when BatchSet fails",
+			urls:               []string{"https://non-existing.com"},
+			batchSetShouldFail: true,
+			wantErr:            true,
+			err:                ErrShortenerSetBindingURLStorageFailed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			us := newURLStorageStub(false, tt.batchSetShouldFail)
+			s := Shortener{
+				urlStorage: us,
+				generator:  newIDGeneratorStub(tt.idGeneratorShouldFail),
+				logger:     zap.NewNop(),
+			}
+
+			got, err := s.ShortenBatch(&tt.urls)
+
+			if !tt.wantErr {
+				require.NoError(t, err)
+				require.NotNil(t, got)
+				assert.Equal(t, tt.want, *got)
+			} else {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, tt.err)
+				assert.Nil(t, got)
 			}
 		})
 	}
