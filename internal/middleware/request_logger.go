@@ -57,19 +57,19 @@ func logSummary(logger *zap.Logger, r *http.Request, rd *responseData, start tim
 }
 
 func RequestLogger(logger *zap.Logger) func(http.Handler) http.Handler {
+	mwLogger := logger.With(
+		zap.String("component", "middleware"),
+		zap.String("middleware", "request_logger"),
+	)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger = logger.With(
-				zap.String("component", "middleware"),
-				zap.String("middleware", "request_logger"),
-			)
 			start := time.Now()
 
 			rd := &responseData{}
-			lw := newLoggingResponseWriter(w, rd, logger)
+			lw := newLoggingResponseWriter(w, rd, mwLogger)
 			next.ServeHTTP(lw, r)
 
-			logSummary(logger, r, rd, start)
+			logSummary(mwLogger, r, rd, start)
 		})
 	}
 }

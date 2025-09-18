@@ -145,18 +145,18 @@ func wrapReqBodyWithDecompress(r *http.Request, logger *zap.Logger) (io.Closer, 
 }
 
 func GzipMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
+	mwLogger := logger.With(
+		zap.String("component", "middleware"),
+		zap.String("middleware", "gzip_middleware"),
+	)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger = logger.With(
-				zap.String("component", "middleware"),
-				zap.String("middleware", "gzip_middleware"),
-			)
-			resWriter, respCloser := wrapWriterWithCompress(w, r, logger)
+			resWriter, respCloser := wrapWriterWithCompress(w, r, mwLogger)
 			if respCloser != nil {
 				defer respCloser.Close()
 			}
 
-			reqCloser, err := wrapReqBodyWithDecompress(r, logger)
+			reqCloser, err := wrapReqBodyWithDecompress(r, mwLogger)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
