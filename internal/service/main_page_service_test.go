@@ -48,6 +48,15 @@ func TestMainPageService_Shorten(t *testing.T) {
 			stubErr: errors.New("random error"),
 			wantErr: true,
 		},
+		{
+			name:         "returns shortURL and ErrURLAlreadyExists when URL bind exists in storage",
+			body:         []byte("https://example.com"),
+			stubShortURL: "https://short.host/exist",
+			stubErr:      ErrURLAlreadyExists,
+			wantShortURL: "https://short.host/exist",
+			wantErr:      true,
+			wantErrIs:    ErrURLAlreadyExists,
+		},
 	}
 
 	for _, tt := range tests {
@@ -62,7 +71,11 @@ func TestMainPageService_Shorten(t *testing.T) {
 				if tt.wantErrIs != nil {
 					require.ErrorIs(t, gotErr, tt.wantErrIs)
 				}
-				assert.Equal(t, "", gotURL)
+				if tt.wantShortURL != "" {
+					assert.Equal(t, tt.wantShortURL, gotURL)
+				} else {
+					assert.Equal(t, "", gotURL)
+				}
 				return
 			}
 

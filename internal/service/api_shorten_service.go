@@ -37,6 +37,8 @@ func (s *APIShortenService) Shorten(r io.Reader) (*model.ShortenResponse, error)
 	shortURL, _, err := s.core.Shorten(req.OrigURL)
 	if errors.Is(err, ErrEmptyInputURL) {
 		return nil, ErrEmptyURL
+	} else if errors.Is(err, ErrURLAlreadyExists) {
+		return &model.ShortenResponse{ShortURL: shortURL}, ErrURLAlreadyExists
 	} else if err != nil {
 		s.logger.Debug("failed to shorten url", zap.Error(err))
 		return nil, err

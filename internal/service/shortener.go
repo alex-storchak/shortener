@@ -38,7 +38,7 @@ func (s *Shortener) Shorten(url string) (string, error) {
 	shortID, err := s.urlStorage.Get(url, repository.OrigURLType)
 	if err == nil {
 		s.logger.Debug("url already exists in the storage", zap.String("url", url))
-		return shortID, nil
+		return shortID, ErrURLAlreadyExists
 	} else if !errors.Is(err, repository.ErrURLStorageDataNotFound) {
 		s.logger.Error("error retrieving url", zap.Error(err))
 		return "", err
@@ -122,4 +122,5 @@ func (s *Shortener) prepareURLBindToPersistItem(origURL string) (repository.URLB
 var (
 	ErrShortenerGenerationShortIDFailed    = errors.New("failed to generate short id")
 	ErrShortenerSetBindingURLStorageFailed = errors.New("failed to set url binding in the urlStorage")
+	ErrURLAlreadyExists                    = errors.New("url already exists")
 )

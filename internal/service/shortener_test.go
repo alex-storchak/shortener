@@ -99,13 +99,13 @@ func TestShortener_Shorten(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "returns short id from storage if exists",
+			name: "returns short id from storage if exists and ErrURLAlreadyExists",
 			args: args{
 				url: "http://existing.com",
 			},
-			err:     nil,
+			err:     ErrURLAlreadyExists,
 			want:    "abcde",
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "returns error if generation of short id is failed",

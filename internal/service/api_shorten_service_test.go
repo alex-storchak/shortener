@@ -71,6 +71,16 @@ func TestAPIShortenService_Shorten(t *testing.T) {
 			coreShortURL: "https://short.host/abcde",
 			wantResp:     &model.ShortenResponse{ShortURL: "https://short.host/abcde"},
 		},
+		{
+			name:         "returns short url and ErrURLAlreadyExists when URL bind exists in storage",
+			body:         []byte("{}"),
+			decoderReq:   model.ShortenRequest{OrigURL: "https://example.com"},
+			coreShortURL: "https://short.host/exist",
+			coreErr:      ErrURLAlreadyExists,
+			wantResp:     &model.ShortenResponse{ShortURL: "https://short.host/exist"},
+			wantErr:      true,
+			wantErrIs:    ErrURLAlreadyExists,
+		},
 	}
 
 	for _, tt := range tests {
@@ -87,7 +97,11 @@ func TestAPIShortenService_Shorten(t *testing.T) {
 				if tt.wantErrIs != nil {
 					require.ErrorIs(t, err, tt.wantErrIs)
 				}
-				assert.Nil(t, resp)
+				if tt.wantResp != nil {
+					assert.Equal(t, tt.wantResp, resp)
+				} else {
+					assert.Nil(t, resp)
+				}
 				return
 			}
 

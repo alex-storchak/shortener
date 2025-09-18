@@ -85,6 +85,19 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 			shortenError: service.ErrEmptyURL,
 		},
 		{
+			name:   "returns 409 (Conflict) when url already exists",
+			method: http.MethodPost,
+			want: want{
+				code: http.StatusConflict,
+				body: model.ShortenResponse{
+					ShortURL: "https://example.com/abcde",
+				},
+				contentType: "application/json",
+			},
+			wantErr:      false,
+			shortenError: service.ErrURLAlreadyExists,
+		},
+		{
 			name:   "returns 500 (Internal Server Error) when failed to decode request body",
 			method: http.MethodPost,
 			want: want{

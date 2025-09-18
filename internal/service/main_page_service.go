@@ -27,6 +27,8 @@ func (s *MainPageService) Shorten(body []byte) (string, error) {
 	shortURL, _, err := s.core.Shorten(string(body))
 	if errors.Is(err, ErrEmptyInputURL) {
 		return "", ErrEmptyBody
+	} else if errors.Is(err, ErrURLAlreadyExists) {
+		return shortURL, err
 	} else if err != nil {
 		s.logger.Debug("failed to shorten url", zap.Error(err))
 		return "", err

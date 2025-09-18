@@ -20,7 +20,7 @@ type MainPageSrvStub struct {
 
 func (s *MainPageSrvStub) Shorten(_ []byte) (shortURL string, err error) {
 	if s.shortenError != nil {
-		return "", s.shortenError
+		return "https://example.com/abcde", s.shortenError
 	}
 	return "https://example.com/abcde", nil
 }
@@ -64,6 +64,17 @@ func TestMainPageHandler_ServeHTTP(t *testing.T) {
 			},
 			wantErr:      true,
 			shortenError: service.ErrEmptyBody,
+		},
+		{
+			name:   "POST request returns 409 (Conflict) when URL already exists",
+			method: http.MethodPost,
+			want: want{
+				code:        http.StatusConflict,
+				body:        "https://example.com/abcde",
+				contentType: "text/plain",
+			},
+			wantErr:      false,
+			shortenError: service.ErrURLAlreadyExists,
 		},
 		{
 			name:   "POST request returns 500 (Internal Server Error) when random error on shorten happens",

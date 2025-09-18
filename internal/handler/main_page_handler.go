@@ -45,14 +45,21 @@ func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 		h.logger.Error("empty request body", zap.Error(err))
 		res.WriteHeader(http.StatusBadRequest)
 		return
+	} else if errors.Is(err, service.ErrURLAlreadyExists) {
+		h.writeResponse(res, http.StatusConflict, shortURL)
+		return
 	} else if err != nil {
 		h.logger.Error("failed to process main page request", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	h.writeResponse(res, http.StatusCreated, shortURL)
+}
+
+func (h *MainPageHandler) writeResponse(res http.ResponseWriter, status int, shortURL string) {
 	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusCreated)
+	res.WriteHeader(status)
 	_, _ = res.Write([]byte(shortURL))
 }
 

@@ -34,6 +34,11 @@ func (c *ShortenCore) Shorten(origURL string) (string, string, error) {
 
 	shortID, err := c.shortener.Shorten(origURL)
 	if err != nil {
+		if errors.Is(err, ErrURLAlreadyExists) {
+			shortURL := fmt.Sprintf("%s/%s", c.baseURL, shortID)
+			c.logger.Debug("url already existed, returning existing short url", zap.String("url", shortURL))
+			return shortURL, shortID, ErrURLAlreadyExists
+		}
 		c.logger.Debug("failed to shorten url", zap.Error(err))
 		return "", "", err
 	}

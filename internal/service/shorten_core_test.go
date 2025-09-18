@@ -39,11 +39,13 @@ func TestShortenCore_Shorten(t *testing.T) {
 		wantErrIs    error
 	}{
 		{
-			name:      "returns error ErrEmptyInputURL on empty input",
-			baseURL:   "https://example.com",
-			OrigURL:   "",
-			wantErr:   true,
-			wantErrIs: ErrEmptyInputURL,
+			name:         "returns error ErrEmptyInputURL on empty input",
+			baseURL:      "https://example.com",
+			OrigURL:      "",
+			wantErr:      true,
+			wantErrIs:    ErrEmptyInputURL,
+			wantShortURL: "",
+			wantShortID:  "",
 		},
 		{
 			name:         "returns composed short URL and id on success",
@@ -55,11 +57,24 @@ func TestShortenCore_Shorten(t *testing.T) {
 			wantErr:      false,
 		},
 		{
-			name:    "returns error on failed shortener",
-			baseURL: "https://short.host",
-			OrigURL: "https://example.com/",
-			stubErr: errors.New("failed to shorten"),
-			wantErr: true,
+			name:         "returns error on failed shortener",
+			baseURL:      "https://short.host",
+			OrigURL:      "https://example.com/",
+			stubErr:      errors.New("failed to shorten"),
+			wantErr:      true,
+			wantShortURL: "",
+			wantShortID:  "",
+		},
+		{
+			name:         "returns existing short url and id with ErrURLAlreadyExists",
+			baseURL:      "https://short.host",
+			OrigURL:      "https://example.com/",
+			stubShortID:  "abcde",
+			stubErr:      ErrURLAlreadyExists,
+			wantShortID:  "abcde",
+			wantShortURL: "https://short.host/abcde",
+			wantErr:      true,
+			wantErrIs:    ErrURLAlreadyExists,
 		},
 	}
 
@@ -75,8 +90,8 @@ func TestShortenCore_Shorten(t *testing.T) {
 				if tt.wantErrIs != nil {
 					require.ErrorIs(t, gotErr, tt.wantErrIs)
 				}
-				assert.Equal(t, "", gotShortURL)
-				assert.Equal(t, "", gotShortID)
+				assert.Equal(t, tt.wantShortURL, gotShortURL)
+				assert.Equal(t, tt.wantShortID, gotShortID)
 				return
 			}
 

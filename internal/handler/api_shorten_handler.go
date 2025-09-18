@@ -2,8 +2,10 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
@@ -49,6 +51,9 @@ func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request
 		h.logger.Error("failed to shorten because of empty url in request json", zap.Error(err))
 		res.WriteHeader(http.StatusBadRequest)
 		return
+	} else if errors.Is(err, service.ErrURLAlreadyExists) {
+		_ = h.writeResponse(res, http.StatusConflict, resBody)
+		return
 	} else if errors.Is(err, service.ErrJSONDecode) {
 		h.logger.Error("failed to shorten because of failed to decode request json", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
@@ -59,14 +64,18 @@ func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request
 		return
 	}
 
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusCreated)
-	h.logger.Debug("sending HTTP 201 response")
+	_ = h.writeResponse(res, http.StatusCreated, resBody)
+}
 
+func (h *APIShortenHandler) writeResponse(res http.ResponseWriter, status int, resBody *model.ShortenResponse) error {
+	h.logger.Debug(fmt.Sprintf("sending HTTP %d response", status))
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(status)
 	if err := h.jsonEncoder.Encode(res, resBody); err != nil {
 		h.logger.Debug("error encoding response", zap.Error(err))
-		return
+		return err
 	}
+	return nil
 }
 
 func (h *APIShortenHandler) Routes() []Route {
