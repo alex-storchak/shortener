@@ -7,6 +7,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func GetInstance(cfg *config.Config) (*sql.DB, error) {
+func NewDB(cfg *config.Config) (*sql.DB, error) {
 	return sql.Open("pgx", cfg.DSN)
 }

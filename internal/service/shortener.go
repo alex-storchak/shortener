@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"github.com/alex-storchak/shortener/internal/repository"
@@ -11,6 +12,11 @@ type IShortener interface {
 	Shorten(url string) (shortID string, err error)
 	Extract(shortID string) (OrigURL string, err error)
 	ShortenBatch(urls *[]string) (*[]string, error)
+}
+
+type IShortenerService interface {
+	IShortener
+	Pinger
 }
 
 type Shortener struct {
@@ -24,9 +30,6 @@ func NewShortener(
 	urlStorage repository.URLStorage,
 	logger *zap.Logger,
 ) *Shortener {
-	logger = logger.With(
-		zap.String("package", "shortener"),
-	)
 	return &Shortener{
 		urlStorage: urlStorage,
 		generator:  idGenerator,
@@ -37,7 +40,6 @@ func NewShortener(
 func (s *Shortener) Shorten(url string) (string, error) {
 	shortID, err := s.urlStorage.Get(url, repository.OrigURLType)
 	if err == nil {
-		s.logger.Debug("url already exists in the storage", zap.String("url", url))
 		return shortID, ErrURLAlreadyExists
 	} else if !errors.Is(err, repository.ErrURLStorageDataNotFound) {
 		s.logger.Error("error retrieving url", zap.Error(err))
@@ -45,7 +47,6 @@ func (s *Shortener) Shorten(url string) (string, error) {
 	}
 
 	shortID, err = s.generator.Generate()
-	s.logger.Debug("generated short id", zap.String("shortID", shortID))
 	if err != nil {
 		s.logger.Error("failed to generate short id", zap.Error(err))
 		return "", ErrShortenerGenerationShortIDFailed
@@ -111,12 +112,15 @@ func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]repository.URL
 
 func (s *Shortener) prepareURLBindToPersistItem(origURL string) (repository.URLBind, error) {
 	shortID, err := s.generator.Generate()
-	s.logger.Debug("generated short id", zap.String("shortID", shortID))
 	if err != nil {
 		s.logger.Error("failed to generate short id", zap.Error(err))
 		return repository.URLBind{}, ErrShortenerGenerationShortIDFailed
 	}
 	return repository.URLBind{OrigURL: origURL, ShortID: shortID}, nil
+}
+
+func (s *Shortener) IsReady(ctx context.Context) error {
+	return s.urlStorage.Ping(ctx)
 }
 
 var (

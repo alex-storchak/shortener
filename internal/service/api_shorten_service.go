@@ -19,7 +19,6 @@ type APIShortenService struct {
 }
 
 func NewAPIShortenService(core IShortenCore, decoder IJSONRequestDecoder, logger *zap.Logger) *APIShortenService {
-	logger = logger.With(zap.String("package", "api_shorten_service"))
 	return &APIShortenService{
 		core:    core,
 		decoder: decoder,
@@ -30,7 +29,6 @@ func NewAPIShortenService(core IShortenCore, decoder IJSONRequestDecoder, logger
 func (s *APIShortenService) Shorten(r io.Reader) (*model.ShortenResponse, error) {
 	req, err := s.decoder.Decode(r)
 	if err != nil {
-		s.logger.Debug("cannot decode api/shorten request JSON")
 		return nil, ErrJSONDecode
 	}
 
@@ -40,7 +38,6 @@ func (s *APIShortenService) Shorten(r io.Reader) (*model.ShortenResponse, error)
 	} else if errors.Is(err, ErrURLAlreadyExists) {
 		return &model.ShortenResponse{ShortURL: shortURL}, ErrURLAlreadyExists
 	} else if err != nil {
-		s.logger.Debug("failed to shorten url", zap.Error(err))
 		return nil, err
 	}
 	return &model.ShortenResponse{ShortURL: shortURL}, nil

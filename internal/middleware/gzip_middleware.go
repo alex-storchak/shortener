@@ -118,22 +118,16 @@ func isCompressed(r *http.Request, compressEncType string) bool {
 	return false
 }
 
-func wrapWriterWithCompress(
-	w http.ResponseWriter,
-	r *http.Request,
-	logger *zap.Logger,
-) (http.ResponseWriter, io.Closer) {
+func wrapWriterWithCompress(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, io.Closer) {
 	if canCompress(r, "gzip") {
-		logger.Debug("Can compress response")
 		gzw := newGzipWriter(w)
 		return gzw, gzw
 	}
 	return w, nil
 }
 
-func wrapReqBodyWithDecompress(r *http.Request, logger *zap.Logger) (io.Closer, error) {
+func wrapReqBodyWithDecompress(r *http.Request) (io.Closer, error) {
 	if isCompressed(r, "gzip") {
-		logger.Debug("Compressed data received")
 		gzr, err := newGzipReader(r.Body)
 		if err != nil {
 			return nil, err
@@ -145,18 +139,14 @@ func wrapReqBodyWithDecompress(r *http.Request, logger *zap.Logger) (io.Closer, 
 }
 
 func GzipMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
-	mwLogger := logger.With(
-		zap.String("component", "middleware"),
-		zap.String("middleware", "gzip_middleware"),
-	)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			resWriter, respCloser := wrapWriterWithCompress(w, r, mwLogger)
+			resWriter, respCloser := wrapWriterWithCompress(w, r)
 			if respCloser != nil {
 				defer respCloser.Close()
 			}
 
-			reqCloser, err := wrapReqBodyWithDecompress(r, mwLogger)
+			reqCloser, err := wrapReqBodyWithDecompress(r)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

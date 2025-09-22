@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"go.uber.org/zap"
 )
 
@@ -14,14 +17,39 @@ type DBManager struct {
 	db     *sql.DB
 }
 
-func NewDBManager(logger *zap.Logger, db *sql.DB) *DBManager {
-	logger = logger.With(
-		zap.String("component", "db manager"),
-	)
-	return &DBManager{
+func NewDBManager(
+	logger *zap.Logger,
+	db *sql.DB,
+	dsn string,
+	migrationsPath string,
+) (*DBManager, error) {
+	m := &DBManager{
 		logger: logger,
 		db:     db,
 	}
+
+	if err := m.applyMigrations(dsn, migrationsPath); err != nil {
+		return nil, fmt.Errorf("failed to apply migrations: %w", err)
+	}
+	return m, nil
+}
+
+func (m *DBManager) Close() error {
+	return m.db.Close()
+}
+
+func (m *DBManager) applyMigrations(dsn string, migrationsPath string) error {
+	mg, err := migrate.New(migrationsPath, dsn)
+	if err != nil {
+		return fmt.Errorf("failed to initialize database for migrations: %w", err)
+	}
+	err = mg.Up()
+	if errors.Is(err, migrate.ErrNoChange) {
+		m.logger.Info("No new migrations to apply")
+	} else if err != nil {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+	return nil
 }
 
 func (m *DBManager) GetByOriginalURL(ctx context.Context, origURL string) (string, error) {
@@ -86,6 +114,13 @@ func (m *DBManager) PersistBatch(ctx context.Context, binds *[]URLBind) error {
 	}
 	if err := trx.Commit(); err != nil {
 		return fmt.Errorf("error on commiting transaction: %w", err)
+	}
+	return nil
+}
+
+func (m *DBManager) Ping(ctx context.Context) error {
+	if err := m.db.PingContext(ctx); err != nil {
+		return fmt.Errorf("failed to ping db: %w", err)
 	}
 	return nil
 }

@@ -18,6 +18,14 @@ type dbManagerStub struct {
 	persistErr error
 }
 
+func (s dbManagerStub) Close() error {
+	return nil
+}
+
+func (s dbManagerStub) Ping(_ context.Context) error {
+	return nil
+}
+
 func (s dbManagerStub) GetByOriginalURL(_ context.Context, _ string) (string, error) {
 	return s.retByOrig, s.errByOrig
 }

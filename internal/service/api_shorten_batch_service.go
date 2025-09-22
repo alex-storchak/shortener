@@ -26,7 +26,6 @@ func NewAPIShortenBatchService(
 	decoder IJSONBatchRequestDecoder,
 	logger *zap.Logger,
 ) *APIShortenBatchService {
-	logger = logger.With(zap.String("package", "api_shorten_batch_service"))
 	return &APIShortenBatchService{
 		baseURL:   baseURL,
 		shortener: shortener,
@@ -38,7 +37,6 @@ func NewAPIShortenBatchService(
 func (s *APIShortenBatchService) ShortenBatch(r io.Reader) ([]model.BatchShortenResponseItem, error) {
 	reqItems, err := s.batchDec.DecodeBatch(r)
 	if err != nil {
-		s.logger.Debug("cannot decode api/shorten/batch request JSON")
 		return nil, ErrJSONDecode
 	}
 	if len(*reqItems) == 0 {

@@ -15,10 +15,6 @@ type MainPageHandler struct {
 }
 
 func NewMainPageHandler(mainPageService service.IMainPageService, logger *zap.Logger) *MainPageHandler {
-	logger = logger.With(
-		zap.String("component", "handler"),
-		zap.String("handler", "main_page"),
-	)
 	return &MainPageHandler{
 		mainPageSrv: mainPageService,
 		logger:      logger,
@@ -26,23 +22,15 @@ func NewMainPageHandler(mainPageService service.IMainPageService, logger *zap.Lo
 }
 
 func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	if err := validateMethod(req.Method, http.MethodPost); err != nil {
-		h.logger.Error("Validation of request method failed", zap.Error(err))
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	defer req.Body.Close()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		h.logger.Error("failed to read request body", zap.Error(err))
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	shortURL, err := h.mainPageSrv.Shorten(body)
 	if errors.Is(err, service.ErrEmptyBody) {
-		h.logger.Error("empty request body", zap.Error(err))
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	} else if errors.Is(err, service.ErrURLAlreadyExists) {

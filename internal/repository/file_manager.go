@@ -17,9 +17,6 @@ type FileManager struct {
 }
 
 func NewFileManager(filePath, dfltFilePath string, logger *zap.Logger) *FileManager {
-	logger = logger.With(
-		zap.String("component", "file manager"),
-	)
 	return &FileManager{
 		filePath:     filePath,
 		dfltFilePath: dfltFilePath,

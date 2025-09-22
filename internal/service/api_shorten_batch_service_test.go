@@ -26,6 +26,10 @@ type stubShortenerBatch struct {
 	retErr error
 }
 
+func (s *stubShortenerBatch) IsReady() error {
+	return nil
+}
+
 func (s *stubShortenerBatch) Shorten(_ string) (string, error) {
 	return "", nil
 }

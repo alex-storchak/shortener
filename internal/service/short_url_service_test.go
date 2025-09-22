@@ -15,6 +15,10 @@ type stubExpandShortener struct {
 	retErr error
 }
 
+func (s *stubExpandShortener) IsReady() error {
+	return nil
+}
+
 func (s *stubExpandShortener) Shorten(_ string) (string, error) {
 	return "", nil
 }

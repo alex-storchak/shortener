@@ -39,14 +39,6 @@ func TestMainPageHandler_ServeHTTP(t *testing.T) {
 		shortenError error
 	}{
 		{
-			name:   "non POST request returns 405 (Method Not Allowed)",
-			method: http.MethodGet,
-			want: want{
-				code: http.StatusMethodNotAllowed,
-			},
-			wantErr: true,
-		},
-		{
 			name:   "POST request returns 201 (Created)",
 			method: http.MethodPost,
 			want: want{

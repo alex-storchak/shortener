@@ -58,15 +58,6 @@ func TestAPIShortenBatchHandler_ServeHTTP(t *testing.T) {
 		encodeError  error
 	}{
 		{
-			name:        "non POST request returns 405 (Method Not Allowed)",
-			method:      http.MethodGet,
-			contentType: "application/json",
-			want: want{
-				code: http.StatusMethodNotAllowed,
-			},
-			wantErr: true,
-		},
-		{
 			name:        "wrong Content-Type returns 400 (Bad Request)",
 			method:      http.MethodPost,
 			contentType: "text/plain",

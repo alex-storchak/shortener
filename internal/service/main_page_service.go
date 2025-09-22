@@ -16,7 +16,6 @@ type MainPageService struct {
 }
 
 func NewMainPageService(core IShortenCore, logger *zap.Logger) *MainPageService {
-	logger = logger.With(zap.String("package", "main_page_service"))
 	return &MainPageService{
 		core:   core,
 		logger: logger,
@@ -30,7 +29,6 @@ func (s *MainPageService) Shorten(body []byte) (string, error) {
 	} else if errors.Is(err, ErrURLAlreadyExists) {
 		return shortURL, err
 	} else if err != nil {
-		s.logger.Debug("failed to shorten url", zap.Error(err))
 		return "", err
 	}
 	return shortURL, nil

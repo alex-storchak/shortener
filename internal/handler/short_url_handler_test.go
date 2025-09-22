@@ -36,15 +36,6 @@ func TestShortURLHandler_ServeHTTP(t *testing.T) {
 		expandError error
 	}{
 		{
-			name:   "non GET request returns 405 (Method Not Allowed)",
-			method: http.MethodPost,
-			path:   "/abcde",
-			want: want{
-				code: http.StatusMethodNotAllowed,
-			},
-			wantErr: true,
-		},
-		{
 			name:   "existing short url returns 307 (Temporary Redirect)",
 			method: http.MethodGet,
 			path:   "/abcde",

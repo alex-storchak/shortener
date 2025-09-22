@@ -15,10 +15,6 @@ type ShortURLHandler struct {
 }
 
 func NewShortURLHandler(shortURLService service.IShortURLService, logger *zap.Logger) *ShortURLHandler {
-	logger = logger.With(
-		zap.String("component", "handler"),
-		zap.String("handler", "short_url"),
-	)
 	return &ShortURLHandler{
 		shortURLSrv: shortURLService,
 		logger:      logger,
@@ -26,17 +22,10 @@ func NewShortURLHandler(shortURLService service.IShortURLService, logger *zap.Lo
 }
 
 func (h *ShortURLHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	if err := validateMethod(req.Method, http.MethodGet); err != nil {
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	shortID := chi.URLParam(req, "id")
-	h.logger.Debug("short ID from request", zap.String("shortID", shortID))
 
 	origURL, err := h.shortURLSrv.Expand(shortID)
 	if errors.Is(err, service.ErrShortURLNotFound) {
-		h.logger.Error("short url not found in storage", zap.Error(err))
 		res.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -44,7 +33,6 @@ func (h *ShortURLHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	h.logger.Debug("original URL", zap.String("url", origURL))
 
 	res.Header().Set("Location", origURL)
 	res.WriteHeader(http.StatusTemporaryRedirect)

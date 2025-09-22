@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func GetInstance(cfg *config.Config) (*zap.Logger, error) {
+func NewLogger(cfg *config.Config) (*zap.Logger, error) {
 	lvl, err := zap.ParseAtomicLevel(cfg.LogLevel)
 	if err != nil {
 		return nil, err

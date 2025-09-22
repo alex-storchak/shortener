@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -52,6 +53,14 @@ func newURLStorageStub(
 			},
 		},
 	}
+}
+
+func (d *urlStorageStub) Close() error {
+	return nil
+}
+
+func (d *urlStorageStub) Ping(_ context.Context) error {
+	return nil
 }
 
 func (d *urlStorageStub) Get(url, searchByType string) (string, error) {

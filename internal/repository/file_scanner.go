@@ -13,9 +13,6 @@ type FileScanner struct {
 }
 
 func NewFileScanner(logger *zap.Logger, parser FileRecordParser) *FileScanner {
-	logger = logger.With(
-		zap.String("component", "file scanner"),
-	)
 	return &FileScanner{
 		logger: logger,
 		parser: parser,

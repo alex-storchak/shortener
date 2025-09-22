@@ -6,20 +6,19 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
-type PingDBSrvStub struct {
+type PingSrvStub struct {
 	pingErr error
 }
 
-func (s *PingDBSrvStub) Ping() error {
+func (s *PingSrvStub) Ping() error {
 	return s.pingErr
 }
 
-func TestPingDBHandler_ServeHTTP(t *testing.T) {
+func TestPingHandler_ServeHTTP(t *testing.T) {
 	tests := []struct {
 		name    string
 		method  string
@@ -27,23 +26,12 @@ func TestPingDBHandler_ServeHTTP(t *testing.T) {
 		want    int
 	}{
 		{
-			name:   "non GET request returns 405 (Method Not Allowed)",
-			method: http.MethodPost,
-			want:   http.StatusMethodNotAllowed,
-		},
-		{
 			name:   "GET request returns 200 (OK) when DB ping succeeds",
 			method: http.MethodGet,
 			want:   http.StatusOK,
 		},
 		{
-			name:    "GET request returns 500 (Internal Server Error) on ErrFailedToPingDB",
-			method:  http.MethodGet,
-			pingErr: service.ErrFailedToPingDB,
-			want:    http.StatusInternalServerError,
-		},
-		{
-			name:    "GET request returns 500 (Internal Server Error) on unknown error",
+			name:    "GET request returns 500 (Internal Server Error)",
 			method:  http.MethodGet,
 			pingErr: errors.New("random error"),
 			want:    http.StatusInternalServerError,
@@ -52,8 +40,8 @@ func TestPingDBHandler_ServeHTTP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv := &PingDBSrvStub{pingErr: tt.pingErr}
-			h := NewPingDBHandler(srv, zap.NewNop())
+			srv := &PingSrvStub{pingErr: tt.pingErr}
+			h := NewPingHandler(srv, zap.NewNop())
 
 			req := httptest.NewRequest(tt.method, "/ping", nil)
 			w := httptest.NewRecorder()

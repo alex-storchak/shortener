@@ -22,16 +22,11 @@ type loggingResponseWriter struct {
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
-	r.logger.Debug("actual and added response size",
-		zap.Int("actual", r.responseData.size),
-		zap.Int("size", size),
-	)
 	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
-	r.logger.Debug("added response status", zap.Int("status", statusCode))
 	r.responseData.httpStatus = statusCode
 }
 
@@ -57,19 +52,15 @@ func logSummary(logger *zap.Logger, r *http.Request, rd *responseData, start tim
 }
 
 func RequestLogger(logger *zap.Logger) func(http.Handler) http.Handler {
-	mwLogger := logger.With(
-		zap.String("component", "middleware"),
-		zap.String("middleware", "request_logger"),
-	)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
 			rd := &responseData{}
-			lw := newLoggingResponseWriter(w, rd, mwLogger)
+			lw := newLoggingResponseWriter(w, rd, logger)
 			next.ServeHTTP(lw, r)
 
-			logSummary(mwLogger, r, rd, start)
+			logSummary(logger, r, rd, start)
 		})
 	}
 }

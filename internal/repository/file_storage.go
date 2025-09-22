@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
 	"go.uber.org/zap"
 )
@@ -22,10 +24,6 @@ func NewFileURLStorage(
 	fs *FileScanner,
 	um *UUIDManager,
 ) (*FileURLStorage, error) {
-	logger = logger.With(
-		zap.String("component", "storage"),
-	)
-
 	storage := &FileURLStorage{
 		logger:   logger,
 		fileMgr:  fm,
@@ -34,16 +32,18 @@ func NewFileURLStorage(
 	}
 
 	if err := storage.restoreFromFile(false); err != nil {
-		logger.Error("failed to restore storage from file", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to restore storage from file: %w", err)
 	}
 	storage.initUUIDMgr()
 	return storage, nil
 }
 
 func (s *FileURLStorage) Close() error {
-	s.logger.Info("Closing storage file")
 	return s.fileMgr.close()
+}
+
+func (s *FileURLStorage) Ping(_ context.Context) error {
+	return nil
 }
 
 func (s *FileURLStorage) persistToFile(record fileRecord) error {
@@ -68,10 +68,6 @@ func (s *FileURLStorage) persistToFile(record fileRecord) error {
 }
 
 func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
-	s.logger.Debug("Getting url from storage by type",
-		zap.String("url", url),
-		zap.String("searchByType", searchByType),
-	)
 	for _, record := range *s.records {
 		if searchByType == OrigURLType && record.OriginalURL == url {
 			return record.ShortURL, nil
@@ -83,10 +79,6 @@ func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 }
 
 func (s *FileURLStorage) Set(origURL, shortURL string) error {
-	s.logger.Debug("Setting url to storage",
-		zap.String("origURL", origURL),
-		zap.String("shortURL", shortURL),
-	)
 	record := fileRecord{
 		UUID:        s.uuidMgr.next(),
 		ShortURL:    shortURL,
@@ -100,9 +92,6 @@ func (s *FileURLStorage) Set(origURL, shortURL string) error {
 }
 
 func (s *FileURLStorage) BatchSet(binds *[]URLBind) error {
-	s.logger.Debug("Setting batch of url bindings to storage",
-		zap.Int("count", len(*binds)),
-	)
 	for _, b := range *binds {
 		if err := s.Set(b.OrigURL, b.ShortID); err != nil {
 			return err

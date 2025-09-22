@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"go.uber.org/zap"
 )
@@ -12,6 +13,8 @@ type dbManager interface {
 	GetByShortID(ctx context.Context, shortID string) (string, error)
 	Persist(ctx context.Context, origURL, shortID string) error
 	PersistBatch(ctx context.Context, binds *[]URLBind) error
+	Ping(ctx context.Context) error
+	Close() error
 }
 
 type DBURLStorage struct {
@@ -20,21 +23,24 @@ type DBURLStorage struct {
 }
 
 func NewDBURLStorage(logger *zap.Logger, dbm dbManager) *DBURLStorage {
-	logger = logger.With(
-		zap.String("component", "storage"),
-	)
 	return &DBURLStorage{
 		logger: logger,
 		dbMgr:  dbm,
 	}
 }
 
-func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
-	s.logger.Debug("Getting url from storage by type",
-		zap.String("url", url),
-		zap.String("searchByType", searchByType),
-	)
+func (s *DBURLStorage) Close() error {
+	return s.dbMgr.Close()
+}
 
+func (s *DBURLStorage) Ping(ctx context.Context) error {
+	if err := s.dbMgr.Ping(ctx); err != nil {
+		return fmt.Errorf("failed to ping db: %w", err)
+	}
+	return nil
+}
+
+func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
 	var err error
 	if searchByType == OrigURLType {
 		url, err = s.dbMgr.GetByOriginalURL(context.Background(), url)
@@ -50,10 +56,6 @@ func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
 }
 
 func (s *DBURLStorage) Set(origURL, shortURL string) error {
-	s.logger.Debug("Setting url to storage",
-		zap.String("originalURL", origURL),
-		zap.String("shortURL", shortURL),
-	)
 	if err := s.dbMgr.Persist(context.Background(), origURL, shortURL); err != nil {
 		s.logger.Error("Can't persist record to db", zap.Error(err))
 		return err
@@ -62,9 +64,6 @@ func (s *DBURLStorage) Set(origURL, shortURL string) error {
 }
 
 func (s *DBURLStorage) BatchSet(binds *[]URLBind) error {
-	s.logger.Debug("Setting batch of url bindings to storage",
-		zap.Int("count", len(*binds)),
-	)
 	if err := s.dbMgr.PersistBatch(context.Background(), binds); err != nil {
 		s.logger.Error("Can't persist batch records to db", zap.Error(err))
 		return err

@@ -18,7 +18,6 @@ type ShortenCore struct {
 }
 
 func NewShortenCore(shortener IShortener, baseURL string, logger *zap.Logger) *ShortenCore {
-	logger = logger.With(zap.String("package", "shorten_core"))
 	return &ShortenCore{
 		shortener: shortener,
 		baseURL:   baseURL,
@@ -28,7 +27,6 @@ func NewShortenCore(shortener IShortener, baseURL string, logger *zap.Logger) *S
 
 func (c *ShortenCore) Shorten(origURL string) (string, string, error) {
 	if len(origURL) == 0 {
-		c.logger.Debug("empty input for shorten")
 		return "", "", ErrEmptyInputURL
 	}
 
@@ -36,14 +34,11 @@ func (c *ShortenCore) Shorten(origURL string) (string, string, error) {
 	if err != nil {
 		if errors.Is(err, ErrURLAlreadyExists) {
 			shortURL := fmt.Sprintf("%s/%s", c.baseURL, shortID)
-			c.logger.Debug("url already existed, returning existing short url", zap.String("url", shortURL))
 			return shortURL, shortID, ErrURLAlreadyExists
 		}
-		c.logger.Debug("failed to shorten url", zap.Error(err))
 		return "", "", err
 	}
 	shortURL := fmt.Sprintf("%s/%s", c.baseURL, shortID)
-	c.logger.Debug("shortened url", zap.String("url", shortURL))
 	return shortURL, shortID, nil
 }
 

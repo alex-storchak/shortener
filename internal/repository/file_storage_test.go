@@ -125,7 +125,7 @@ func fillStorageFile(t *testing.T, testDBFile *os.File) {
 	data, err := json.Marshal(testRecord)
 	require.NoError(t, err)
 	dataWithNewline := append(data, '\n')
-	_ = os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
+	os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
 }
 
 func fillBadStorageFile(_ *testing.T, testDBFile *os.File) {
