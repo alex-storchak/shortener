@@ -70,7 +70,7 @@ func (m *DBManager) getByQuery(ctx context.Context, q string, args ...any) (stri
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrDataNotFoundInDB
 	} else if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to scan query result row: %w", err)
 	}
 	return url, nil
 }
@@ -79,8 +79,7 @@ func (m *DBManager) Persist(ctx context.Context, origURL, shortID string) error 
 	q := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
 	_, err := m.db.ExecContext(ctx, q, origURL, shortID)
 	if err != nil {
-		m.logger.Error("Can't persist binding to db", zap.Error(err))
-		return fmt.Errorf("error persisting binding to db: %w", err)
+		return fmt.Errorf("failed to persist binding (%s, %s) to db: %w", origURL, shortID, err)
 	}
 	return nil
 }
@@ -95,25 +94,32 @@ func (m *DBManager) PersistBatch(ctx context.Context, binds *[]URLBind) error {
 
 	stmt, err := trx.PrepareContext(ctx, insertSQL)
 	if err != nil {
-		_ = trx.Rollback()
+		if rErr := trx.Rollback(); rErr != nil {
+			return fmt.Errorf("error on rollback transaction: %w", rErr)
+		}
 		return fmt.Errorf("error on prepare statement: %w", err)
 	}
 
 	for _, b := range *binds {
-		if _, err := stmt.ExecContext(ctx, b.OrigURL, b.ShortID); err != nil {
-			_ = stmt.Close()
-			_ = trx.Rollback()
-			m.logger.Error("Can't persist batch item to db", zap.Error(err))
-			return fmt.Errorf("error persisting batch to db: %w", err)
+		if _, eErr := stmt.ExecContext(ctx, b.OrigURL, b.ShortID); eErr != nil {
+			if cErr := stmt.Close(); cErr != nil {
+				return fmt.Errorf("error on close statement: %w", cErr)
+			}
+			if rErr := trx.Rollback(); rErr != nil {
+				return fmt.Errorf("error on rollback transaction: %w", rErr)
+			}
+			return fmt.Errorf("failed to persist batch record `%v` to db: %w", b, eErr)
 		}
 	}
 
-	if err := stmt.Close(); err != nil {
-		_ = trx.Rollback()
-		return fmt.Errorf("error on close statement: %w", err)
+	if cErr := stmt.Close(); cErr != nil {
+		if rErr := trx.Rollback(); rErr != nil {
+			return fmt.Errorf("error on rollback transaction: %w", rErr)
+		}
+		return fmt.Errorf("error on close statement: %w", cErr)
 	}
-	if err := trx.Commit(); err != nil {
-		return fmt.Errorf("error on commiting transaction: %w", err)
+	if cErr := trx.Commit(); cErr != nil {
+		return fmt.Errorf("error on commiting transaction: %w", cErr)
 	}
 	return nil
 }

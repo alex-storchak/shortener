@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"fmt"
+
 	"github.com/alex-storchak/shortener/internal/logger/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -9,7 +11,7 @@ import (
 func NewLogger(cfg *config.Config) (*zap.Logger, error) {
 	lvl, err := zap.ParseAtomicLevel(cfg.LogLevel)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse log level: %w", err)
 	}
 	zcfg := zap.NewProductionConfig()
 	zcfg.Level = lvl
@@ -17,7 +19,7 @@ func NewLogger(cfg *config.Config) (*zap.Logger, error) {
 	zcfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	zl, err := zcfg.Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build logger: %w", err)
 	}
 
 	return zl, nil

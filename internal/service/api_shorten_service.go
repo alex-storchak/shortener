@@ -2,7 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"net/url"
 
 	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
@@ -13,37 +15,42 @@ type IAPIShortenService interface {
 }
 
 type APIShortenService struct {
-	core    IShortenCore
-	decoder IJSONRequestDecoder
-	logger  *zap.Logger
+	baseURL   string
+	shortener IShortener
+	decoder   IJSONRequestDecoder
+	logger    *zap.Logger
 }
 
-func NewAPIShortenService(core IShortenCore, decoder IJSONRequestDecoder, logger *zap.Logger) *APIShortenService {
+func NewAPIShortenService(bu string, s IShortener, d IJSONRequestDecoder, l *zap.Logger) *APIShortenService {
 	return &APIShortenService{
-		core:    core,
-		decoder: decoder,
-		logger:  logger,
+		baseURL:   bu,
+		shortener: s,
+		decoder:   d,
+		logger:    l,
 	}
 }
 
 func (s *APIShortenService) Shorten(r io.Reader) (*model.ShortenResponse, error) {
 	req, err := s.decoder.Decode(r)
 	if err != nil {
-		return nil, ErrJSONDecode
+		return nil, fmt.Errorf("failed to decode request json: %w", err)
 	}
 
-	shortURL, _, err := s.core.Shorten(req.OrigURL)
-	if errors.Is(err, ErrEmptyInputURL) {
-		return nil, ErrEmptyURL
-	} else if errors.Is(err, ErrURLAlreadyExists) {
-		return &model.ShortenResponse{ShortURL: shortURL}, ErrURLAlreadyExists
+	shortID, err := s.shortener.Shorten(req.OrigURL)
+	if errors.Is(err, ErrURLAlreadyExists) {
+		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
+		if jpErr != nil {
+			return nil, fmt.Errorf("failed to build full short url path for existing url: %w", jpErr)
+		}
+		return &model.ShortenResponse{ShortURL: shortURL}, fmt.Errorf("tried to shorten existing url: %w", err)
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to shorten url: %w", err)
+	}
+
+	// new url
+	shortURL, err := url.JoinPath(s.baseURL, shortID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build full short url path for new url: %w", err)
 	}
 	return &model.ShortenResponse{ShortURL: shortURL}, nil
 }
-
-var (
-	ErrEmptyURL   = errors.New("empty url provided")
-	ErrJSONDecode = errors.New("failed to decode json")
-)

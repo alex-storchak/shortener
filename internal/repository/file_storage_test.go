@@ -104,9 +104,10 @@ func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
 
 func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {
 	_, err := storage.Get(tt.wantShortURL, ShortURLType)
-	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
+	var nfErrShort, nfErrOrig *DataNotFoundError
+	require.ErrorAs(t, err, &nfErrShort)
 	_, err = storage.Get(tt.wantOrigURL, OrigURLType)
-	require.ErrorIs(t, err, ErrURLStorageDataNotFound)
+	require.ErrorAs(t, err, &nfErrOrig)
 }
 
 func createTmpStorageFile(t *testing.T) *os.File {
@@ -125,10 +126,14 @@ func fillStorageFile(t *testing.T, testDBFile *os.File) {
 	data, err := json.Marshal(testRecord)
 	require.NoError(t, err)
 	dataWithNewline := append(data, '\n')
-	os.WriteFile(testDBFile.Name(), dataWithNewline, 0666)
+	if err := os.WriteFile(testDBFile.Name(), dataWithNewline, 0666); err != nil {
+		t.Fatalf("failed to write test record to storage file: %v", err)
+	}
 }
 
-func fillBadStorageFile(_ *testing.T, testDBFile *os.File) {
+func fillBadStorageFile(t *testing.T, testDBFile *os.File) {
 	data := []byte("foo")
-	_ = os.WriteFile(testDBFile.Name(), data, 0666)
+	if err := os.WriteFile(testDBFile.Name(), data, 0666); err != nil {
+		t.Fatalf("failed to write bad test record to bad storage file: %v", err)
+	}
 }

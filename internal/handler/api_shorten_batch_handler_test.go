@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -38,7 +39,10 @@ func (e *JSONEncoderBatchStub) Encode(w io.Writer, _ any) error {
 	if e.encodeError != nil {
 		return e.encodeError
 	}
-	_, _ = w.Write([]byte(`[{"correlation_id":"1","short_url":"https://example.com/a1"},{"correlation_id":"2","short_url":"https://example.com/b2"}]`))
+	_, err := w.Write([]byte(`[{"correlation_id":"1","short_url":"https://example.com/a1"},{"correlation_id":"2","short_url":"https://example.com/b2"}]`))
+	if err != nil {
+		return fmt.Errorf("failed to write response: %w", err)
+	}
 	return nil
 }
 
@@ -88,7 +92,7 @@ func TestAPIShortenBatchHandler_ServeHTTP(t *testing.T) {
 				code: http.StatusBadRequest,
 			},
 			wantErr:      true,
-			shortenError: service.ErrEmptyBatch,
+			shortenError: service.ErrEmptyInputBatch,
 		},
 		{
 			name:        "returns 400 (Bad Request) when empty url in request json",
@@ -98,17 +102,7 @@ func TestAPIShortenBatchHandler_ServeHTTP(t *testing.T) {
 				code: http.StatusBadRequest,
 			},
 			wantErr:      true,
-			shortenError: service.ErrEmptyURL,
-		},
-		{
-			name:        "returns 500 (Internal Server Error) when failed to decode request body",
-			method:      http.MethodPost,
-			contentType: "application/json",
-			want: want{
-				code: http.StatusInternalServerError,
-			},
-			wantErr:      true,
-			shortenError: service.ErrJSONDecode,
+			shortenError: service.ErrEmptyInputURL,
 		},
 		{
 			name:        "returns 500 (Internal Server Error) when random error on shorten batch",

@@ -1,9 +1,9 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"io"
+	"net/url"
 
 	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
@@ -37,54 +37,45 @@ func NewAPIShortenBatchService(
 func (s *APIShortenBatchService) ShortenBatch(r io.Reader) ([]model.BatchShortenResponseItem, error) {
 	reqItems, err := s.batchDec.DecodeBatch(r)
 	if err != nil {
-		return nil, ErrJSONDecode
-	}
-	if len(*reqItems) == 0 {
-		return nil, ErrEmptyBatch
+		return nil, fmt.Errorf("failed to decode batch request json: %w", err)
 	}
 
-	origURLs, err := s.buildURLList(reqItems)
-	if err != nil {
-		return nil, err
-	}
-
+	origURLs := s.buildURLList(reqItems)
 	shortIDs, err := s.shortener.ShortenBatch(origURLs)
-	if errors.Is(err, ErrEmptyInputURL) {
-		return nil, ErrEmptyURL
-	} else if err != nil {
-		return nil, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to shorten batch: %w", err)
 	}
 
-	resp := s.buildResponse(reqItems, shortIDs)
+	resp, err := s.buildResponse(reqItems, shortIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build response: %w", err)
+	}
 
 	return resp, nil
 }
 
-func (s *APIShortenBatchService) buildURLList(reqItems *[]model.BatchShortenRequestItem) (*[]string, error) {
+func (s *APIShortenBatchService) buildURLList(reqItems *[]model.BatchShortenRequestItem) *[]string {
 	origURLs := make([]string, len(*reqItems))
 	for i, item := range *reqItems {
-		if item.OriginalURL == "" {
-			return nil, ErrEmptyURL
-		}
 		origURLs[i] = item.OriginalURL
 	}
-	return &origURLs, nil
+	return &origURLs
 }
 
 func (s *APIShortenBatchService) buildResponse(
 	reqItems *[]model.BatchShortenRequestItem,
 	shortIDs *[]string,
-) []model.BatchShortenResponseItem {
+) ([]model.BatchShortenResponseItem, error) {
 	resp := make([]model.BatchShortenResponseItem, len(*reqItems))
 	for i, item := range *reqItems {
+		shortURL, err := url.JoinPath(s.baseURL, (*shortIDs)[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to build full short url for new url: %w", err)
+		}
 		resp[i] = model.BatchShortenResponseItem{
 			CorrelationID: item.CorrelationID,
-			ShortURL:      fmt.Sprintf("%s/%s", s.baseURL, (*shortIDs)[i]),
+			ShortURL:      shortURL,
 		}
 	}
-	return resp
+	return resp, nil
 }
-
-var (
-	ErrEmptyBatch = errors.New("empty batch provided")
-)

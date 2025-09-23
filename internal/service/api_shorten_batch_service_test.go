@@ -55,37 +55,38 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 		wantErrIs    error
 	}{
 		{
-			name:      "returns ErrJSONDecode when decoder fails",
-			body:      []byte("[{bad json}]"),
-			decErr:    errors.New("decode error"),
-			wantErr:   true,
-			wantErrIs: ErrJSONDecode,
+			name:    "returns error when decoder fails",
+			body:    []byte("[{bad json}]"),
+			decErr:  errors.New("decode error"),
+			wantErr: true,
 		},
 		{
-			name:      "returns ErrEmptyBatch on empty request list",
+			name:      "returns ErrEmptyInputBatch on empty request list",
 			body:      []byte("[]"),
 			decReq:    &[]model.BatchShortenRequestItem{},
+			stubErr:   ErrEmptyInputBatch,
 			wantErr:   true,
-			wantErrIs: ErrEmptyBatch,
+			wantErrIs: ErrEmptyInputBatch,
 		},
 		{
-			name: "returns ErrEmptyURL if any item has empty OriginalURL",
+			name: "returns ErrEmptyInputURL if any item has empty OriginalURL",
 			body: []byte("[{}]"),
 			decReq: &[]model.BatchShortenRequestItem{
 				{CorrelationID: "1", OriginalURL: ""},
 			},
+			stubErr:   ErrEmptyInputURL,
 			wantErr:   true,
-			wantErrIs: ErrEmptyURL,
+			wantErrIs: ErrEmptyInputURL,
 		},
 		{
-			name: "maps ErrEmptyInputURL from shortener to ErrEmptyURL",
+			name: "returns ErrEmptyInputURL from shortener",
 			body: []byte(`[{"correlation_id":"1","original_url":"https://example.com"}]}"`),
 			decReq: &[]model.BatchShortenRequestItem{
 				{CorrelationID: "1", OriginalURL: "https://example.com"},
 			},
 			stubErr:   ErrEmptyInputURL,
 			wantErr:   true,
-			wantErrIs: ErrEmptyURL,
+			wantErrIs: ErrEmptyInputURL,
 		},
 		{
 			name: "returns unexpected error",

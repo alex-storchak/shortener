@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"net/url"
 
 	"go.uber.org/zap"
 )
@@ -11,29 +13,36 @@ type IMainPageService interface {
 }
 
 type MainPageService struct {
-	core   IShortenCore
-	logger *zap.Logger
+	baseURL   string
+	shortener IShortener
+	logger    *zap.Logger
 }
 
-func NewMainPageService(core IShortenCore, logger *zap.Logger) *MainPageService {
+func NewMainPageService(bu string, s IShortener, l *zap.Logger) *MainPageService {
 	return &MainPageService{
-		core:   core,
-		logger: logger,
+		baseURL:   bu,
+		shortener: s,
+		logger:    l,
 	}
 }
 
 func (s *MainPageService) Shorten(body []byte) (string, error) {
-	shortURL, _, err := s.core.Shorten(string(body))
-	if errors.Is(err, ErrEmptyInputURL) {
-		return "", ErrEmptyBody
-	} else if errors.Is(err, ErrURLAlreadyExists) {
-		return shortURL, err
+	origURL := string(body)
+	shortID, err := s.shortener.Shorten(origURL)
+	if errors.Is(err, ErrURLAlreadyExists) {
+		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
+		if jpErr != nil {
+			return "", fmt.Errorf("failed to build full short url path for existing url: %w", jpErr)
+		}
+		return shortURL, fmt.Errorf("tried to shorten existing url: %w", err)
 	} else if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to shorten url: %w", err)
+	}
+
+	// new url
+	shortURL, err := url.JoinPath(s.baseURL, shortID)
+	if err != nil {
+		return "", fmt.Errorf("failed to build full short url path for new url: %w", err)
 	}
 	return shortURL, nil
 }
-
-var (
-	ErrEmptyBody = errors.New("request body is empty")
-)

@@ -34,18 +34,11 @@ func (h *APIShortenBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Re
 	}
 
 	respItems, err := h.batchSrv.ShortenBatch(req.Body)
-	if errors.Is(err, service.ErrEmptyBatch) {
+	if errors.Is(err, service.ErrEmptyInputURL) || errors.Is(err, service.ErrEmptyInputBatch) {
 		res.WriteHeader(http.StatusBadRequest)
-		return
-	} else if errors.Is(err, service.ErrEmptyURL) {
-		res.WriteHeader(http.StatusBadRequest)
-		return
-	} else if errors.Is(err, service.ErrJSONDecode) {
-		h.logger.Error("failed to shorten because of failed to decode request json", zap.Error(err))
-		res.WriteHeader(http.StatusInternalServerError)
 		return
 	} else if err != nil {
-		h.logger.Error("failed to shorten batch, unknown error", zap.Error(err))
+		h.logger.Error("failed to shorten batch", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -54,6 +47,7 @@ func (h *APIShortenBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Re
 	res.WriteHeader(http.StatusCreated)
 
 	if err := h.jsonEnc.Encode(res, respItems); err != nil {
+		h.logger.Error("failed to encode response", zap.Error(err))
 		return
 	}
 }

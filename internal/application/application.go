@@ -120,16 +120,14 @@ func (a *App) initShortener() (*service.Shortener, error) {
 }
 
 func (a *App) initHandlers(shortener service.IShortenerService) *handler.Handlers {
-	shortenCore := service.NewShortenCore(shortener, a.cfg.Handler.BaseURL, a.logger)
-
-	mainPageService := service.NewMainPageService(shortenCore, a.logger)
+	mainPageService := service.NewMainPageService(a.cfg.Handler.BaseURL, shortener, a.logger)
 	mainPageHandler := handler.NewMainPageHandler(mainPageService, a.logger)
 
 	shortURLService := service.NewShortURLService(shortener, a.logger)
 	shortURLHandler := handler.NewShortURLHandler(shortURLService, a.logger)
 
 	jsonDecoder := service.JSONRequestDecoder{}
-	apiShortenService := service.NewAPIShortenService(shortenCore, jsonDecoder, a.logger)
+	apiShortenService := service.NewAPIShortenService(a.cfg.Handler.BaseURL, shortener, jsonDecoder, a.logger)
 	jsonEncoder := service.JSONEncoder{}
 	apiShortenHandler := handler.NewAPIShortenHandler(apiShortenService, jsonEncoder, a.logger)
 

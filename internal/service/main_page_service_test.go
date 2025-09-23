@@ -9,36 +9,43 @@ import (
 	"go.uber.org/zap"
 )
 
-type stubShortenCore struct {
-	retShortURL string
-	retErr      error
+type stubShortener struct {
+	retShortID string
+	retErr     error
 }
 
-func (s *stubShortenCore) Shorten(_ string) (string, string, error) {
-	return s.retShortURL, "", s.retErr
+func (s *stubShortener) Shorten(_ string) (string, error) {
+	return s.retShortID, s.retErr
+}
+
+func (s *stubShortener) Extract(_ string) (string, error) {
+	return "", nil
+}
+func (s *stubShortener) ShortenBatch(_ *[]string) (*[]string, error) {
+	return nil, nil
 }
 
 func TestMainPageService_Shorten(t *testing.T) {
 	tests := []struct {
 		name         string
 		body         []byte
-		stubShortURL string
+		stubShortID  string
 		stubErr      error
 		wantShortURL string
 		wantErr      bool
 		wantErrIs    error
 	}{
 		{
-			name:      "maps ErrEmptyInputURL to ErrEmptyBody on empty body",
+			name:      "returns ErrEmptyInputURL on empty body",
 			body:      []byte(""),
 			stubErr:   ErrEmptyInputURL,
 			wantErr:   true,
-			wantErrIs: ErrEmptyBody,
+			wantErrIs: ErrEmptyInputURL,
 		},
 		{
 			name:         "returns shortURL on success",
 			body:         []byte("https://example.com"),
-			stubShortURL: "https://short.host/abcde",
+			stubShortID:  "abcde",
 			wantShortURL: "https://short.host/abcde",
 			wantErr:      false,
 		},
@@ -51,7 +58,7 @@ func TestMainPageService_Shorten(t *testing.T) {
 		{
 			name:         "returns shortURL and ErrURLAlreadyExists when URL bind exists in storage",
 			body:         []byte("https://example.com"),
-			stubShortURL: "https://short.host/exist",
+			stubShortID:  "exist",
 			stubErr:      ErrURLAlreadyExists,
 			wantShortURL: "https://short.host/exist",
 			wantErr:      true,
@@ -61,8 +68,8 @@ func TestMainPageService_Shorten(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			core := &stubShortenCore{tt.stubShortURL, tt.stubErr}
-			svc := NewMainPageService(core, zap.NewNop())
+			core := &stubShortener{tt.stubShortID, tt.stubErr}
+			svc := NewMainPageService("https://short.host", core, zap.NewNop())
 
 			gotURL, gotErr := svc.Shorten(tt.body)
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -30,7 +31,7 @@ func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 	}
 
 	shortURL, err := h.mainPageSrv.Shorten(body)
-	if errors.Is(err, service.ErrEmptyBody) {
+	if errors.Is(err, service.ErrEmptyInputURL) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	} else if errors.Is(err, service.ErrURLAlreadyExists) {
@@ -42,13 +43,18 @@ func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	h.writeResponse(res, http.StatusCreated, shortURL)
+	if err := h.writeResponse(res, http.StatusCreated, shortURL); err != nil {
+		h.logger.Error("failed to write response for main page request", zap.Error(err))
+	}
 }
 
-func (h *MainPageHandler) writeResponse(res http.ResponseWriter, status int, shortURL string) {
+func (h *MainPageHandler) writeResponse(res http.ResponseWriter, status int, shortURL string) error {
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(status)
-	_, _ = res.Write([]byte(shortURL))
+	if _, err := res.Write([]byte(shortURL)); err != nil {
+		return fmt.Errorf("failed to write response `%s`: %w", shortURL, err)
+	}
+	return nil
 }
 
 func (h *MainPageHandler) Routes() []Route {

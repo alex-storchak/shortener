@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/service"
+	repo "github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -53,7 +53,7 @@ func TestShortURLHandler_ServeHTTP(t *testing.T) {
 				code: http.StatusNotFound,
 			},
 			wantErr:     true,
-			expandError: service.ErrShortURLNotFound,
+			expandError: repo.NewDataNotFoundError(nil),
 		},
 		{
 			name:   "returns 500 (Internal Server Error) when random error on expand happens",

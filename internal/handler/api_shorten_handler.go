@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/alex-storchak/shortener/internal/model"
@@ -35,27 +36,21 @@ func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request
 	}
 
 	resBody, err := h.apiShortenSrv.Shorten(req.Body)
-	if errors.Is(err, service.ErrEmptyURL) {
+	if errors.Is(err, service.ErrEmptyInputURL) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	} else if errors.Is(err, service.ErrURLAlreadyExists) {
-		err = h.writeResponse(res, http.StatusConflict, resBody)
-		if err != nil {
+		if err := h.writeResponse(res, http.StatusConflict, resBody); err != nil {
 			h.logger.Error("failed to write response", zap.Error(err))
 		}
 		return
-	} else if errors.Is(err, service.ErrJSONDecode) {
-		h.logger.Error("failed to shorten because of failed to decode request json", zap.Error(err))
-		res.WriteHeader(http.StatusInternalServerError)
-		return
 	} else if err != nil {
-		h.logger.Error("failed to shorten, unknown error", zap.Error(err))
+		h.logger.Error("failed to shorten", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	err = h.writeResponse(res, http.StatusCreated, resBody)
-	if err != nil {
+	if err := h.writeResponse(res, http.StatusCreated, resBody); err != nil {
 		h.logger.Error("failed to write response", zap.Error(err))
 	}
 }
@@ -64,7 +59,7 @@ func (h *APIShortenHandler) writeResponse(res http.ResponseWriter, status int, r
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(status)
 	if err := h.jsonEncoder.Encode(res, resBody); err != nil {
-		return err
+		return fmt.Errorf("failed to encode response body `%v`: %w", resBody, err)
 	}
 	return nil
 }

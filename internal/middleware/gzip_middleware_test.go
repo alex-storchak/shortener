@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -106,10 +107,10 @@ func makeRequestBody(body string, contentEncoding string) (*bytes.Buffer, error)
 		buf := bytes.NewBuffer(nil)
 		zw := gzip.NewWriter(buf)
 		if _, err := zw.Write([]byte(body)); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to write req body (%s) with gzip writer: %w", body, err)
 		}
 		if err := zw.Close(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to close gzip writer: %w", err)
 		}
 		return buf, nil
 	}
@@ -124,7 +125,7 @@ func isValidGzip(data []byte) bool {
 func decompressGzip(data []byte) ([]byte, error) {
 	reader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer reader.Close()
 	return io.ReadAll(reader)

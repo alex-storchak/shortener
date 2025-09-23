@@ -48,25 +48,23 @@ func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
 		url, err = s.dbMgr.GetByShortID(context.Background(), url)
 	}
 	if errors.Is(err, ErrDataNotFoundInDB) {
-		return "", ErrURLStorageDataNotFound
+		return "", NewDataNotFoundError(ErrDataNotFoundInDB)
 	} else if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to retrieve bind by url `%s` from db: %w", url, err)
 	}
 	return url, nil
 }
 
 func (s *DBURLStorage) Set(origURL, shortURL string) error {
 	if err := s.dbMgr.Persist(context.Background(), origURL, shortURL); err != nil {
-		s.logger.Error("Can't persist record to db", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to persist record to db: %w", err)
 	}
 	return nil
 }
 
 func (s *DBURLStorage) BatchSet(binds *[]URLBind) error {
 	if err := s.dbMgr.PersistBatch(context.Background(), binds); err != nil {
-		s.logger.Error("Can't persist batch records to db", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to persist batch records to db: %w", err)
 	}
 	return nil
 }

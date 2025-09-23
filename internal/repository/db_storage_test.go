@@ -45,6 +45,7 @@ func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]URLBind) error {
 func TestDBURLStorage_Get(t *testing.T) {
 	lgr := zap.NewNop()
 	unexpected := errors.New("random error")
+	var notFound *DataNotFoundError
 
 	tests := []struct {
 		name       string
@@ -54,6 +55,7 @@ func TestDBURLStorage_Get(t *testing.T) {
 		wantURL    string
 		wantErr    bool
 		wantErrIs  error
+		wantErrAs  any
 	}{
 		{
 			name:       "success by original",
@@ -75,7 +77,7 @@ func TestDBURLStorage_Get(t *testing.T) {
 			stub:       dbManagerStub{errByOrig: ErrDataNotFoundInDB},
 			inputURL:   "https://missing.com",
 			wantErr:    true,
-			wantErrIs:  ErrURLStorageDataNotFound,
+			wantErrAs:  &notFound,
 		},
 		{
 			name:       "returns not found error when not found by short url",
@@ -83,7 +85,7 @@ func TestDBURLStorage_Get(t *testing.T) {
 			stub:       dbManagerStub{errByShort: ErrDataNotFoundInDB},
 			inputURL:   "missingShort",
 			wantErr:    true,
-			wantErrIs:  ErrURLStorageDataNotFound,
+			wantErrAs:  &notFound,
 		},
 		{
 			name:       "return unexpected error by original",
@@ -103,6 +105,9 @@ func TestDBURLStorage_Get(t *testing.T) {
 				require.Error(t, err)
 				if tt.wantErrIs != nil {
 					require.ErrorIs(t, err, tt.wantErrIs)
+				}
+				if tt.wantErrAs != nil {
+					require.ErrorAs(t, err, tt.wantErrAs)
 				}
 				assert.Equal(t, "", got)
 				return

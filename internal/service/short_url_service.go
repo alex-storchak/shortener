@@ -1,9 +1,8 @@
 package service
 
 import (
-	"errors"
+	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/repository"
 	"go.uber.org/zap"
 )
 
@@ -25,14 +24,8 @@ func NewShortURLService(shortener IShortener, logger *zap.Logger) *ShortURLServi
 
 func (s *ShortURLService) Expand(shortID string) (string, error) {
 	origURL, err := s.shortener.Extract(shortID)
-	if errors.Is(err, repository.ErrURLStorageDataNotFound) {
-		return "", ErrShortURLNotFound
-	} else if err != nil {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("failed to extract short url from storage: %w", err)
 	}
 	return origURL, nil
 }
-
-var (
-	ErrShortURLNotFound = errors.New("short url not found")
-)

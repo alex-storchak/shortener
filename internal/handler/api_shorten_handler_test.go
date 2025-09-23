@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -37,7 +38,9 @@ func (e *JSONEncoderStub) Encode(w io.Writer, _ any) error {
 	if e.encodeError != nil {
 		return e.encodeError
 	}
-	_, _ = w.Write([]byte(`{"result":"https://example.com/abcde"}`))
+	if _, err := w.Write([]byte(`{"result":"https://example.com/abcde"}`)); err != nil {
+		return fmt.Errorf("failed to write encoded response: %w", err)
+	}
 	return nil
 }
 
@@ -74,7 +77,7 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 				code: http.StatusBadRequest,
 			},
 			wantErr:      true,
-			shortenError: service.ErrEmptyURL,
+			shortenError: service.ErrEmptyInputURL,
 		},
 		{
 			name:   "returns 409 (Conflict) when url already exists",
@@ -88,15 +91,6 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 			},
 			wantErr:      false,
 			shortenError: service.ErrURLAlreadyExists,
-		},
-		{
-			name:   "returns 500 (Internal Server Error) when failed to decode request body",
-			method: http.MethodPost,
-			want: want{
-				code: http.StatusInternalServerError,
-			},
-			wantErr:      true,
-			shortenError: service.ErrJSONDecode,
 		},
 		{
 			name:   "returns 500 (Internal Server Error) when random error on shorten url",

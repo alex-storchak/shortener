@@ -55,7 +55,7 @@ func TestMainPageHandler_ServeHTTP(t *testing.T) {
 				code: http.StatusBadRequest,
 			},
 			wantErr:      true,
-			shortenError: service.ErrEmptyBody,
+			shortenError: service.ErrEmptyInputURL,
 		},
 		{
 			name:   "POST request returns 409 (Conflict) when URL already exists",

@@ -37,7 +37,6 @@ func TestPingService_Ping(t *testing.T) {
 		name          string
 		db            Pinger
 		wantErr       bool
-		wantErrIs     error
 		checkDuration bool
 	}{
 		{
@@ -49,13 +48,11 @@ func TestPingService_Ping(t *testing.T) {
 			name:    "db returns ErrFailedToPingDB error",
 			db:      &stubPinger{PingErr: errors.New("db down")},
 			wantErr: true,
-			//wantErrIs: ErrFailedToPingDB,
 		},
 		{
-			name:    "timeout maps to ErrFailedToPingDB and returns quickly",
-			db:      &stubSleepPinger{sleep: 5 * time.Second},
-			wantErr: true,
-			//wantErrIs:     ErrFailedToPingDB,
+			name:          "timeout maps to ErrFailedToPingDB and returns quickly",
+			db:            &stubSleepPinger{sleep: 5 * time.Second},
+			wantErr:       true,
 			checkDuration: true,
 		},
 	}
@@ -73,7 +70,6 @@ func TestPingService_Ping(t *testing.T) {
 
 			if tt.wantErr {
 				require.Error(t, err)
-				//require.ErrorIs(t, err, tt.wantErrIs)
 			} else {
 				require.NoError(t, err)
 			}

@@ -39,7 +39,7 @@ func (s *MemoryURLStorage) Get(url, searchByType string) (string, error) {
 			return v, nil
 		}
 	}
-	return "", ErrURLStorageDataNotFound
+	return "", NewDataNotFoundError(nil)
 }
 
 func (s *MemoryURLStorage) Set(origURL, shortURL string) error {

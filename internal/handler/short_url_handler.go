@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -25,7 +26,8 @@ func (h *ShortURLHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 	shortID := chi.URLParam(req, "id")
 
 	origURL, err := h.shortURLSrv.Expand(shortID)
-	if errors.Is(err, service.ErrShortURLNotFound) {
+	var nfErr *repository.DataNotFoundError
+	if errors.As(err, &nfErr) {
 		res.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
