@@ -91,33 +91,32 @@ func (m *DBManager) PersistBatch(ctx context.Context, binds *[]URLBind) error {
 	if err != nil {
 		return fmt.Errorf("error on begin transaction: %w", err)
 	}
+	defer func() {
+		if err := trx.Rollback(); err != nil {
+			if !errors.Is(err, sql.ErrTxDone) {
+				m.logger.Error("failed to rollback transaction", zap.Error(err))
+			}
+		}
+	}()
 
 	stmt, err := trx.PrepareContext(ctx, insertSQL)
 	if err != nil {
-		if rErr := trx.Rollback(); rErr != nil {
-			return fmt.Errorf("error on rollback transaction: %w", rErr)
-		}
 		return fmt.Errorf("error on prepare statement: %w", err)
 	}
+	defer func() {
+		if err := stmt.Close(); err != nil {
+			if !errors.Is(err, sql.ErrTxDone) {
+				m.logger.Error("failed to close statement", zap.Error(err))
+			}
+		}
+	}()
 
 	for _, b := range *binds {
 		if _, eErr := stmt.ExecContext(ctx, b.OrigURL, b.ShortID); eErr != nil {
-			if cErr := stmt.Close(); cErr != nil {
-				return fmt.Errorf("error on close statement: %w", cErr)
-			}
-			if rErr := trx.Rollback(); rErr != nil {
-				return fmt.Errorf("error on rollback transaction: %w", rErr)
-			}
 			return fmt.Errorf("failed to persist batch record `%v` to db: %w", b, eErr)
 		}
 	}
 
-	if cErr := stmt.Close(); cErr != nil {
-		if rErr := trx.Rollback(); rErr != nil {
-			return fmt.Errorf("error on rollback transaction: %w", rErr)
-		}
-		return fmt.Errorf("error on close statement: %w", cErr)
-	}
 	if cErr := trx.Commit(); cErr != nil {
 		return fmt.Errorf("error on commiting transaction: %w", cErr)
 	}
