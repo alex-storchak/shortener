@@ -7,7 +7,6 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/handler"
-	"github.com/alex-storchak/shortener/internal/logger"
 	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/service"
@@ -30,14 +29,10 @@ type App struct {
 	closers closers
 }
 
-func NewApp() (*App, error) {
-	app := &App{}
-
-	if err := app.initConfig(); err != nil {
-		return nil, fmt.Errorf("failed to initialize config: %w", err)
-	}
-	if err := app.initLogger(); err != nil {
-		return nil, fmt.Errorf("failed to initialize logger: %w", err)
+func NewApp(cfg *config.Config, l *zap.Logger) (*App, error) {
+	app := &App{
+		cfg:    cfg,
+		logger: l,
 	}
 
 	shortener, err := app.initShortener()
@@ -57,35 +52,11 @@ func (a *App) Close() error {
 			errs = append(errs, err)
 		}
 	}
-
-	if err := a.logger.Sync(); err != nil {
-		err = fmt.Errorf("failed to sync logger: %w", err)
-		errs = append(errs, err)
-	}
 	return errors.Join(errs...)
 }
 
 func (a *App) Run() error {
 	return handler.Serve(&a.cfg.Handler, a.router)
-}
-
-func (a *App) initConfig() error {
-	cfg, err := config.ParseConfig()
-	if err != nil {
-		return fmt.Errorf("failed to parse config: %w", err)
-	}
-	a.cfg = cfg
-	return nil
-}
-
-func (a *App) initLogger() error {
-	zl, err := logger.NewLogger(&a.cfg.Logger)
-	if err != nil {
-		return fmt.Errorf("failed to initialize logger: %w", err)
-	}
-	a.logger = zl
-	zl.Info("logger initialized")
-	return nil
 }
 
 func (a *App) initURLStorage() (repository.URLStorage, error) {
