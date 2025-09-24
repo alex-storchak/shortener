@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"go.uber.org/zap"
 )
 
@@ -14,14 +17,39 @@ type DBManager struct {
 	db     *sql.DB
 }
 
-func NewDBManager(logger *zap.Logger, db *sql.DB) *DBManager {
-	logger = logger.With(
-		zap.String("component", "db manager"),
-	)
-	return &DBManager{
+func NewDBManager(
+	logger *zap.Logger,
+	db *sql.DB,
+	dsn string,
+	migrationsPath string,
+) (*DBManager, error) {
+	m := &DBManager{
 		logger: logger,
 		db:     db,
 	}
+
+	if err := m.applyMigrations(dsn, migrationsPath); err != nil {
+		return nil, fmt.Errorf("failed to apply migrations: %w", err)
+	}
+	return m, nil
+}
+
+func (m *DBManager) Close() error {
+	return m.db.Close()
+}
+
+func (m *DBManager) applyMigrations(dsn string, migrationsPath string) error {
+	mg, err := migrate.New(migrationsPath, dsn)
+	if err != nil {
+		return fmt.Errorf("failed to initialize database for migrations: %w", err)
+	}
+	err = mg.Up()
+	if errors.Is(err, migrate.ErrNoChange) {
+		m.logger.Info("No new migrations to apply")
+	} else if err != nil {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+	return nil
 }
 
 func (m *DBManager) GetByOriginalURL(ctx context.Context, origURL string) (string, error) {
@@ -42,7 +70,7 @@ func (m *DBManager) getByQuery(ctx context.Context, q string, args ...any) (stri
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrDataNotFoundInDB
 	} else if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to scan query result row: %w", err)
 	}
 	return url, nil
 }
@@ -51,8 +79,7 @@ func (m *DBManager) Persist(ctx context.Context, origURL, shortID string) error 
 	q := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
 	_, err := m.db.ExecContext(ctx, q, origURL, shortID)
 	if err != nil {
-		m.logger.Error("Can't persist binding to db", zap.Error(err))
-		return fmt.Errorf("error persisting binding to db: %w", err)
+		return fmt.Errorf("failed to persist binding (%s, %s) to db: %w", origURL, shortID, err)
 	}
 	return nil
 }
@@ -64,28 +91,41 @@ func (m *DBManager) PersistBatch(ctx context.Context, binds *[]URLBind) error {
 	if err != nil {
 		return fmt.Errorf("error on begin transaction: %w", err)
 	}
+	defer func() {
+		if err := trx.Rollback(); err != nil {
+			if !errors.Is(err, sql.ErrTxDone) {
+				m.logger.Error("failed to rollback transaction", zap.Error(err))
+			}
+		}
+	}()
 
 	stmt, err := trx.PrepareContext(ctx, insertSQL)
 	if err != nil {
-		_ = trx.Rollback()
 		return fmt.Errorf("error on prepare statement: %w", err)
 	}
+	defer func() {
+		if err := stmt.Close(); err != nil {
+			if !errors.Is(err, sql.ErrTxDone) {
+				m.logger.Error("failed to close statement", zap.Error(err))
+			}
+		}
+	}()
 
 	for _, b := range *binds {
-		if _, err := stmt.ExecContext(ctx, b.OrigURL, b.ShortID); err != nil {
-			_ = stmt.Close()
-			_ = trx.Rollback()
-			m.logger.Error("Can't persist batch item to db", zap.Error(err))
-			return fmt.Errorf("error persisting batch to db: %w", err)
+		if _, eErr := stmt.ExecContext(ctx, b.OrigURL, b.ShortID); eErr != nil {
+			return fmt.Errorf("failed to persist batch record `%v` to db: %w", b, eErr)
 		}
 	}
 
-	if err := stmt.Close(); err != nil {
-		_ = trx.Rollback()
-		return fmt.Errorf("error on close statement: %w", err)
+	if cErr := trx.Commit(); cErr != nil {
+		return fmt.Errorf("error on commiting transaction: %w", cErr)
 	}
-	if err := trx.Commit(); err != nil {
-		return fmt.Errorf("error on commiting transaction: %w", err)
+	return nil
+}
+
+func (m *DBManager) Ping(ctx context.Context) error {
+	if err := m.db.PingContext(ctx); err != nil {
+		return fmt.Errorf("failed to ping db: %w", err)
 	}
 	return nil
 }

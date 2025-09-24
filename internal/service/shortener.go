@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/repository"
+	repo "github.com/alex-storchak/shortener/internal/repository"
 	"go.uber.org/zap"
 )
 
@@ -13,20 +15,22 @@ type IShortener interface {
 	ShortenBatch(urls *[]string) (*[]string, error)
 }
 
+type IShortenerService interface {
+	IShortener
+	Pinger
+}
+
 type Shortener struct {
-	urlStorage repository.URLStorage
+	urlStorage repo.URLStorage
 	generator  IDGenerator
 	logger     *zap.Logger
 }
 
 func NewShortener(
 	idGenerator IDGenerator,
-	urlStorage repository.URLStorage,
+	urlStorage repo.URLStorage,
 	logger *zap.Logger,
 ) *Shortener {
-	logger = logger.With(
-		zap.String("package", "shortener"),
-	)
 	return &Shortener{
 		urlStorage: urlStorage,
 		generator:  idGenerator,
@@ -35,73 +39,76 @@ func NewShortener(
 }
 
 func (s *Shortener) Shorten(url string) (string, error) {
-	shortID, err := s.urlStorage.Get(url, repository.OrigURLType)
+	if len(url) == 0 {
+		return "", ErrEmptyInputURL
+	}
+
+	shortID, err := s.urlStorage.Get(url, repo.OrigURLType)
 	if err == nil {
-		s.logger.Debug("url already exists in the storage", zap.String("url", url))
-		return shortID, nil
-	} else if !errors.Is(err, repository.ErrURLStorageDataNotFound) {
-		s.logger.Error("error retrieving url", zap.Error(err))
-		return "", err
+		return shortID, ErrURLAlreadyExists
+	}
+	var nfErr *repo.DataNotFoundError
+	if !errors.As(err, &nfErr) {
+		return "", fmt.Errorf("failed to retrieve url from storage: %w", err)
 	}
 
 	shortID, err = s.generator.Generate()
-	s.logger.Debug("generated short id", zap.String("shortID", shortID))
 	if err != nil {
-		s.logger.Error("failed to generate short id", zap.Error(err))
-		return "", ErrShortenerGenerationShortIDFailed
+		return "", fmt.Errorf("failed to generate short id: %w", err)
 	}
 	if err := s.urlStorage.Set(url, shortID); err != nil {
-		s.logger.Error("failed to set url binding in the urlStorage", zap.Error(err))
-		return "", ErrShortenerSetBindingURLStorageFailed
+		return "", fmt.Errorf("failed to set url binding in storage: %w", err)
 	}
 	return shortID, nil
 }
 
 func (s *Shortener) Extract(shortID string) (string, error) {
-	origURL, err := s.urlStorage.Get(shortID, repository.ShortURLType)
+	origURL, err := s.urlStorage.Get(shortID, repo.ShortURLType)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to retrieve short url from storage: %w", err)
 	}
 	return origURL, nil
 }
 
 func (s *Shortener) ShortenBatch(urls *[]string) (*[]string, error) {
+	if len(*urls) == 0 {
+		return nil, ErrEmptyInputBatch
+	}
+
 	res, toPersist, err := s.segregateBatch(urls)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to segregate batch: %w", err)
 	}
-
 	if len(*toPersist) > 0 {
 		if err := s.urlStorage.BatchSet(toPersist); err != nil {
-			s.logger.Error("failed to set url bindings batch in the urlStorage", zap.Error(err))
-			return nil, ErrShortenerSetBindingURLStorageFailed
+			return nil, fmt.Errorf("failed to set url bindings batch in storage: %w", err)
 		}
 	}
-
 	return res, nil
 }
 
-func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]repository.URLBind, error) {
+func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]repo.URLBind, error) {
 	res := make([]string, len(*urls))
-	toPersist := make([]repository.URLBind, 0)
+	toPersist := make([]repo.URLBind, 0)
 
 	for i, u := range *urls {
 		if u == "" {
 			return nil, nil, ErrEmptyInputURL
 		}
 
-		shortID, err := s.urlStorage.Get(u, repository.OrigURLType)
+		shortID, err := s.urlStorage.Get(u, repo.OrigURLType)
 		if err == nil {
 			res[i] = shortID
 			continue
-		} else if !errors.Is(err, repository.ErrURLStorageDataNotFound) {
-			s.logger.Error("error retrieving url", zap.Error(err))
-			return nil, nil, err
+		}
+		var nfErr *repo.DataNotFoundError
+		if !errors.As(err, &nfErr) {
+			return nil, nil, fmt.Errorf("failed to retrieve url from storage: %w", err)
 		}
 
 		urlBindItem, err := s.prepareURLBindToPersistItem(u)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to prepare url bind to persist item: %w", err)
 		}
 		toPersist = append(toPersist, urlBindItem)
 		res[i] = urlBindItem.ShortID
@@ -109,17 +116,20 @@ func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]repository.URL
 	return &res, &toPersist, nil
 }
 
-func (s *Shortener) prepareURLBindToPersistItem(origURL string) (repository.URLBind, error) {
+func (s *Shortener) prepareURLBindToPersistItem(origURL string) (repo.URLBind, error) {
 	shortID, err := s.generator.Generate()
-	s.logger.Debug("generated short id", zap.String("shortID", shortID))
 	if err != nil {
-		s.logger.Error("failed to generate short id", zap.Error(err))
-		return repository.URLBind{}, ErrShortenerGenerationShortIDFailed
+		return repo.URLBind{}, fmt.Errorf("batch. failed to generate short id: %w", err)
 	}
-	return repository.URLBind{OrigURL: origURL, ShortID: shortID}, nil
+	return repo.URLBind{OrigURL: origURL, ShortID: shortID}, nil
+}
+
+func (s *Shortener) IsReady(ctx context.Context) error {
+	return s.urlStorage.Ping(ctx)
 }
 
 var (
-	ErrShortenerGenerationShortIDFailed    = errors.New("failed to generate short id")
-	ErrShortenerSetBindingURLStorageFailed = errors.New("failed to set url binding in the urlStorage")
+	ErrURLAlreadyExists = errors.New("url already exists")
+	ErrEmptyInputURL    = errors.New("empty url in the input")
+	ErrEmptyInputBatch  = errors.New("empty batch provided")
 )

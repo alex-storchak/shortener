@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/alex-storchak/shortener/internal/model"
@@ -17,7 +18,7 @@ func (d JSONRequestDecoder) Decode(r io.Reader) (model.ShortenRequest, error) {
 	var req model.ShortenRequest
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&req); err != nil {
-		return model.ShortenRequest{}, err
+		return model.ShortenRequest{}, fmt.Errorf("failed to decode request json: %w", err)
 	}
 	return req, nil
 }
@@ -32,7 +33,7 @@ func (d JSONBatchRequestDecoder) DecodeBatch(r io.Reader) (*[]model.BatchShorten
 	var req []model.BatchShortenRequestItem
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&req); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode batch request json: %w", err)
 	}
 	return &req, nil
 }

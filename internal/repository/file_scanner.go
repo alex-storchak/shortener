@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 
 	"go.uber.org/zap"
@@ -13,9 +14,6 @@ type FileScanner struct {
 }
 
 func NewFileScanner(logger *zap.Logger, parser FileRecordParser) *FileScanner {
-	logger = logger.With(
-		zap.String("component", "file scanner"),
-	)
 	return &FileScanner{
 		logger: logger,
 		parser: parser,
@@ -33,18 +31,13 @@ func (s *FileScanner) scan(file *os.File) (*fileRecords, error) {
 
 		record, err := s.parser.parse(line)
 		if err != nil {
-			s.logger.Error("failed to parse record",
-				zap.Error(err),
-				zap.String("line", string(line)),
-			)
-			return nil, err
+			return nil, fmt.Errorf("failed to parse line as record: %w", err)
 		}
 		records = append(records, record)
 	}
 
 	if err := scanner.Err(); err != nil {
-		s.logger.Error("scanner error", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to scan file: %w", err)
 	}
 	return &records, nil
 }

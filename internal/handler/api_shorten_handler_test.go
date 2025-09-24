@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -37,7 +38,9 @@ func (e *JSONEncoderStub) Encode(w io.Writer, _ any) error {
 	if e.encodeError != nil {
 		return e.encodeError
 	}
-	_, _ = w.Write([]byte(`{"result":"https://example.com/abcde"}`))
+	if _, err := w.Write([]byte(`{"result":"https://example.com/abcde"}`)); err != nil {
+		return fmt.Errorf("failed to write encoded response: %w", err)
+	}
 	return nil
 }
 
@@ -55,14 +58,6 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 		shortenError error
 		encodeError  error
 	}{
-		{
-			name:   "non POST request returns 405 (Method Not Allowed)",
-			method: http.MethodGet,
-			want: want{
-				code: http.StatusMethodNotAllowed,
-			},
-			wantErr: true,
-		},
 		{
 			name:   "POST request returns 201 (Created)",
 			method: http.MethodPost,
@@ -82,16 +77,20 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 				code: http.StatusBadRequest,
 			},
 			wantErr:      true,
-			shortenError: service.ErrEmptyURL,
+			shortenError: service.ErrEmptyInputURL,
 		},
 		{
-			name:   "returns 500 (Internal Server Error) when failed to decode request body",
+			name:   "returns 409 (Conflict) when url already exists",
 			method: http.MethodPost,
 			want: want{
-				code: http.StatusInternalServerError,
+				code: http.StatusConflict,
+				body: model.ShortenResponse{
+					ShortURL: "https://example.com/abcde",
+				},
+				contentType: "application/json",
 			},
-			wantErr:      true,
-			shortenError: service.ErrJSONDecode,
+			wantErr:      false,
+			shortenError: service.ErrURLAlreadyExists,
 		},
 		{
 			name:   "returns 500 (Internal Server Error) when random error on shorten url",

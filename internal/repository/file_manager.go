@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 
 	"github.com/alex-storchak/shortener/internal/helper"
@@ -17,9 +18,6 @@ type FileManager struct {
 }
 
 func NewFileManager(filePath, dfltFilePath string, logger *zap.Logger) *FileManager {
-	logger = logger.With(
-		zap.String("component", "file manager"),
-	)
 	return &FileManager{
 		filePath:     filePath,
 		dfltFilePath: dfltFilePath,
@@ -30,8 +28,7 @@ func NewFileManager(filePath, dfltFilePath string, logger *zap.Logger) *FileMana
 func (m *FileManager) getAbsPath(filePath string) (string, error) {
 	absPath, err := helper.GetAbsFilePath(filePath)
 	if err != nil {
-		m.logger.Error("Failed to get absolute path", zap.String("file_path", filePath), zap.Error(err))
-		return "", err
+		return "", fmt.Errorf("failed to get absolute path for `%s`: %w", filePath, err)
 	}
 	return absPath, nil
 }
@@ -43,12 +40,11 @@ func (m *FileManager) open(useDefault bool) (*os.File, error) {
 	}
 	absPath, err := m.getAbsPath(m.filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get absolute path for `%s`: %w", m.filePath, err)
 	}
 	file, err := os.OpenFile(absPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		m.logger.Error("Can't open file by path", zap.String("path", absPath), zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to open file by path `%s`: %w", absPath, err)
 	}
 	m.file = file
 	m.writer = bufio.NewWriter(file)
@@ -64,12 +60,10 @@ func (m *FileManager) close() error {
 
 func (m *FileManager) writeData(data []byte) error {
 	if _, err := m.writer.Write(data); err != nil {
-		m.logger.Error("Can't write data to file", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to write data to file: %w", err)
 	}
 	if err := m.writer.WriteByte('\n'); err != nil {
-		m.logger.Error("Can't add line break in file", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to add line break to file: %w", err)
 	}
 	return m.writer.Flush()
 }

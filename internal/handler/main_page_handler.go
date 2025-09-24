@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -15,10 +16,6 @@ type MainPageHandler struct {
 }
 
 func NewMainPageHandler(mainPageService service.IMainPageService, logger *zap.Logger) *MainPageHandler {
-	logger = logger.With(
-		zap.String("component", "handler"),
-		zap.String("handler", "main_page"),
-	)
 	return &MainPageHandler{
 		mainPageSrv: mainPageService,
 		logger:      logger,
@@ -26,24 +23,19 @@ func NewMainPageHandler(mainPageService service.IMainPageService, logger *zap.Lo
 }
 
 func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	if err := validateMethod(req.Method, http.MethodPost); err != nil {
-		h.logger.Error("Validation of request method failed", zap.Error(err))
-		res.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	defer req.Body.Close()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		h.logger.Error("failed to read request body", zap.Error(err))
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	shortURL, err := h.mainPageSrv.Shorten(body)
-	if errors.Is(err, service.ErrEmptyBody) {
-		h.logger.Error("empty request body", zap.Error(err))
+	if errors.Is(err, service.ErrEmptyInputURL) {
 		res.WriteHeader(http.StatusBadRequest)
+		return
+	} else if errors.Is(err, service.ErrURLAlreadyExists) {
+		h.writeResponse(res, http.StatusConflict, shortURL)
 		return
 	} else if err != nil {
 		h.logger.Error("failed to process main page request", zap.Error(err))
@@ -51,9 +43,18 @@ func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	if err := h.writeResponse(res, http.StatusCreated, shortURL); err != nil {
+		h.logger.Error("failed to write response for main page request", zap.Error(err))
+	}
+}
+
+func (h *MainPageHandler) writeResponse(res http.ResponseWriter, status int, shortURL string) error {
 	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusCreated)
-	_, _ = res.Write([]byte(shortURL))
+	res.WriteHeader(status)
+	if _, err := res.Write([]byte(shortURL)); err != nil {
+		return fmt.Errorf("failed to write response `%s`: %w", shortURL, err)
+	}
+	return nil
 }
 
 func (h *MainPageHandler) Routes() []Route {

@@ -1,8 +1,8 @@
 package config
 
 const (
-	//DefaultDatabaseDSN = "postgres://shortener:StrongPassword02@localhost:54320/shortener?sslmode=disable&search_path=public"
 	DefaultDatabaseDSN = ""
+	MigrationsPath     = "file://migrations"
 )
 
 type Config struct {

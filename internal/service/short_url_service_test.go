@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -13,6 +12,10 @@ import (
 type stubExpandShortener struct {
 	retURL string
 	retErr error
+}
+
+func (s *stubExpandShortener) IsReady() error {
+	return nil
 }
 
 func (s *stubExpandShortener) Shorten(_ string) (string, error) {
@@ -35,13 +38,6 @@ func TestShortURLService_Expand(t *testing.T) {
 		wantErr     bool
 		wantErrIs   error
 	}{
-		{
-			name:      "maps ErrURLStorageDataNotFound to ErrShortURLNotFound",
-			shortID:   "abcde",
-			stubErr:   repository.ErrURLStorageDataNotFound,
-			wantErr:   true,
-			wantErrIs: ErrShortURLNotFound,
-		},
 		{
 			name:        "returns original url on success",
 			shortID:     "abcde",

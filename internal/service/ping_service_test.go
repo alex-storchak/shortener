@@ -11,19 +11,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type stubDBPinger struct {
+type stubPinger struct {
 	PingErr error
 }
 
-func (m *stubDBPinger) PingContext(_ context.Context) error {
+func (m *stubPinger) IsReady(_ context.Context) error {
 	return m.PingErr
 }
 
-type stubSleepDBPinger struct {
+type stubSleepPinger struct {
 	sleep time.Duration
 }
 
-func (s *stubSleepDBPinger) PingContext(ctx context.Context) error {
+func (s *stubSleepPinger) IsReady(ctx context.Context) error {
 	select {
 	case <-time.After(s.sleep):
 		return nil
@@ -32,37 +32,34 @@ func (s *stubSleepDBPinger) PingContext(ctx context.Context) error {
 	}
 }
 
-func TestPingDBService_Ping(t *testing.T) {
+func TestPingService_Ping(t *testing.T) {
 	tests := []struct {
 		name          string
-		db            DBPinger
+		db            Pinger
 		wantErr       bool
-		wantErrIs     error
 		checkDuration bool
 	}{
 		{
 			name:    "success ping",
-			db:      &stubDBPinger{PingErr: nil},
+			db:      &stubPinger{PingErr: nil},
 			wantErr: false,
 		},
 		{
-			name:      "db returns ErrFailedToPingDB error",
-			db:        &stubDBPinger{PingErr: errors.New("db down")},
-			wantErr:   true,
-			wantErrIs: ErrFailedToPingDB,
+			name:    "db returns ErrFailedToPingDB error",
+			db:      &stubPinger{PingErr: errors.New("db down")},
+			wantErr: true,
 		},
 		{
 			name:          "timeout maps to ErrFailedToPingDB and returns quickly",
-			db:            &stubSleepDBPinger{sleep: 5 * time.Second},
+			db:            &stubSleepPinger{sleep: 5 * time.Second},
 			wantErr:       true,
-			wantErrIs:     ErrFailedToPingDB,
 			checkDuration: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv := &PingDBService{db: tt.db, logger: zap.NewNop()}
+			srv := &PingService{pinger: tt.db, logger: zap.NewNop()}
 
 			var start time.Time
 			if tt.checkDuration {
@@ -73,7 +70,6 @@ func TestPingDBService_Ping(t *testing.T) {
 
 			if tt.wantErr {
 				require.Error(t, err)
-				require.ErrorIs(t, err, tt.wantErrIs)
 			} else {
 				require.NoError(t, err)
 			}

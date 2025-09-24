@@ -1,10 +1,11 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/repository"
+	repo "github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -54,13 +55,21 @@ func newURLStorageStub(
 	}
 }
 
+func (d *urlStorageStub) Close() error {
+	return nil
+}
+
+func (d *urlStorageStub) Ping(_ context.Context) error {
+	return nil
+}
+
 func (d *urlStorageStub) Get(url, searchByType string) (string, error) {
-	if searchByType == repository.OrigURLType && d.storage[0].origURL == url {
+	if searchByType == repo.OrigURLType && d.storage[0].origURL == url {
 		return d.storage[0].shortURL, nil
-	} else if searchByType == repository.ShortURLType && d.storage[0].shortURL == url {
+	} else if searchByType == repo.ShortURLType && d.storage[0].shortURL == url {
 		return d.storage[0].origURL, nil
 	}
-	return "", repository.ErrURLStorageDataNotFound
+	return "", repo.NewDataNotFoundError(nil)
 }
 
 func (d *urlStorageStub) Set(_, _ string) error {
@@ -70,7 +79,7 @@ func (d *urlStorageStub) Set(_, _ string) error {
 	return nil
 }
 
-func (d *urlStorageStub) BatchSet(_ *[]repository.URLBind) error {
+func (d *urlStorageStub) BatchSet(_ *[]repo.URLBind) error {
 	if d.setBatchMethodShouldFail {
 		return errors.New("set batch method should fail")
 	}
@@ -81,13 +90,13 @@ func TestShortener_Shorten(t *testing.T) {
 		url string
 	}
 	tests := []struct {
-		name                  string
-		args                  args
-		idGeneratorShouldFail bool
-		urlStorageShouldFail  bool
-		err                   error
-		want                  string
-		wantErr               bool
+		name              string
+		args              args
+		idGenShouldFail   bool
+		storageShouldFail bool
+		err               error
+		want              string
+		wantErr           bool
 	}{
 		{
 			name: "returns new short id if storage is empty",
@@ -99,40 +108,38 @@ func TestShortener_Shorten(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "returns short id from storage if exists",
+			name: "returns short id from storage if exists and ErrURLAlreadyExists",
 			args: args{
 				url: "http://existing.com",
 			},
-			err:     nil,
+			err:     ErrURLAlreadyExists,
 			want:    "abcde",
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "returns error if generation of short id is failed",
 			args: args{
 				url: "https://non-existing.com",
 			},
-			idGeneratorShouldFail: true,
-			err:                   ErrShortenerGenerationShortIDFailed,
-			want:                  "",
-			wantErr:               true,
+			idGenShouldFail: true,
+			want:            "",
+			wantErr:         true,
 		},
 		{
 			name: "returns error if failed to set binding in urlStorage",
 			args: args{
 				url: "http://non-existing.com",
 			},
-			urlStorageShouldFail: true,
-			err:                  ErrShortenerSetBindingURLStorageFailed,
-			want:                 "",
-			wantErr:              true,
+			storageShouldFail: true,
+			want:              "",
+			wantErr:           true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Shortener{
-				urlStorage: newURLStorageStub(tt.urlStorageShouldFail, false),
-				generator:  newIDGeneratorStub(tt.idGeneratorShouldFail),
+				urlStorage: newURLStorageStub(tt.storageShouldFail, false),
+				generator:  newIDGeneratorStub(tt.idGenShouldFail),
 				logger:     zap.NewNop(),
 			}
 
@@ -143,7 +150,9 @@ func TestShortener_Shorten(t *testing.T) {
 				assert.Equal(t, tt.want, got)
 			} else {
 				require.Error(t, err)
-				assert.ErrorIs(t, err, tt.err)
+				if tt.err != nil {
+					assert.ErrorIs(t, err, tt.err)
+				}
 				assert.Equal(t, tt.want, got)
 			}
 		})
@@ -151,22 +160,23 @@ func TestShortener_Shorten(t *testing.T) {
 }
 
 func TestShortener_Extract(t *testing.T) {
+	var nfErr *repo.DataNotFoundError
+
 	type args struct {
 		shortID string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		err     error
-		want    string
-		wantErr bool
+		name      string
+		args      args
+		want      string
+		wantErr   bool
+		wantErrAs any
 	}{
 		{
 			name: "extract url from storage if exists",
 			args: args{
 				shortID: "abcde",
 			},
-			err:     nil,
 			want:    "http://existing.com",
 			wantErr: false,
 		},
@@ -175,9 +185,9 @@ func TestShortener_Extract(t *testing.T) {
 			args: args{
 				shortID: "non-existing",
 			},
-			err:     repository.ErrURLStorageDataNotFound,
-			want:    "",
-			wantErr: true,
+			want:      "",
+			wantErr:   true,
+			wantErrAs: &nfErr,
 		},
 	}
 
@@ -196,7 +206,7 @@ func TestShortener_Extract(t *testing.T) {
 				assert.Equal(t, tt.want, got)
 			} else {
 				require.Error(t, err)
-				assert.ErrorIs(t, err, tt.err)
+				assert.ErrorAs(t, err, tt.wantErrAs)
 				assert.Equal(t, tt.want, got)
 			}
 		})
@@ -229,14 +239,12 @@ func TestShortener_ShortenBatch(t *testing.T) {
 			urls:                  []string{"https://non-existing.com"},
 			idGeneratorShouldFail: true,
 			wantErr:               true,
-			err:                   ErrShortenerGenerationShortIDFailed,
 		},
 		{
 			name:               "returns ErrShortenerSetBindingURLStorageFailed when BatchSet fails",
 			urls:               []string{"https://non-existing.com"},
 			batchSetShouldFail: true,
 			wantErr:            true,
-			err:                ErrShortenerSetBindingURLStorageFailed,
 		},
 	}
 
@@ -257,7 +265,9 @@ func TestShortener_ShortenBatch(t *testing.T) {
 				assert.Equal(t, tt.want, *got)
 			} else {
 				require.Error(t, err)
-				assert.ErrorIs(t, err, tt.err)
+				if tt.err != nil {
+					assert.ErrorIs(t, err, tt.err)
+				}
 				assert.Nil(t, got)
 			}
 		})

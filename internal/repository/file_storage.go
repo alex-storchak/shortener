@@ -1,7 +1,8 @@
 package repository
 
 import (
-	"errors"
+	"context"
+	"fmt"
 
 	"go.uber.org/zap"
 )
@@ -22,10 +23,6 @@ func NewFileURLStorage(
 	fs *FileScanner,
 	um *UUIDManager,
 ) (*FileURLStorage, error) {
-	logger = logger.With(
-		zap.String("component", "storage"),
-	)
-
 	storage := &FileURLStorage{
 		logger:   logger,
 		fileMgr:  fm,
@@ -34,44 +31,37 @@ func NewFileURLStorage(
 	}
 
 	if err := storage.restoreFromFile(false); err != nil {
-		logger.Error("failed to restore storage from file", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed to restore storage from file: %w", err)
 	}
 	storage.initUUIDMgr()
 	return storage, nil
 }
 
 func (s *FileURLStorage) Close() error {
-	s.logger.Info("Closing storage file")
 	return s.fileMgr.close()
+}
+
+func (s *FileURLStorage) Ping(_ context.Context) error {
+	return nil
 }
 
 func (s *FileURLStorage) persistToFile(record fileRecord) error {
 	data, err := record.toJSON()
 	if err != nil {
-		s.logger.Error("Can't prepare record for store", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to convert record to json for store: %w", err)
 	}
-
 	if err := s.fileMgr.writeData(data); err != nil {
-		s.logger.Error("Can't persist record to file", zap.Error(err))
-		return err
+		return fmt.Errorf("mgr failed to persist record to file: %w", err)
 	}
-
 	s.logger.Info("Stored record",
 		zap.Uint64("UUID", record.UUID),
 		zap.String("OriginalURL", record.OriginalURL),
 		zap.String("ShortURL", record.ShortURL),
 	)
-
 	return nil
 }
 
 func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
-	s.logger.Debug("Getting url from storage by type",
-		zap.String("url", url),
-		zap.String("searchByType", searchByType),
-	)
 	for _, record := range *s.records {
 		if searchByType == OrigURLType && record.OriginalURL == url {
 			return record.ShortURL, nil
@@ -79,14 +69,10 @@ func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 			return record.OriginalURL, nil
 		}
 	}
-	return "", ErrURLStorageDataNotFound
+	return "", NewDataNotFoundError(nil)
 }
 
 func (s *FileURLStorage) Set(origURL, shortURL string) error {
-	s.logger.Debug("Setting url to storage",
-		zap.String("origURL", origURL),
-		zap.String("shortURL", shortURL),
-	)
 	record := fileRecord{
 		UUID:        s.uuidMgr.next(),
 		ShortURL:    shortURL,
@@ -94,18 +80,15 @@ func (s *FileURLStorage) Set(origURL, shortURL string) error {
 	}
 	*s.records = append(*s.records, record)
 	if err := s.persistToFile(record); err != nil {
-		return err
+		return fmt.Errorf("failed to persist record `%v` to file: %w", record, err)
 	}
 	return nil
 }
 
 func (s *FileURLStorage) BatchSet(binds *[]URLBind) error {
-	s.logger.Debug("Setting batch of url bindings to storage",
-		zap.Int("count", len(*binds)),
-	)
 	for _, b := range *binds {
 		if err := s.Set(b.OrigURL, b.ShortID); err != nil {
-			return err
+			return fmt.Errorf("failed to set record in storage: %w", err)
 		}
 	}
 	return nil
@@ -124,35 +107,35 @@ func (s *FileURLStorage) initUUIDMgr() {
 func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
 	file, err := s.fileMgr.open(useDefault)
 	if err != nil && !useDefault {
-		s.logger.Warn("Can't restore from requested file, trying default", zap.Error(err))
+		s.logger.Warn("failed to restore from requested file, trying default: ", zap.Error(err))
 		if err := s.restoreFromFile(true); err != nil {
-			s.logger.Error("Failed to restore from default file", zap.Error(err))
-			return err
+			return fmt.Errorf("failed to restore from default file: %w", err)
 		}
 		return nil
 	} else if err != nil {
-		return err
+		return fmt.Errorf("failed to open default file: %w", err)
 	}
 
 	records, err := s.fileScnr.scan(file)
 	if err != nil && !useDefault {
-		s.logger.Warn("Can't scan data from requested file, trying default", zap.Error(err))
-		s.fileMgr.close()
+		s.logger.Warn("Can't scan data from requested file, trying default: ", zap.Error(err))
+		if err := s.fileMgr.close(); err != nil {
+			return fmt.Errorf("failed to close requested file: %w", err)
+		}
 		if err := s.restoreFromFile(true); err != nil {
-			s.fileMgr.close()
-			s.logger.Error("Failed to scan data from default file", zap.Error(err))
-			return err
+			if err := s.fileMgr.close(); err != nil {
+				return fmt.Errorf("failed to close requested file: %w", err)
+			}
+			return fmt.Errorf("failed to restore from default file: %w", err)
 		}
 		return nil
 	} else if err != nil {
-		s.fileMgr.close()
-		return err
+		if cErr := s.fileMgr.close(); cErr != nil {
+			return fmt.Errorf("failed to close default file: %w", cErr)
+		}
+		return fmt.Errorf("failed to scan data from default file: %w", err)
 	}
 
 	s.records = records
 	return nil
 }
-
-var (
-	ErrURLStorageDataNotFound = errors.New("no data in the storage for the requested url")
-)
