@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"strings"
 
 	"github.com/alex-storchak/shortener/internal/config"
 	pkgDB "github.com/alex-storchak/shortener/internal/db"
@@ -14,6 +16,9 @@ import (
 	"github.com/alex-storchak/shortener/internal/repository"
 	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
 	"github.com/alex-storchak/shortener/internal/service"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/teris-io/shortid"
 	"go.uber.org/zap"
 )
@@ -42,21 +47,23 @@ func run() error {
 		return err
 	}
 
-	urlStorage, err := initURLStorage(cfg, zLogger)
-	if err != nil {
-		zLogger.Error("Failed to instantiate url storage", zap.Error(err), zap.String("package", "main"))
-		return err
-	}
-	defer urlStorage.Close()
-
-	shortener := service.NewShortener(shortIDGenerator, urlStorage, zLogger)
-
-	db, err := initDB(cfg)
+	db, err := initDB(cfg, zLogger)
 	if err != nil {
 		zLogger.Error("Failed to instantiate database", zap.Error(err), zap.String("package", "main"))
 		return err
 	}
 	defer db.Close()
+
+	urlStorage, closer, err := initURLStorage(cfg, zLogger, db)
+	if err != nil {
+		zLogger.Error("Failed to instantiate url storage", zap.Error(err), zap.String("package", "main"))
+		return err
+	}
+	if closer != nil {
+		defer closer.Close()
+	}
+
+	shortener := service.NewShortener(shortIDGenerator, urlStorage, zLogger)
 
 	handlers := initHandlers(cfg, zLogger, shortener, db)
 	middlewares := initMiddlewares(zLogger)
@@ -81,12 +88,38 @@ func initLogger(cfg *config.Config) (*zap.Logger, error) {
 	return zLogger, nil
 }
 
-func initDB(cfg *config.Config) (*sql.DB, error) {
+func initDB(cfg *config.Config, zLogger *zap.Logger) (*sql.DB, error) {
+	if strings.TrimSpace(cfg.DB.DSN) == "" {
+		zLogger.Info("DB DSN is empty, skipping db initialization")
+		return nil, nil
+	}
+	if err := applyMigrations(cfg.DB.DSN, zLogger); err != nil {
+		zLogger.Error("Failed to apply migrations", zap.Error(err), zap.String("package", "main"))
+		return nil, err
+	}
 	db, err := pkgDB.GetInstance(&cfg.DB)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize db: %w", err)
 	}
 	return db, nil
+}
+
+func applyMigrations(dsn string, zLogger *zap.Logger) error {
+	m, err := migrate.New(
+		"file://migrations",
+		dsn,
+	)
+	if err != nil {
+		zLogger.Error("Failed to initialize database for migrations", zap.Error(err), zap.String("package", "main"))
+		return err
+	}
+	err = m.Up()
+	if errors.Is(err, migrate.ErrNoChange) {
+		zLogger.Info("No new migrations to apply")
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
 
 func initShortIDGenerator() (*service.ShortIDGenerator, error) {
@@ -97,16 +130,30 @@ func initShortIDGenerator() (*service.ShortIDGenerator, error) {
 	return service.NewShortIDGenerator(generator), nil
 }
 
-func initURLStorage(cfg *config.Config, zLogger *zap.Logger) (*repository.FileURLStorage, error) {
-	fm := repository.NewFileManager(cfg.Repository.FileStoragePath, repoCfg.DefaultFileStoragePath, zLogger)
-	frp := repository.FileRecordParser{}
-	fs := repository.NewFileScanner(zLogger, frp)
-	um := repository.NewUUIDManager(zLogger)
-	urlStorage, err := repository.NewFileURLStorage(zLogger, fm, fs, um)
-	if err != nil {
-		return nil, errors.New("failed to instantiate url storage")
+func initURLStorage(cfg *config.Config, zLogger *zap.Logger, db *sql.DB) (repository.URLStorage, io.Closer, error) {
+	if strings.TrimSpace(cfg.DB.DSN) != "" && db != nil {
+		dbMgr := repository.NewDBManager(zLogger, db)
+		storage := repository.NewDBURLStorage(zLogger, dbMgr)
+		zLogger.Info("db url storage initialized")
+		return storage, io.NopCloser(nil), nil
 	}
-	return urlStorage, nil
+
+	if strings.TrimSpace(cfg.Repository.FileStorage.Path) != "" {
+		fm := repository.NewFileManager(cfg.Repository.FileStorage.Path, repoCfg.DefaultFileStoragePath, zLogger)
+		frp := repository.FileRecordParser{}
+		fs := repository.NewFileScanner(zLogger, frp)
+		um := repository.NewUUIDManager(zLogger)
+		fileStorage, err := repository.NewFileURLStorage(zLogger, fm, fs, um)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to instantiate file storage: %w", err)
+		}
+		zLogger.Info("file url storage initialized")
+		return fileStorage, fileStorage, nil
+	}
+
+	memStorage := repository.NewMemoryURLStorage(zLogger)
+	zLogger.Info("memory url storage initialized")
+	return memStorage, io.NopCloser(nil), nil
 }
 
 func initHandlers(

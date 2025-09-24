@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_url_storage_original_url;

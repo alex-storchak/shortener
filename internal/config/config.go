@@ -31,7 +31,7 @@ func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.Handler.ServerAddr, "a", handlerCfg.DefaultServerAddr, "address of HTTP server")
 	flag.StringVar(&cfg.Handler.BaseURL, "b", handlerCfg.DefaultBaseURL, "base URL of short url service")
 	flag.StringVar(&cfg.Logger.LogLevel, "l", loggerCfg.DefaultLogLevel, "log level")
-	flag.StringVar(&cfg.Repository.FileStoragePath, "f", repoCfg.DefaultFileStoragePath, "db storage file path")
+	flag.StringVar(&cfg.Repository.FileStorage.Path, "f", repoCfg.DefaultFileStoragePath, "db storage file path")
 	flag.StringVar(&cfg.DB.DSN, "d", dbCfg.DefaultDatabaseDSN, "postgres database DSN")
 	flag.Parse()
 }
