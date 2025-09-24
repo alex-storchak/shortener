@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 
+	dbCfg "github.com/alex-storchak/shortener/internal/db/config"
 	handlerCfg "github.com/alex-storchak/shortener/internal/handler/config"
 	loggerCfg "github.com/alex-storchak/shortener/internal/logger/config"
 	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
@@ -13,6 +14,7 @@ type Config struct {
 	Handler    handlerCfg.Config
 	Logger     loggerCfg.Config
 	Repository repoCfg.Config
+	DB         dbCfg.Config
 }
 
 func ParseConfig() (*Config, error) {
@@ -30,6 +32,7 @@ func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.Handler.BaseURL, "b", handlerCfg.DefaultBaseURL, "base URL of short url service")
 	flag.StringVar(&cfg.Logger.LogLevel, "l", loggerCfg.DefaultLogLevel, "log level")
 	flag.StringVar(&cfg.Repository.FileStoragePath, "f", repoCfg.DefaultFileStoragePath, "db storage file path")
+	flag.StringVar(&cfg.DB.DSN, "d", dbCfg.DefaultDatabaseDSN, "postgres database DSN")
 	flag.Parse()
 }
 

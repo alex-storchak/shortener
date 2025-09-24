@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	dbCfg "github.com/alex-storchak/shortener/internal/db/config"
 	handlerCfg "github.com/alex-storchak/shortener/internal/handler/config"
 	loggerCfg "github.com/alex-storchak/shortener/internal/logger/config"
 	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
@@ -16,6 +17,7 @@ const (
 	envNameBaseURL       = "BASE_URL"
 	envNameLogLevel      = "LOG_LEVEL"
 	envFileStoragePath   = "FILE_STORAGE_PATH"
+	envDatabaseDSN       = "DATABASE_DSN"
 )
 
 type ConfigTestSuite struct {
@@ -27,7 +29,7 @@ type ConfigTestSuite struct {
 }
 
 func (s *ConfigTestSuite) SetupSuite() {
-	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL, envNameLogLevel, envFileStoragePath}
+	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL, envNameLogLevel, envFileStoragePath, envDatabaseDSN}
 }
 
 func (s *ConfigTestSuite) setEnvs(envs map[string]string) {
@@ -72,6 +74,20 @@ func (s *ConfigTestSuite) TearDownSubTest() {
 }
 
 func (s *ConfigTestSuite) TestParseConfig() {
+	dfltHandlerCfg := handlerCfg.Config{
+		ServerAddr: handlerCfg.DefaultServerAddr,
+		BaseURL:    handlerCfg.DefaultBaseURL,
+	}
+	dfltLoggerCfg := loggerCfg.Config{
+		LogLevel: loggerCfg.DefaultLogLevel,
+	}
+	dfltRepoCfg := repoCfg.Config{
+		FileStoragePath: repoCfg.DefaultFileStoragePath,
+	}
+	dfltDBCfg := dbCfg.Config{
+		DSN: dbCfg.DefaultDatabaseDSN,
+	}
+
 	tests := []struct {
 		name  string
 		flags []string
@@ -83,16 +99,10 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			flags: []string{},
 			envs:  map[string]string{},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: handlerCfg.DefaultServerAddr,
-					BaseURL:    handlerCfg.DefaultBaseURL,
-				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
+				Handler:    dfltHandlerCfg,
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
 			},
 		},
 		{
@@ -101,6 +111,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				"-a=example.com:1111",
 				"-b=http://example.com:1111",
 				"-f=./data/some_file.json",
+				"-d=postgres:flagsDSN",
 			},
 			envs: map[string]string{},
 			want: &Config{
@@ -108,12 +119,11 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "example.com:1111",
 					BaseURL:    "http://example.com:1111",
 				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
+				Logger: dfltLoggerCfg,
 				Repository: repoCfg.Config{
 					FileStoragePath: "./data/some_file.json",
 				},
+				DB: dbCfg.Config{DSN: "postgres:flagsDSN"},
 			},
 		},
 		{
@@ -127,12 +137,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "example.com:1111",
 					BaseURL:    handlerCfg.DefaultBaseURL,
 				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
 			},
 		},
 		{
@@ -146,12 +153,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: handlerCfg.DefaultServerAddr,
 					BaseURL:    "http://example.com:1111",
 				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
 			},
 		},
 		{
@@ -167,12 +171,11 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    "http://env-example.com:1111",
 				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
+				Logger: dfltLoggerCfg,
 				Repository: repoCfg.Config{
 					FileStoragePath: "./data/some_file.json",
 				},
+				DB: dfltDBCfg,
 			},
 		},
 		{
@@ -192,12 +195,11 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    "http://env-example.com:1111",
 				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
+				Logger: dfltLoggerCfg,
 				Repository: repoCfg.Config{
 					FileStoragePath: "./data/some_another_file.json",
 				},
+				DB: dfltDBCfg,
 			},
 		},
 		{
@@ -213,12 +215,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    "http://flags-example.com:1111",
 				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
 			},
 		},
 		{
@@ -234,12 +233,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 					ServerAddr: "env-example.com:1111",
 					BaseURL:    handlerCfg.DefaultBaseURL,
 				},
-				Logger: loggerCfg.Config{
-					LogLevel: loggerCfg.DefaultLogLevel,
-				},
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
+				Logger:     dfltLoggerCfg,
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
 			},
 		},
 		{
@@ -251,16 +247,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameLogLevel: "debug",
 			},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: handlerCfg.DefaultServerAddr,
-					BaseURL:    handlerCfg.DefaultBaseURL,
-				},
+				Handler: dfltHandlerCfg,
 				Logger: loggerCfg.Config{
 					LogLevel: "debug",
 				},
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
 			},
 		},
 		{
@@ -270,16 +262,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameLogLevel: "debug",
 			},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: handlerCfg.DefaultServerAddr,
-					BaseURL:    handlerCfg.DefaultBaseURL,
-				},
+				Handler: dfltHandlerCfg,
 				Logger: loggerCfg.Config{
 					LogLevel: "debug",
 				},
-				Repository: repoCfg.Config{
-					FileStoragePath: repoCfg.DefaultFileStoragePath,
-				},
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
 			},
 		},
 		{
@@ -289,16 +277,106 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: handlerCfg.DefaultServerAddr,
-					BaseURL:    handlerCfg.DefaultBaseURL,
-				},
+				Handler: dfltHandlerCfg,
 				Logger: loggerCfg.Config{
 					LogLevel: "error",
 				},
+				Repository: dfltRepoCfg,
+				DB:         dfltDBCfg,
+			},
+		},
+		{
+			name: "parse config with env FILE_STORAGE_PATH and -f (file storage path) flag returns env",
+			flags: []string{
+				"-f=./data/flags_file.json",
+			},
+			envs: map[string]string{
+				envFileStoragePath: "./data/env_file.json",
+			},
+			want: &Config{
+				Handler: dfltHandlerCfg,
+				Logger:  dfltLoggerCfg,
+				Repository: repoCfg.Config{
+					FileStoragePath: "./data/env_file.json",
+				},
+				DB: dfltDBCfg,
+			},
+		},
+		{
+			name:  "parse config with env FILE_STORAGE_PATH without flags returns env",
+			flags: []string{},
+			envs: map[string]string{
+				envFileStoragePath: "./data/env_file.json",
+			},
+			want: &Config{
+				Handler: dfltHandlerCfg,
+				Logger:  dfltLoggerCfg,
+				Repository: repoCfg.Config{
+					FileStoragePath: "./data/env_file.json",
+				},
+				DB: dfltDBCfg,
+			},
+		},
+		{
+			name: "parse config without env with -f (file storage path) flag returns flag",
+			flags: []string{
+				"-f=./data/flags_file.json",
+			},
+			envs: map[string]string{},
+			want: &Config{
+				Handler: dfltHandlerCfg,
+				Logger:  dfltLoggerCfg,
+				Repository: repoCfg.Config{
+					FileStoragePath: "./data/flags_file.json",
+				},
+				DB: dfltDBCfg,
+			},
+		},
+		{
+			name: "parse config with env DATABASE_DSN and -d (database dsn) flag returns env",
+			flags: []string{
+				"-d=postgres:flagsDSN",
+			},
+			envs: map[string]string{
+				envDatabaseDSN: "postgres:envDSN",
+			},
+			want: &Config{
+				Handler: dfltHandlerCfg,
+				Logger:  dfltLoggerCfg,
 				Repository: repoCfg.Config{
 					FileStoragePath: repoCfg.DefaultFileStoragePath,
 				},
+				DB: dbCfg.Config{DSN: "postgres:envDSN"},
+			},
+		},
+		{
+			name:  "parse config with env DATABASE_DSN without flags returns env",
+			flags: []string{},
+			envs: map[string]string{
+				envDatabaseDSN: "postgres:envDSN",
+			},
+			want: &Config{
+				Handler: dfltHandlerCfg,
+				Logger:  dfltLoggerCfg,
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
+				DB: dbCfg.Config{DSN: "postgres:envDSN"},
+			},
+		},
+		{
+			name: "parse config without env with -d (database dsn) flag returns flag",
+			flags: []string{
+				"-d=postgres:flagsDSN",
+			},
+			envs: map[string]string{},
+			want: &Config{
+				Handler: dfltHandlerCfg,
+				Logger:  dfltLoggerCfg,
+				Repository: repoCfg.Config{
+					FileStoragePath: repoCfg.DefaultFileStoragePath,
+				},
+				DB: dbCfg.Config{DSN: "postgres:flagsDSN"},
 			},
 		},
 	}
