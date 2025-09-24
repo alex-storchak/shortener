@@ -30,6 +30,10 @@ func (s dbManagerStub) Persist(_ context.Context, _, _ string) error {
 	return s.persistErr
 }
 
+func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]URLBind) error {
+	return s.persistErr
+}
+
 func TestDBURLStorage_Get(t *testing.T) {
 	lgr := zap.NewNop()
 	unexpected := errors.New("random error")
@@ -127,6 +131,49 @@ func TestDBURLStorage_Set(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			st := NewDBURLStorage(lgr, tt.stub)
 			err := st.Set("https://example.com", "abcde")
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.wantErrIs != nil {
+					require.ErrorIs(t, err, tt.wantErrIs)
+				}
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestDBURLStorage_BatchSet(t *testing.T) {
+	lgr := zap.NewNop()
+	insertErr := errors.New("batch insert failed")
+
+	tests := []struct {
+		name      string
+		stub      dbManagerStub
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name: "success",
+			stub: dbManagerStub{persistErr: nil},
+		},
+		{
+			name:      "returns persist error",
+			stub:      dbManagerStub{persistErr: insertErr},
+			wantErr:   true,
+			wantErrIs: insertErr,
+		},
+	}
+
+	binds := &[]URLBind{
+		{OrigURL: "https://a.com", ShortID: "abc"},
+		{OrigURL: "https://b.com", ShortID: "def"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st := NewDBURLStorage(lgr, tt.stub)
+			err := st.BatchSet(binds)
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.wantErrIs != nil {

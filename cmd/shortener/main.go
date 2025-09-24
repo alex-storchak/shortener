@@ -175,6 +175,10 @@ func initHandlers(
 	jsonEncoder := service.JSONEncoder{}
 	apiShortenHandler := handler.NewAPIShortenHandler(apiShortenService, jsonEncoder, zLogger)
 
+	batchDecoder := service.JSONBatchRequestDecoder{}
+	apiShortenBatchService := service.NewAPIShortenBatchService(cfg.Handler.BaseURL, shortener, batchDecoder, zLogger)
+	apiShortenBatchHandler := handler.NewAPIShortenBatchHandler(apiShortenBatchService, jsonEncoder, zLogger)
+
 	pingDBService := service.NewPingDBService(db, zLogger)
 	pingDBHandler := handler.NewPingDBHandler(pingDBService, zLogger)
 
@@ -182,6 +186,7 @@ func initHandlers(
 		mainPageHandler,
 		shortURLHandler,
 		apiShortenHandler,
+		apiShortenBatchHandler,
 		pingDBHandler,
 	}
 }

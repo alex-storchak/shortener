@@ -11,6 +11,7 @@ type dbManager interface {
 	GetByOriginalURL(ctx context.Context, origURL string) (string, error)
 	GetByShortID(ctx context.Context, shortID string) (string, error)
 	Persist(ctx context.Context, origURL, shortID string) error
+	PersistBatch(ctx context.Context, binds *[]URLBind) error
 }
 
 type DBURLStorage struct {
@@ -55,6 +56,17 @@ func (s *DBURLStorage) Set(origURL, shortURL string) error {
 	)
 	if err := s.dbMgr.Persist(context.Background(), origURL, shortURL); err != nil {
 		s.logger.Error("Can't persist record to db", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (s *DBURLStorage) BatchSet(binds *[]URLBind) error {
+	s.logger.Debug("Setting batch of url bindings to storage",
+		zap.Int("count", len(*binds)),
+	)
+	if err := s.dbMgr.PersistBatch(context.Background(), binds); err != nil {
+		s.logger.Error("Can't persist batch records to db", zap.Error(err))
 		return err
 	}
 	return nil

@@ -76,7 +76,7 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "returns 403 (Bad Request) when empty url in body requested",
+			name:   "returns 400 (Bad Request) when empty url in body requested",
 			method: http.MethodPost,
 			want: want{
 				code: http.StatusBadRequest,

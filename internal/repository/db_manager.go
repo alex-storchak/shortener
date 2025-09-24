@@ -57,6 +57,39 @@ func (m *DBManager) Persist(ctx context.Context, origURL, shortID string) error 
 	return nil
 }
 
+func (m *DBManager) PersistBatch(ctx context.Context, binds *[]URLBind) error {
+	insertSQL := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
+
+	trx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("error on begin transaction: %w", err)
+	}
+
+	stmt, err := trx.PrepareContext(ctx, insertSQL)
+	if err != nil {
+		_ = trx.Rollback()
+		return fmt.Errorf("error on prepare statement: %w", err)
+	}
+
+	for _, b := range *binds {
+		if _, err := stmt.ExecContext(ctx, b.OrigURL, b.ShortID); err != nil {
+			_ = stmt.Close()
+			_ = trx.Rollback()
+			m.logger.Error("Can't persist batch item to db", zap.Error(err))
+			return fmt.Errorf("error persisting batch to db: %w", err)
+		}
+	}
+
+	if err := stmt.Close(); err != nil {
+		_ = trx.Rollback()
+		return fmt.Errorf("error on close statement: %w", err)
+	}
+	if err := trx.Commit(); err != nil {
+		return fmt.Errorf("error on commiting transaction: %w", err)
+	}
+	return nil
+}
+
 var (
 	ErrDataNotFoundInDB = errors.New("data not found in db")
 )

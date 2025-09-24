@@ -46,3 +46,11 @@ func (s *MemoryURLStorage) Set(origURL, shortURL string) error {
 	s.shortToOrig[shortURL] = origURL
 	return nil
 }
+
+func (s *MemoryURLStorage) BatchSet(binds *[]URLBind) error {
+	for _, b := range *binds {
+		s.origToShort[b.OrigURL] = b.ShortID
+		s.shortToOrig[b.ShortID] = b.OrigURL
+	}
+	return nil
+}

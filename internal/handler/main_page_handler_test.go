@@ -57,7 +57,7 @@ func TestMainPageHandler_ServeHTTP(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "POST request returns 403 (Bad Request) when shorten errors on empty body passed",
+			name:   "POST request returns 400 (Bad Request) when shorten errors on empty body passed",
 			method: http.MethodPost,
 			want: want{
 				code: http.StatusBadRequest,
