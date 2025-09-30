@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -18,7 +19,7 @@ type MainPageSrvStub struct {
 	shortenError error
 }
 
-func (s *MainPageSrvStub) Shorten(_ []byte) (shortURL string, err error) {
+func (s *MainPageSrvStub) Shorten(_ context.Context, _ []byte) (shortURL string, err error) {
 	if s.shortenError != nil {
 		return "https://example.com/abcde", s.shortenError
 	}

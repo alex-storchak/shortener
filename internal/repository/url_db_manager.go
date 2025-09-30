@@ -28,14 +28,20 @@ func (m *URLDBManager) Close() error {
 	return m.db.Close()
 }
 
-func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (string, error) {
+func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string /*, userUUID string*/) (string, error) {
 	q := "SELECT short_id FROM url_storage WHERE original_url = $1"
 	return m.getByQuery(ctx, q, origURL)
+
+	//q := "SELECT short_id FROM url_storage WHERE original_url = $1 AND user_id = (SELECT id FROM auth_user WHERE user_uuid = $2)"
+	//return m.getByQuery(ctx, q, origURL, userUUID)
 }
 
-func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string) (string, error) {
+func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string /*, userUUID string*/) (string, error) {
 	q := "SELECT original_url FROM url_storage WHERE short_id = $1"
 	return m.getByQuery(ctx, q, shortID)
+
+	//q := "SELECT original_url FROM url_storage WHERE short_id = $1 AND user_id = (SELECT id FROM auth_user WHERE user_uuid = $2)"
+	//return m.getByQuery(ctx, q, shortID, userUUID)
 }
 
 func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (string, error) {
@@ -51,17 +57,17 @@ func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (s
 	return url, nil
 }
 
-func (m *URLDBManager) Persist(ctx context.Context, origURL, shortID string) error {
-	q := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
-	_, err := m.db.ExecContext(ctx, q, origURL, shortID)
+func (m *URLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord) error {
+	q := "INSERT INTO url_storage (original_url, short_id, user_id) SELECT $1, $2, id FROM auth_user where user_uuid = $3"
+	_, err := m.db.ExecContext(ctx, q, r.OrigURL, r.ShortID, r.UserUUID)
 	if err != nil {
-		return fmt.Errorf("failed to persist binding (%s, %s) to db: %w", origURL, shortID, err)
+		return fmt.Errorf("failed to persist binding (%s, %s, %s) to db: %w", r.OrigURL, r.ShortID, r.UserUUID, err)
 	}
 	return nil
 }
 
 func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error {
-	insertSQL := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
+	insertSQL := "INSERT INTO url_storage (original_url, short_id, user_id) SELECT $1, $2, id FROM auth_user where user_uuid = $3"
 
 	trx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -88,7 +94,7 @@ func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLStora
 	}()
 
 	for _, b := range *binds {
-		if _, eErr := stmt.ExecContext(ctx, b.OrigURL, b.ShortID); eErr != nil {
+		if _, eErr := stmt.ExecContext(ctx, b.OrigURL, b.ShortID, b.UserUUID); eErr != nil {
 			return fmt.Errorf("failed to persist batch record `%v` to db: %w", b, eErr)
 		}
 	}

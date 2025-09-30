@@ -10,9 +10,9 @@ import (
 )
 
 type IURLDBManager interface {
-	GetByOriginalURL(ctx context.Context, origURL string) (string, error)
-	GetByShortID(ctx context.Context, shortID string) (string, error)
-	Persist(ctx context.Context, origURL, shortID string) error
+	GetByOriginalURL(ctx context.Context, origURL string /*, userUUID string*/) (string, error)
+	GetByShortID(ctx context.Context, shortID string /*, userUUID string*/) (string, error)
+	Persist(ctx context.Context, r *model.URLStorageRecord) error
 	PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
@@ -41,12 +41,12 @@ func (s *DBURLStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
+func (s *DBURLStorage) Get( /*userUUID string, */ url, searchByType string) (string, error) {
 	var err error
 	if searchByType == OrigURLType {
-		url, err = s.dbMgr.GetByOriginalURL(context.Background(), url)
+		url, err = s.dbMgr.GetByOriginalURL(context.Background(), url /*, userUUID*/)
 	} else if searchByType == ShortURLType {
-		url, err = s.dbMgr.GetByShortID(context.Background(), url)
+		url, err = s.dbMgr.GetByShortID(context.Background(), url /*, userUUID*/)
 	}
 	if errors.Is(err, ErrDataNotFoundInDB) {
 		return "", NewDataNotFoundError(ErrDataNotFoundInDB)
@@ -57,7 +57,7 @@ func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
 }
 
 func (s *DBURLStorage) Set(r *model.URLStorageRecord) error {
-	if err := s.dbMgr.Persist(context.Background(), r.OrigURL, r.ShortID); err != nil {
+	if err := s.dbMgr.Persist(context.Background(), r); err != nil {
 		return fmt.Errorf("failed to persist record to db: %w", err)
 	}
 	return nil

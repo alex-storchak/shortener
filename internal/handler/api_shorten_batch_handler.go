@@ -33,7 +33,7 @@ func (h *APIShortenBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Re
 		return
 	}
 
-	respItems, err := h.batchSrv.ShortenBatch(req.Body)
+	respItems, err := h.batchSrv.ShortenBatch(req.Context(), req.Body)
 	if errors.Is(err, service.ErrEmptyInputURL) || errors.Is(err, service.ErrEmptyInputBatch) {
 		res.WriteHeader(http.StatusBadRequest)
 		return

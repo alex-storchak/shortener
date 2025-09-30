@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -15,7 +16,7 @@ type ShortURLSrvStub struct {
 	expandError error
 }
 
-func (s *ShortURLSrvStub) Expand(_ string) (origURL string, err error) {
+func (s *ShortURLSrvStub) Expand(_ context.Context, _ string) (origURL string, err error) {
 	if s.expandError != nil {
 		return "", s.expandError
 	}

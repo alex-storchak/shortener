@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/alex-storchak/shortener/internal/helper"
 	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
-type UserCtxKey struct{}
-
-func createUser(um service.IUserManager) (*model.User, error) {
+func createUser(um repository.IUserManager) (*model.User, error) {
 	user, err := um.NewUser()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new user: %w", err)
@@ -21,13 +21,14 @@ func createUser(um service.IUserManager) (*model.User, error) {
 	return user, nil
 }
 
-func AuthMiddleware(logger *zap.Logger, authSrv service.AuthService, um service.IUserManager) func(http.Handler) http.Handler {
+func AuthMiddleware(logger *zap.Logger, authSrv *service.AuthService, um repository.IUserManager) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var user *model.User
 
 			cookie, err := r.Cookie("auth")
 			if err == nil { // cookie exists
+				logger.Info("cookie exists", zap.String("cookie", cookie.Value))
 				token := cookie.Value
 				claims, vErr := authSrv.ValidateToken(token)
 				if vErr != nil {
@@ -54,12 +55,13 @@ func AuthMiddleware(logger *zap.Logger, authSrv service.AuthService, um service.
 							HttpOnly: true,
 							MaxAge:   30 * 24 * 60 * 60, // 30 дней
 						})
-						ctx := context.WithValue(r.Context(), UserCtxKey{}, user)
+						ctx := context.WithValue(r.Context(), helper.UserCtxKey{}, user)
 						next.ServeHTTP(w, r.WithContext(ctx))
 						return
 					}
 				}
 			}
+			logger.Info(" cookie doesn't exist or need to extend expire time")
 
 			// cookie doesn't exist or need to extend expire time
 			if user == nil {
@@ -84,7 +86,7 @@ func AuthMiddleware(logger *zap.Logger, authSrv service.AuthService, um service.
 				HttpOnly: true,
 				MaxAge:   30 * 24 * 60 * 60, // 30 дней
 			})
-			ctx := context.WithValue(r.Context(), UserCtxKey{}, user)
+			ctx := context.WithValue(r.Context(), helper.UserCtxKey{}, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

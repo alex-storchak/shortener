@@ -44,8 +44,9 @@ func NewApp(cfg *config.Config, l *zap.Logger) (*App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize shortener: %w", err)
 	}
-
-	app.initRouter(shortener)
+	if err := app.initRouter(shortener, sf); err != nil {
+		return nil, fmt.Errorf("failed to initialize router: %w", err)
+	}
 	return app, nil
 }
 
@@ -122,16 +123,28 @@ func (a *App) initHandlers(shortener service.IShortenerService) *handler.Handler
 	}
 }
 
-func (a *App) initMiddlewares() *handler.Middlewares {
+func (a *App) initMiddlewares(sf factory.IStorageFactory) (*handler.Middlewares, error) {
+	us, err := sf.MakeUserStorage()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize user storage: %w", err)
+	}
+	as := service.NewAuthService(a.logger, us)
+	um := repository.NewUserManager(a.logger, us)
+
 	return &handler.Middlewares{
 		middleware.RequestLogger(a.logger),
+		middleware.AuthMiddleware(a.logger, as, um),
 		middleware.GzipMiddleware(a.logger),
-	}
+	}, nil
 }
 
-func (a *App) initRouter(shortener service.IShortenerService) {
+func (a *App) initRouter(shortener service.IShortenerService, sf factory.IStorageFactory) error {
 	handlers := a.initHandlers(shortener)
-	middlewares := a.initMiddlewares()
+	middlewares, err := a.initMiddlewares(sf)
+	if err != nil {
+		return fmt.Errorf("failed to initialize middlewares: %w", err)
+	}
 	a.router = handler.NewRouter(handlers, middlewares)
 	a.logger.Info("router initialized")
+	return nil
 }

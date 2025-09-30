@@ -11,9 +11,9 @@ import (
 )
 
 type IShortener interface {
-	Shorten(url string) (shortID string, err error)
-	Extract(shortID string) (OrigURL string, err error)
-	ShortenBatch(urls *[]string) (*[]string, error)
+	Shorten(userUUID string, url string) (shortID string, err error)
+	Extract( /*userUUID string, */ shortID string) (OrigURL string, err error)
+	ShortenBatch(userUUID string, urls *[]string) (*[]string, error)
 }
 
 type IShortenerService interface {
@@ -39,12 +39,12 @@ func NewShortener(
 	}
 }
 
-func (s *Shortener) Shorten(url string) (string, error) {
+func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
 	if len(url) == 0 {
 		return "", ErrEmptyInputURL
 	}
 
-	shortID, err := s.urlStorage.Get(url, repo.OrigURLType)
+	shortID, err := s.urlStorage.Get( /*userUUID, */ url, repo.OrigURLType)
 	if err == nil {
 		return shortID, ErrURLAlreadyExists
 	}
@@ -57,27 +57,27 @@ func (s *Shortener) Shorten(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to generate short id: %w", err)
 	}
-	record := &model.URLStorageRecord{OrigURL: url, ShortID: shortID}
+	record := &model.URLStorageRecord{OrigURL: url, ShortID: shortID, UserUUID: userUUID}
 	if err := s.urlStorage.Set(record); err != nil {
 		return "", fmt.Errorf("failed to set url binding in storage: %w", err)
 	}
 	return shortID, nil
 }
 
-func (s *Shortener) Extract(shortID string) (string, error) {
-	origURL, err := s.urlStorage.Get(shortID, repo.ShortURLType)
+func (s *Shortener) Extract( /*userUUID string, */ shortID string) (string, error) {
+	origURL, err := s.urlStorage.Get( /*userUUID, */ shortID, repo.ShortURLType)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve short url from storage: %w", err)
 	}
 	return origURL, nil
 }
 
-func (s *Shortener) ShortenBatch(urls *[]string) (*[]string, error) {
+func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, error) {
 	if len(*urls) == 0 {
 		return nil, ErrEmptyInputBatch
 	}
 
-	res, toPersist, err := s.segregateBatch(urls)
+	res, toPersist, err := s.segregateBatch(userUUID, urls)
 	if err != nil {
 		return nil, fmt.Errorf("failed to segregate batch: %w", err)
 	}
@@ -89,7 +89,7 @@ func (s *Shortener) ShortenBatch(urls *[]string) (*[]string, error) {
 	return res, nil
 }
 
-func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLStorageRecord, error) {
+func (s *Shortener) segregateBatch(userUUID string, urls *[]string) (*[]string, *[]model.URLStorageRecord, error) {
 	res := make([]string, len(*urls))
 	toPersist := make([]model.URLStorageRecord, 0)
 
@@ -98,7 +98,7 @@ func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLStora
 			return nil, nil, ErrEmptyInputURL
 		}
 
-		shortID, err := s.urlStorage.Get(u, repo.OrigURLType)
+		shortID, err := s.urlStorage.Get( /*userUUID, */ u, repo.OrigURLType)
 		if err == nil {
 			res[i] = shortID
 			continue
@@ -108,7 +108,7 @@ func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLStora
 			return nil, nil, fmt.Errorf("failed to retrieve url from storage: %w", err)
 		}
 
-		urlBindItem, err := s.prepareURLBindToPersistItem(u)
+		urlBindItem, err := s.prepareURLBindToPersistItem(userUUID, u)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to prepare url bind to persist item: %w", err)
 		}
@@ -118,12 +118,12 @@ func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLStora
 	return &res, &toPersist, nil
 }
 
-func (s *Shortener) prepareURLBindToPersistItem(origURL string) (model.URLStorageRecord, error) {
+func (s *Shortener) prepareURLBindToPersistItem(userUUID string, origURL string) (model.URLStorageRecord, error) {
 	shortID, err := s.generator.Generate()
 	if err != nil {
 		return model.URLStorageRecord{}, fmt.Errorf("batch. failed to generate short id: %w", err)
 	}
-	return model.URLStorageRecord{OrigURL: origURL, ShortID: shortID}, nil
+	return model.URLStorageRecord{OrigURL: origURL, ShortID: shortID, UserUUID: userUUID}, nil
 }
 
 func (s *Shortener) IsReady(ctx context.Context) error {

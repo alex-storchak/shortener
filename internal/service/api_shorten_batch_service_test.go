@@ -2,10 +2,12 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/helper"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,14 +32,14 @@ func (s *stubShortenerBatch) IsReady() error {
 	return nil
 }
 
-func (s *stubShortenerBatch) Shorten(_ string) (string, error) {
+func (s *stubShortenerBatch) Shorten(_ string, _ string) (string, error) {
 	return "", nil
 }
 
-func (s *stubShortenerBatch) Extract(_ string) (string, error) {
+func (s *stubShortenerBatch) Extract( /*_ string, */ _ string) (string, error) {
 	return "", nil
 }
-func (s *stubShortenerBatch) ShortenBatch(_ *[]string) (*[]string, error) {
+func (s *stubShortenerBatch) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
 	return s.retIDs, s.retErr
 }
 
@@ -122,9 +124,10 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 				baseURL = "http://any"
 			}
 			srv := NewAPIShortenBatchService(baseURL, shortener, dec, zap.NewNop())
+			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
 
 			var r io.Reader = bytes.NewReader(tt.body)
-			resp, err := srv.ShortenBatch(r)
+			resp, err := srv.ShortenBatch(ctx, r)
 
 			if tt.wantErr {
 				require.Error(t, err)

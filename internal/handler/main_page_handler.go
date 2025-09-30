@@ -30,12 +30,14 @@ func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	shortURL, err := h.mainPageSrv.Shorten(body)
+	shortURL, err := h.mainPageSrv.Shorten(req.Context(), body)
 	if errors.Is(err, service.ErrEmptyInputURL) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	} else if errors.Is(err, service.ErrURLAlreadyExists) {
-		h.writeResponse(res, http.StatusConflict, shortURL)
+		if err := h.writeResponse(res, http.StatusConflict, shortURL); err != nil {
+			h.logger.Error("failed to write response (status conflict) for main page request", zap.Error(err))
+		}
 		return
 	} else if err != nil {
 		h.logger.Error("failed to process main page request", zap.Error(err))
@@ -44,7 +46,7 @@ func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 	}
 
 	if err := h.writeResponse(res, http.StatusCreated, shortURL); err != nil {
-		h.logger.Error("failed to write response for main page request", zap.Error(err))
+		h.logger.Error("failed to write response (status created) for main page request", zap.Error(err))
 	}
 }
 

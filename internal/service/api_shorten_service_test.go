@@ -2,10 +2,12 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/helper"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,15 +28,15 @@ type stubShortenerAPI struct {
 	retErr     error
 }
 
-func (s *stubShortenerAPI) Shorten(_ string) (string, error) {
+func (s *stubShortenerAPI) Shorten(_, _ string) (string, error) {
 	return s.retShortID, s.retErr
 }
 
-func (s *stubShortenerAPI) Extract(_ string) (string, error) {
+func (s *stubShortenerAPI) Extract( /*_, */ _ string) (string, error) {
 	return "", nil
 }
 
-func (s *stubShortenerAPI) ShortenBatch(_ *[]string) (*[]string, error) {
+func (s *stubShortenerAPI) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
 	return nil, nil
 }
 
@@ -102,9 +104,10 @@ func TestAPIShortenService_Shorten(t *testing.T) {
 				baseURL = "http://any"
 			}
 			srv := NewAPIShortenService(baseURL, shortener, dec, zap.NewNop())
+			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
 
 			var r io.Reader = bytes.NewReader(tt.body)
-			resp, err := srv.Shorten(r)
+			resp, err := srv.Shorten(ctx, r)
 
 			if tt.wantErr {
 				require.Error(t, err)

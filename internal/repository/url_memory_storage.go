@@ -27,17 +27,17 @@ func (s *MemoryURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *MemoryURLStorage) Get(url, searchByType string) (string, error) {
+func (s *MemoryURLStorage) Get( /*userUUID string, */ url, searchByType string) (string, error) {
 	switch searchByType {
 	case OrigURLType:
 		for _, r := range s.records {
-			if r.OrigURL == url {
+			if /*r.UserUUID == userUUID && */ r.OrigURL == url {
 				return r.ShortID, nil
 			}
 		}
 	case ShortURLType:
 		for _, r := range s.records {
-			if r.ShortID == url {
+			if /*r.UserUUID == userUUID && */ r.ShortID == url {
 				return r.OrigURL, nil
 			}
 		}

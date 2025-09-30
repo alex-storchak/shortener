@@ -1,9 +1,12 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -14,14 +17,14 @@ type stubShortener struct {
 	retErr     error
 }
 
-func (s *stubShortener) Shorten(_ string) (string, error) {
+func (s *stubShortener) Shorten(_, _ string) (string, error) {
 	return s.retShortID, s.retErr
 }
 
-func (s *stubShortener) Extract(_ string) (string, error) {
+func (s *stubShortener) Extract( /*_, */ _ string) (string, error) {
 	return "", nil
 }
-func (s *stubShortener) ShortenBatch(_ *[]string) (*[]string, error) {
+func (s *stubShortener) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
 	return nil, nil
 }
 
@@ -69,9 +72,10 @@ func TestMainPageService_Shorten(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			core := &stubShortener{tt.stubShortID, tt.stubErr}
-			svc := NewMainPageService("https://short.host", core, zap.NewNop())
+			srv := NewMainPageService("https://short.host", core, zap.NewNop())
+			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
 
-			gotURL, gotErr := svc.Shorten(tt.body)
+			gotURL, gotErr := srv.Shorten(ctx, tt.body)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

@@ -25,8 +25,14 @@ type Claims struct {
 
 type AuthService struct {
 	logger *zap.Logger
-	um     IUserManager
 	us     repository.UserStorage
+}
+
+func NewAuthService(logger *zap.Logger, us repository.UserStorage) *AuthService {
+	return &AuthService{
+		logger: logger,
+		us:     us,
+	}
 }
 
 func (a *AuthService) ValidateToken(tokenString string) (*Claims, error) {

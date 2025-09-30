@@ -62,11 +62,11 @@ func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
 	return nil
 }
 
-func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
+func (s *FileURLStorage) Get( /*userUUID string, */ url, searchByType string) (string, error) {
 	for _, record := range *s.records {
-		if searchByType == OrigURLType && record.OriginalURL == url {
+		if searchByType == OrigURLType && record.OriginalURL == url /*&& record.UserUUID == userUUID*/ {
 			return record.ShortURL, nil
-		} else if searchByType == ShortURLType && record.ShortURL == url {
+		} else if searchByType == ShortURLType && record.ShortURL == url /*&& record.UserUUID == userUUID*/ {
 			return record.OriginalURL, nil
 		}
 	}
@@ -78,6 +78,7 @@ func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
 		UUID:        s.uuidMgr.next(),
 		ShortURL:    r.ShortID,
 		OriginalURL: r.OrigURL,
+		UserUUID:    r.UserUUID,
 	}
 	*s.records = append(*s.records, record)
 	if err := s.persistToFile(record); err != nil {
