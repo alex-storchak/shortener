@@ -64,7 +64,7 @@ func (d *urlStorageStub) Ping(_ context.Context) error {
 	return nil
 }
 
-func (d *urlStorageStub) Get( /*_ string, */ url, searchByType string) (string, error) {
+func (d *urlStorageStub) Get(url, searchByType string) (string, error) {
 	if searchByType == repo.OrigURLType && d.storage[0].origURL == url {
 		return d.storage[0].shortURL, nil
 	} else if searchByType == repo.ShortURLType && d.storage[0].shortURL == url {
@@ -169,7 +169,6 @@ func TestShortener_Shorten(t *testing.T) {
 
 func TestShortener_Extract(t *testing.T) {
 	var nfErr *repo.DataNotFoundError
-	/*userUUID := "userUUID"*/
 
 	type args struct {
 		shortID string
@@ -208,7 +207,7 @@ func TestShortener_Extract(t *testing.T) {
 				logger:     zap.NewNop(),
 			}
 
-			got, err := s.Extract( /*userUUID, */ tt.args.shortID)
+			got, err := s.Extract(tt.args.shortID)
 
 			if !tt.wantErr {
 				require.NoError(t, err)

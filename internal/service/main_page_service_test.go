@@ -21,7 +21,7 @@ func (s *stubShortener) Shorten(_, _ string) (string, error) {
 	return s.retShortID, s.retErr
 }
 
-func (s *stubShortener) Extract( /*_, */ _ string) (string, error) {
+func (s *stubShortener) Extract(_ string) (string, error) {
 	return "", nil
 }
 func (s *stubShortener) ShortenBatch(_ string, _ *[]string) (*[]string, error) {

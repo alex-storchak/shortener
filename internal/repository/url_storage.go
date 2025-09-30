@@ -13,7 +13,7 @@ const (
 )
 
 type URLStorage interface {
-	Get( /*userUUID string, */ url, searchByType string) (string, error)
+	Get(url, searchByType string) (string, error)
 	Set(record *model.URLStorageRecord) error
 	BatchSet(records *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error

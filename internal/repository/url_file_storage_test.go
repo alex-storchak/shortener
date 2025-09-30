@@ -75,41 +75,41 @@ func TestFileURLStorage(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.hasRecord {
-				assertStorageHasURL(t, tt, storage /*, userUUID*/)
+				assertStorageHasURL(t, tt, storage)
 				return
 			}
 
-			assertStorageDoesNotHaveURL(t, tt, storage /*, userUUID*/)
+			assertStorageDoesNotHaveURL(t, tt, storage)
 
 			err = storage.Set(&model.URLStorageRecord{OrigURL: tt.wantOrigURL, ShortID: tt.wantShortURL, UserUUID: userUUID})
 			require.NoError(t, err)
 
-			assertStorageHasURL(t, tt, storage /*, userUUID*/)
+			assertStorageHasURL(t, tt, storage)
 
 			fm = NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
 			um = NewUUIDManager(lgr)
 			newStorage, err := NewFileURLStorage(lgr, fm, fs, um)
 			require.NoError(t, err)
-			assertStorageHasURL(t, tt, newStorage /*, userUUID*/)
+			assertStorageHasURL(t, tt, newStorage)
 		})
 	}
 }
 
-func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage /*, userUUID string*/) {
-	origURL, err := storage.Get( /*userUUID, */ tt.wantShortURL, ShortURLType)
+func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
+	origURL, err := storage.Get(tt.wantShortURL, ShortURLType)
 	require.NoError(t, err)
 	assert.Equal(t, tt.wantOrigURL, origURL)
 
-	shortURL, err := storage.Get( /*userUUID, */ tt.wantOrigURL, OrigURLType)
+	shortURL, err := storage.Get(tt.wantOrigURL, OrigURLType)
 	require.NoError(t, err)
 	assert.Equal(t, tt.wantShortURL, shortURL)
 }
 
-func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage /*, userUUID string*/) {
-	_, err := storage.Get( /*userUUID, */ tt.wantShortURL, ShortURLType)
+func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {
+	_, err := storage.Get(tt.wantShortURL, ShortURLType)
 	var nfErrShort, nfErrOrig *DataNotFoundError
 	require.ErrorAs(t, err, &nfErrShort)
-	_, err = storage.Get( /*userUUID, */ tt.wantOrigURL, OrigURLType)
+	_, err = storage.Get(tt.wantOrigURL, OrigURLType)
 	require.ErrorAs(t, err, &nfErrOrig)
 }
 

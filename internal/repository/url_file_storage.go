@@ -62,11 +62,11 @@ func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
 	return nil
 }
 
-func (s *FileURLStorage) Get( /*userUUID string, */ url, searchByType string) (string, error) {
+func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 	for _, record := range *s.records {
-		if searchByType == OrigURLType && record.OriginalURL == url /*&& record.UserUUID == userUUID*/ {
+		if searchByType == OrigURLType && record.OriginalURL == url {
 			return record.ShortURL, nil
-		} else if searchByType == ShortURLType && record.ShortURL == url /*&& record.UserUUID == userUUID*/ {
+		} else if searchByType == ShortURLType && record.ShortURL == url {
 			return record.OriginalURL, nil
 		}
 	}

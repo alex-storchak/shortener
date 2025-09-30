@@ -25,7 +25,7 @@ func NewShortURLHandler(shortURLService service.IShortURLService, logger *zap.Lo
 func (h *ShortURLHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	shortID := chi.URLParam(req, "id")
 
-	origURL, err := h.shortURLSrv.Expand(req.Context(), shortID)
+	origURL, err := h.shortURLSrv.Expand(shortID)
 	var nfErr *repository.DataNotFoundError
 	if errors.As(err, &nfErr) {
 		res.WriteHeader(http.StatusNotFound)

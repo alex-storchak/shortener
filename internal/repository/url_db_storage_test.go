@@ -27,11 +27,11 @@ func (s dbManagerStub) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s dbManagerStub) GetByOriginalURL(_ context.Context, _ string /*, _ string*/) (string, error) {
+func (s dbManagerStub) GetByOriginalURL(_ context.Context, _ string) (string, error) {
 	return s.retByOrig, s.errByOrig
 }
 
-func (s dbManagerStub) GetByShortID(_ context.Context, _ string /*, _ string*/) (string, error) {
+func (s dbManagerStub) GetByShortID(_ context.Context, _ string) (string, error) {
 	return s.retByShort, s.errByShort
 }
 
@@ -43,14 +43,13 @@ func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]model.URLStorageReco
 	return s.persistErr
 }
 
-func (s dbManagerStub) GetByUserUUID(_ context.Context, _ string /*, _ string*/) (*[]model.URLStorageRecord, error) {
+func (s dbManagerStub) GetByUserUUID(_ context.Context, _ string) (*[]model.URLStorageRecord, error) {
 	return nil, nil
 }
 
 func TestDBURLStorage_Get(t *testing.T) {
 	lgr := zap.NewNop()
 	unexpected := errors.New("random error")
-	/*userUUID := "userUUID"*/
 	var notFound *DataNotFoundError
 
 	tests := []struct {
@@ -106,7 +105,7 @@ func TestDBURLStorage_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st := NewDBURLStorage(lgr, tt.stub)
-			got, err := st.Get( /*userUUID, */ tt.inputURL, tt.searchType)
+			got, err := st.Get(tt.inputURL, tt.searchType)
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.wantErrIs != nil {

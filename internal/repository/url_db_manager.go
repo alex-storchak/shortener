@@ -28,20 +28,14 @@ func (m *URLDBManager) Close() error {
 	return m.db.Close()
 }
 
-func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string /*, userUUID string*/) (string, error) {
+func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (string, error) {
 	q := "SELECT short_id FROM url_storage WHERE original_url = $1"
 	return m.getByQuery(ctx, q, origURL)
-
-	//q := "SELECT short_id FROM url_storage WHERE original_url = $1 AND user_id = (SELECT id FROM auth_user WHERE user_uuid = $2)"
-	//return m.getByQuery(ctx, q, origURL, userUUID)
 }
 
-func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string /*, userUUID string*/) (string, error) {
+func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string) (string, error) {
 	q := "SELECT original_url FROM url_storage WHERE short_id = $1"
 	return m.getByQuery(ctx, q, shortID)
-
-	//q := "SELECT original_url FROM url_storage WHERE short_id = $1 AND user_id = (SELECT id FROM auth_user WHERE user_uuid = $2)"
-	//return m.getByQuery(ctx, q, shortID, userUUID)
 }
 
 func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (string, error) {

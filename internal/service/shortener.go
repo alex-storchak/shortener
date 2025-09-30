@@ -12,7 +12,7 @@ import (
 
 type IShortener interface {
 	Shorten(userUUID string, url string) (shortID string, err error)
-	Extract( /*userUUID string, */ shortID string) (OrigURL string, err error)
+	Extract(shortID string) (OrigURL string, err error)
 	ShortenBatch(userUUID string, urls *[]string) (*[]string, error)
 	GetUserURLs(userUUID string) (*[]model.URLStorageRecord, error)
 }
@@ -45,7 +45,7 @@ func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
 		return "", ErrEmptyInputURL
 	}
 
-	shortID, err := s.urlStorage.Get( /*userUUID, */ url, repo.OrigURLType)
+	shortID, err := s.urlStorage.Get(url, repo.OrigURLType)
 	if err == nil {
 		return shortID, ErrURLAlreadyExists
 	}
@@ -65,8 +65,8 @@ func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
 	return shortID, nil
 }
 
-func (s *Shortener) Extract( /*userUUID string, */ shortID string) (string, error) {
-	origURL, err := s.urlStorage.Get( /*userUUID, */ shortID, repo.ShortURLType)
+func (s *Shortener) Extract(shortID string) (string, error) {
+	origURL, err := s.urlStorage.Get(shortID, repo.ShortURLType)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve short url from storage: %w", err)
 	}
@@ -99,7 +99,7 @@ func (s *Shortener) segregateBatch(userUUID string, urls *[]string) (*[]string, 
 			return nil, nil, ErrEmptyInputURL
 		}
 
-		shortID, err := s.urlStorage.Get( /*userUUID, */ u, repo.OrigURLType)
+		shortID, err := s.urlStorage.Get(u, repo.OrigURLType)
 		if err == nil {
 			res[i] = shortID
 			continue

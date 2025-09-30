@@ -1,11 +1,9 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/helper"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +22,7 @@ func (s *stubExpandShortener) IsReady() error {
 func (s *stubExpandShortener) Shorten(_, _ string) (string, error) {
 	return "", nil
 }
-func (s *stubExpandShortener) Extract( /*_, */ _ string) (string, error) {
+func (s *stubExpandShortener) Extract(_ string) (string, error) {
 	return s.retURL, s.retErr
 }
 func (s *stubExpandShortener) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
@@ -64,9 +62,8 @@ func TestShortURLService_Expand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr}
 			srv := NewShortURLService(shortener, zap.NewNop())
-			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
 
-			gotURL, gotErr := srv.Expand(ctx, tt.shortID)
+			gotURL, gotErr := srv.Expand(tt.shortID)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

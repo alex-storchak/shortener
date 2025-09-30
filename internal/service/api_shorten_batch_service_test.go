@@ -36,7 +36,7 @@ func (s *stubShortenerBatch) Shorten(_ string, _ string) (string, error) {
 	return "", nil
 }
 
-func (s *stubShortenerBatch) Extract( /*_ string, */ _ string) (string, error) {
+func (s *stubShortenerBatch) Extract(_ string) (string, error) {
 	return "", nil
 }
 func (s *stubShortenerBatch) ShortenBatch(_ string, _ *[]string) (*[]string, error) {

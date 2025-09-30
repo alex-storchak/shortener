@@ -32,7 +32,7 @@ func (s *stubShortenerAPI) Shorten(_, _ string) (string, error) {
 	return s.retShortID, s.retErr
 }
 
-func (s *stubShortenerAPI) Extract( /*_, */ _ string) (string, error) {
+func (s *stubShortenerAPI) Extract(_ string) (string, error) {
 	return "", nil
 }
 
