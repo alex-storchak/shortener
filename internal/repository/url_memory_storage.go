@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +49,7 @@ func (s *MemoryURLStorage) Set(origURL, shortURL string) error {
 	return nil
 }
 
-func (s *MemoryURLStorage) BatchSet(binds *[]URLBind) error {
+func (s *MemoryURLStorage) BatchSet(binds *[]model.URLBind) error {
 	for _, b := range *binds {
 		s.origToShort[b.OrigURL] = b.ShortID
 		s.shortToOrig[b.ShortID] = b.OrigURL

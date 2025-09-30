@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	repo "github.com/alex-storchak/shortener/internal/repository"
 	"go.uber.org/zap"
 )
@@ -87,9 +88,9 @@ func (s *Shortener) ShortenBatch(urls *[]string) (*[]string, error) {
 	return res, nil
 }
 
-func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]repo.URLBind, error) {
+func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLBind, error) {
 	res := make([]string, len(*urls))
-	toPersist := make([]repo.URLBind, 0)
+	toPersist := make([]model.URLBind, 0)
 
 	for i, u := range *urls {
 		if u == "" {
@@ -116,12 +117,12 @@ func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]repo.URLBind, 
 	return &res, &toPersist, nil
 }
 
-func (s *Shortener) prepareURLBindToPersistItem(origURL string) (repo.URLBind, error) {
+func (s *Shortener) prepareURLBindToPersistItem(origURL string) (model.URLBind, error) {
 	shortID, err := s.generator.Generate()
 	if err != nil {
-		return repo.URLBind{}, fmt.Errorf("batch. failed to generate short id: %w", err)
+		return model.URLBind{}, fmt.Errorf("batch. failed to generate short id: %w", err)
 	}
-	return repo.URLBind{OrigURL: origURL, ShortID: shortID}, nil
+	return model.URLBind{OrigURL: origURL, ShortID: shortID}, nil
 }
 
 func (s *Shortener) IsReady(ctx context.Context) error {

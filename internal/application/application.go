@@ -9,6 +9,7 @@ import (
 	"github.com/alex-storchak/shortener/internal/handler"
 	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/alex-storchak/shortener/internal/repository"
+	"github.com/alex-storchak/shortener/internal/repository/factory"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/teris-io/shortid"
@@ -35,7 +36,11 @@ func NewApp(cfg *config.Config, l *zap.Logger) (*App, error) {
 		logger: l,
 	}
 
-	shortener, err := app.initShortener()
+	sf, err := factory.NewStorageFactory(cfg, l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize storage factory: %w", err)
+	}
+	shortener, err := app.initShortener(sf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize shortener: %w", err)
 	}
@@ -59,9 +64,8 @@ func (a *App) Run() error {
 	return handler.Serve(&a.cfg.Handler, a.router)
 }
 
-func (a *App) initURLStorage() (repository.URLStorage, error) {
-	sf := repository.NewStorageFactory(a.cfg, a.logger)
-	storage, err := sf.Produce()
+func (a *App) initURLStorage(sf factory.IStorageFactory) (repository.URLStorage, error) {
+	storage, err := sf.MakeURLStorage()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize url storage: %w", err)
 	}
@@ -77,12 +81,12 @@ func (a *App) initShortIDGenerator() (*service.ShortIDGenerator, error) {
 	return service.NewShortIDGenerator(generator), nil
 }
 
-func (a *App) initShortener() (*service.Shortener, error) {
+func (a *App) initShortener(sf factory.IStorageFactory) (*service.Shortener, error) {
 	gen, err := a.initShortIDGenerator()
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate shortid generator: %w", err)
 	}
-	storage, err := a.initURLStorage()
+	storage, err := a.initURLStorage(sf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize url storage: %w", err)
 	}

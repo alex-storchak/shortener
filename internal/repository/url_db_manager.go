@@ -6,63 +6,39 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/golang-migrate/migrate/v4"
+	"github.com/alex-storchak/shortener/internal/model"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"go.uber.org/zap"
 )
 
-type DBManager struct {
+type URLDBManager struct {
 	logger *zap.Logger
 	db     *sql.DB
 }
 
-func NewDBManager(
-	logger *zap.Logger,
-	db *sql.DB,
-	dsn string,
-	migrationsPath string,
-) (*DBManager, error) {
-	m := &DBManager{
+func NewURLDBManager(logger *zap.Logger, db *sql.DB) *URLDBManager {
+	return &URLDBManager{
 		logger: logger,
 		db:     db,
 	}
-
-	if err := m.applyMigrations(dsn, migrationsPath); err != nil {
-		return nil, fmt.Errorf("failed to apply migrations: %w", err)
-	}
-	return m, nil
 }
 
-func (m *DBManager) Close() error {
+func (m *URLDBManager) Close() error {
 	return m.db.Close()
 }
 
-func (m *DBManager) applyMigrations(dsn string, migrationsPath string) error {
-	mg, err := migrate.New(migrationsPath, dsn)
-	if err != nil {
-		return fmt.Errorf("failed to initialize database for migrations: %w", err)
-	}
-	err = mg.Up()
-	if errors.Is(err, migrate.ErrNoChange) {
-		m.logger.Info("No new migrations to apply")
-	} else if err != nil {
-		return fmt.Errorf("failed to apply migrations: %w", err)
-	}
-	return nil
-}
-
-func (m *DBManager) GetByOriginalURL(ctx context.Context, origURL string) (string, error) {
+func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (string, error) {
 	q := "SELECT short_id FROM url_storage WHERE original_url = $1"
 	return m.getByQuery(ctx, q, origURL)
 }
 
-func (m *DBManager) GetByShortID(ctx context.Context, shortID string) (string, error) {
+func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string) (string, error) {
 	q := "SELECT original_url FROM url_storage WHERE short_id = $1"
 	return m.getByQuery(ctx, q, shortID)
 }
 
-func (m *DBManager) getByQuery(ctx context.Context, q string, args ...any) (string, error) {
+func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (string, error) {
 	row := m.db.QueryRowContext(ctx, q, args...)
 
 	var url string
@@ -75,7 +51,7 @@ func (m *DBManager) getByQuery(ctx context.Context, q string, args ...any) (stri
 	return url, nil
 }
 
-func (m *DBManager) Persist(ctx context.Context, origURL, shortID string) error {
+func (m *URLDBManager) Persist(ctx context.Context, origURL, shortID string) error {
 	q := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
 	_, err := m.db.ExecContext(ctx, q, origURL, shortID)
 	if err != nil {
@@ -84,7 +60,7 @@ func (m *DBManager) Persist(ctx context.Context, origURL, shortID string) error 
 	return nil
 }
 
-func (m *DBManager) PersistBatch(ctx context.Context, binds *[]URLBind) error {
+func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLBind) error {
 	insertSQL := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
 
 	trx, err := m.db.BeginTx(ctx, nil)
@@ -123,7 +99,7 @@ func (m *DBManager) PersistBatch(ctx context.Context, binds *[]URLBind) error {
 	return nil
 }
 
-func (m *DBManager) Ping(ctx context.Context) error {
+func (m *URLDBManager) Ping(ctx context.Context) error {
 	if err := m.db.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to ping db: %w", err)
 	}

@@ -4,23 +4,24 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
-type fileRecords []fileRecord
+type urlFileRecords []urlFileRecord
 
 type FileURLStorage struct {
 	logger   *zap.Logger
 	fileMgr  *FileManager
-	fileScnr *FileScanner
+	fileScnr *URLFileScanner
 	uuidMgr  *UUIDManager
-	records  *fileRecords
+	records  *urlFileRecords
 }
 
 func NewFileURLStorage(
 	logger *zap.Logger,
 	fm *FileManager,
-	fs *FileScanner,
+	fs *URLFileScanner,
 	um *UUIDManager,
 ) (*FileURLStorage, error) {
 	storage := &FileURLStorage{
@@ -45,7 +46,7 @@ func (s *FileURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *FileURLStorage) persistToFile(record fileRecord) error {
+func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
 	data, err := record.toJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert record to json for store: %w", err)
@@ -73,7 +74,7 @@ func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 }
 
 func (s *FileURLStorage) Set(origURL, shortURL string) error {
-	record := fileRecord{
+	record := urlFileRecord{
 		UUID:        s.uuidMgr.next(),
 		ShortURL:    shortURL,
 		OriginalURL: origURL,
@@ -85,7 +86,7 @@ func (s *FileURLStorage) Set(origURL, shortURL string) error {
 	return nil
 }
 
-func (s *FileURLStorage) BatchSet(binds *[]URLBind) error {
+func (s *FileURLStorage) BatchSet(binds *[]model.URLBind) error {
 	for _, b := range *binds {
 		if err := s.Set(b.OrigURL, b.ShortID); err != nil {
 			return fmt.Errorf("failed to set record in storage: %w", err)

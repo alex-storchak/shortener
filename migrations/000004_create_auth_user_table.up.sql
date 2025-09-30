@@ -1,0 +1,13 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS auth_user (
+    id         SERIAL PRIMARY KEY,
+    user_uuid  VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+INSERT INTO auth_user (user_uuid)
+VALUES ('00000000-0000-0000-0000-000000000000')
+ON CONFLICT (user_uuid) DO NOTHING;
+
+COMMIT;

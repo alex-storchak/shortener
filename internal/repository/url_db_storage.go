@@ -5,24 +5,25 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
-type dbManager interface {
+type IURLDBManager interface {
 	GetByOriginalURL(ctx context.Context, origURL string) (string, error)
 	GetByShortID(ctx context.Context, shortID string) (string, error)
 	Persist(ctx context.Context, origURL, shortID string) error
-	PersistBatch(ctx context.Context, binds *[]URLBind) error
+	PersistBatch(ctx context.Context, binds *[]model.URLBind) error
 	Ping(ctx context.Context) error
 	Close() error
 }
 
 type DBURLStorage struct {
 	logger *zap.Logger
-	dbMgr  dbManager
+	dbMgr  IURLDBManager
 }
 
-func NewDBURLStorage(logger *zap.Logger, dbm dbManager) *DBURLStorage {
+func NewDBURLStorage(logger *zap.Logger, dbm IURLDBManager) *DBURLStorage {
 	return &DBURLStorage{
 		logger: logger,
 		dbMgr:  dbm,
@@ -62,7 +63,7 @@ func (s *DBURLStorage) Set(origURL, shortURL string) error {
 	return nil
 }
 
-func (s *DBURLStorage) BatchSet(binds *[]URLBind) error {
+func (s *DBURLStorage) BatchSet(binds *[]model.URLBind) error {
 	if err := s.dbMgr.PersistBatch(context.Background(), binds); err != nil {
 		return fmt.Errorf("failed to persist batch records to db: %w", err)
 	}

@@ -65,7 +65,7 @@ func TestFileURLStorage(t *testing.T) {
 
 			lgr := zap.NewNop()
 			fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
-			frp := FileRecordParser{}
+			frp := URLFileRecordParser{}
 			fs := NewFileScanner(lgr, frp)
 			um := NewUUIDManager(lgr)
 			storage, err := NewFileURLStorage(lgr, fm, fs, um)
@@ -118,7 +118,7 @@ func createTmpStorageFile(t *testing.T) *os.File {
 }
 
 func fillStorageFile(t *testing.T, testDBFile *os.File) {
-	testRecord := fileRecord{
+	testRecord := urlFileRecord{
 		UUID:        1,
 		ShortURL:    "abcde",
 		OriginalURL: "https://example.com",

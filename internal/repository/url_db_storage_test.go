@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -38,7 +39,7 @@ func (s dbManagerStub) Persist(_ context.Context, _, _ string) error {
 	return s.persistErr
 }
 
-func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]URLBind) error {
+func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]model.URLBind) error {
 	return s.persistErr
 }
 
@@ -178,7 +179,7 @@ func TestDBURLStorage_BatchSet(t *testing.T) {
 		},
 	}
 
-	binds := &[]URLBind{
+	binds := &[]model.URLBind{
 		{OrigURL: "https://a.com", ShortID: "abc"},
 		{OrigURL: "https://b.com", ShortID: "def"},
 	}

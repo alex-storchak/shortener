@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	repo "github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,7 +80,7 @@ func (d *urlStorageStub) Set(_, _ string) error {
 	return nil
 }
 
-func (d *urlStorageStub) BatchSet(_ *[]repo.URLBind) error {
+func (d *urlStorageStub) BatchSet(_ *[]model.URLBind) error {
 	if d.setBatchMethodShouldFail {
 		return errors.New("set batch method should fail")
 	}
