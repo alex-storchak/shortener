@@ -73,14 +73,14 @@ func (d *urlStorageStub) Get(url, searchByType string) (string, error) {
 	return "", repo.NewDataNotFoundError(nil)
 }
 
-func (d *urlStorageStub) Set(_, _ string) error {
+func (d *urlStorageStub) Set(_ *model.URLStorageRecord) error {
 	if d.setMethodShouldFail {
 		return errors.New("set method should fail")
 	}
 	return nil
 }
 
-func (d *urlStorageStub) BatchSet(_ *[]model.URLBind) error {
+func (d *urlStorageStub) BatchSet(_ *[]model.URLStorageRecord) error {
 	if d.setBatchMethodShouldFail {
 		return errors.New("set batch method should fail")
 	}

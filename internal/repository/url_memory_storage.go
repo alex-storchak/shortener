@@ -8,16 +8,14 @@ import (
 )
 
 type MemoryURLStorage struct {
-	logger      *zap.Logger
-	origToShort map[string]string
-	shortToOrig map[string]string
+	logger  *zap.Logger
+	records []model.URLStorageRecord
 }
 
 func NewMemoryURLStorage(logger *zap.Logger) *MemoryURLStorage {
 	return &MemoryURLStorage{
-		logger:      logger,
-		origToShort: make(map[string]string),
-		shortToOrig: make(map[string]string),
+		logger:  logger,
+		records: make([]model.URLStorageRecord, 0),
 	}
 }
 
@@ -32,27 +30,27 @@ func (s *MemoryURLStorage) Ping(_ context.Context) error {
 func (s *MemoryURLStorage) Get(url, searchByType string) (string, error) {
 	switch searchByType {
 	case OrigURLType:
-		if v, ok := s.origToShort[url]; ok {
-			return v, nil
+		for _, r := range s.records {
+			if r.OrigURL == url {
+				return r.ShortID, nil
+			}
 		}
 	case ShortURLType:
-		if v, ok := s.shortToOrig[url]; ok {
-			return v, nil
+		for _, r := range s.records {
+			if r.ShortID == url {
+				return r.OrigURL, nil
+			}
 		}
 	}
 	return "", NewDataNotFoundError(nil)
 }
 
-func (s *MemoryURLStorage) Set(origURL, shortURL string) error {
-	s.origToShort[origURL] = shortURL
-	s.shortToOrig[shortURL] = origURL
+func (s *MemoryURLStorage) Set(r *model.URLStorageRecord) error {
+	s.records = append(s.records, *r)
 	return nil
 }
 
-func (s *MemoryURLStorage) BatchSet(binds *[]model.URLBind) error {
-	for _, b := range *binds {
-		s.origToShort[b.OrigURL] = b.ShortID
-		s.shortToOrig[b.ShortID] = b.OrigURL
-	}
+func (s *MemoryURLStorage) BatchSet(records *[]model.URLStorageRecord) error {
+	s.records = append(s.records, *records...)
 	return nil
 }

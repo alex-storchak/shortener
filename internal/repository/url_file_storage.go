@@ -73,11 +73,11 @@ func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 	return "", NewDataNotFoundError(nil)
 }
 
-func (s *FileURLStorage) Set(origURL, shortURL string) error {
+func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
 	record := urlFileRecord{
 		UUID:        s.uuidMgr.next(),
-		ShortURL:    shortURL,
-		OriginalURL: origURL,
+		ShortURL:    r.ShortID,
+		OriginalURL: r.OrigURL,
 	}
 	*s.records = append(*s.records, record)
 	if err := s.persistToFile(record); err != nil {
@@ -86,9 +86,9 @@ func (s *FileURLStorage) Set(origURL, shortURL string) error {
 	return nil
 }
 
-func (s *FileURLStorage) BatchSet(binds *[]model.URLBind) error {
+func (s *FileURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
 	for _, b := range *binds {
-		if err := s.Set(b.OrigURL, b.ShortID); err != nil {
+		if err := s.Set(&b); err != nil {
 			return fmt.Errorf("failed to set record in storage: %w", err)
 		}
 	}

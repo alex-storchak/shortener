@@ -1,4 +1,4 @@
-package repository
+package service
 
 import (
 	"github.com/alex-storchak/shortener/internal/model"
@@ -7,15 +7,15 @@ import (
 )
 
 type IUserManager interface {
-	NewUser() (model.User, error)
+	NewUser() (*model.User, error)
 }
 
 type UserManager struct {
 	logger *zap.Logger
 }
 
-func (um *UserManager) NewUser() (model.User, error) {
-	return model.User{
+func (um *UserManager) NewUser() (*model.User, error) {
+	return &model.User{
 		UUID: uuid.NewString(),
 	}, nil
 }

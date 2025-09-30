@@ -14,8 +14,8 @@ const (
 
 type URLStorage interface {
 	Get(url, searchByType string) (string, error)
-	Set(origURL, shortURL string) error
-	BatchSet(binds *[]model.URLBind) error
+	Set(record *model.URLStorageRecord) error
+	BatchSet(records *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
 }

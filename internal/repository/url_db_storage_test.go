@@ -39,7 +39,7 @@ func (s dbManagerStub) Persist(_ context.Context, _, _ string) error {
 	return s.persistErr
 }
 
-func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]model.URLBind) error {
+func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]model.URLStorageRecord) error {
 	return s.persistErr
 }
 
@@ -144,7 +144,7 @@ func TestDBURLStorage_Set(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st := NewDBURLStorage(lgr, tt.stub)
-			err := st.Set("https://example.com", "abcde")
+			err := st.Set(&model.URLStorageRecord{OrigURL: "https://example.com", ShortID: "abcde"})
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.wantErrIs != nil {
@@ -179,7 +179,7 @@ func TestDBURLStorage_BatchSet(t *testing.T) {
 		},
 	}
 
-	binds := &[]model.URLBind{
+	binds := &[]model.URLStorageRecord{
 		{OrigURL: "https://a.com", ShortID: "abc"},
 		{OrigURL: "https://b.com", ShortID: "def"},
 	}

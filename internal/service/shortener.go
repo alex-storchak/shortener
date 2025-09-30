@@ -57,7 +57,8 @@ func (s *Shortener) Shorten(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to generate short id: %w", err)
 	}
-	if err := s.urlStorage.Set(url, shortID); err != nil {
+	record := &model.URLStorageRecord{OrigURL: url, ShortID: shortID}
+	if err := s.urlStorage.Set(record); err != nil {
 		return "", fmt.Errorf("failed to set url binding in storage: %w", err)
 	}
 	return shortID, nil
@@ -88,9 +89,9 @@ func (s *Shortener) ShortenBatch(urls *[]string) (*[]string, error) {
 	return res, nil
 }
 
-func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLBind, error) {
+func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLStorageRecord, error) {
 	res := make([]string, len(*urls))
-	toPersist := make([]model.URLBind, 0)
+	toPersist := make([]model.URLStorageRecord, 0)
 
 	for i, u := range *urls {
 		if u == "" {
@@ -117,12 +118,12 @@ func (s *Shortener) segregateBatch(urls *[]string) (*[]string, *[]model.URLBind,
 	return &res, &toPersist, nil
 }
 
-func (s *Shortener) prepareURLBindToPersistItem(origURL string) (model.URLBind, error) {
+func (s *Shortener) prepareURLBindToPersistItem(origURL string) (model.URLStorageRecord, error) {
 	shortID, err := s.generator.Generate()
 	if err != nil {
-		return model.URLBind{}, fmt.Errorf("batch. failed to generate short id: %w", err)
+		return model.URLStorageRecord{}, fmt.Errorf("batch. failed to generate short id: %w", err)
 	}
-	return model.URLBind{OrigURL: origURL, ShortID: shortID}, nil
+	return model.URLStorageRecord{OrigURL: origURL, ShortID: shortID}, nil
 }
 
 func (s *Shortener) IsReady(ctx context.Context) error {

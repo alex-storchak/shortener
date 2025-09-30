@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -78,7 +79,7 @@ func TestFileURLStorage(t *testing.T) {
 
 			assertStorageDoesNotHaveURL(t, tt, storage)
 
-			err = storage.Set(tt.wantOrigURL, tt.wantShortURL)
+			err = storage.Set(&model.URLStorageRecord{OrigURL: tt.wantOrigURL, ShortID: tt.wantShortURL})
 			require.NoError(t, err)
 
 			assertStorageHasURL(t, tt, storage)

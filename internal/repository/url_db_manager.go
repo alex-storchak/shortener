@@ -60,7 +60,7 @@ func (m *URLDBManager) Persist(ctx context.Context, origURL, shortID string) err
 	return nil
 }
 
-func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLBind) error {
+func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error {
 	insertSQL := "INSERT INTO url_storage (original_url, short_id) VALUES ($1, $2)"
 
 	trx, err := m.db.BeginTx(ctx, nil)
