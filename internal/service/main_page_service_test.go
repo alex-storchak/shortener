@@ -28,6 +28,10 @@ func (s *stubShortener) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
 	return nil, nil
 }
 
+func (s *stubShortener) GetUserURLs(_ string) (*[]model.URLStorageRecord, error) {
+	return nil, nil
+}
+
 func TestMainPageService_Shorten(t *testing.T) {
 	tests := []struct {
 		name         string

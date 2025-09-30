@@ -43,6 +43,10 @@ func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]model.URLStorageReco
 	return s.persistErr
 }
 
+func (s dbManagerStub) GetByUserUUID(_ context.Context, _ string /*, _ string*/) (*[]model.URLStorageRecord, error) {
+	return nil, nil
+}
+
 func TestDBURLStorage_Get(t *testing.T) {
 	lgr := zap.NewNop()
 	unexpected := errors.New("random error")

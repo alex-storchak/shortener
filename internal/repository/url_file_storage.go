@@ -96,6 +96,20 @@ func (s *FileURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
 	return nil
 }
 
+func (s *FileURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
+	var records []model.URLStorageRecord
+	for _, r := range *s.records {
+		if r.UserUUID == userUUID {
+			records = append(records, model.URLStorageRecord{
+				ShortID:  r.ShortURL,
+				OrigURL:  r.OriginalURL,
+				UserUUID: r.UserUUID,
+			})
+		}
+	}
+	return &records, nil
+}
+
 func (s *FileURLStorage) initUUIDMgr() {
 	var maxUUID uint64 = 0
 	for _, rec := range *s.records {

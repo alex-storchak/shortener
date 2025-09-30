@@ -43,6 +43,10 @@ func (s *stubShortenerBatch) ShortenBatch(_ string, _ *[]string) (*[]string, err
 	return s.retIDs, s.retErr
 }
 
+func (s *stubShortenerBatch) GetUserURLs(_ string) (*[]model.URLStorageRecord, error) {
+	return nil, nil
+}
+
 func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 	tests := []struct {
 		name         string

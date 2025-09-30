@@ -18,6 +18,7 @@ type URLStorage interface {
 	BatchSet(records *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
+	GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error)
 }
 
 type DataNotFoundError struct {

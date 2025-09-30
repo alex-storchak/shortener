@@ -112,6 +112,33 @@ func (m *URLDBManager) Ping(ctx context.Context) error {
 	return nil
 }
 
+func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) (*[]model.URLStorageRecord, error) {
+	urls := make([]model.URLStorageRecord, 0)
+
+	q := "SELECT original_url, short_id, user_uuid FROM url_storage JOIN auth_user ON id = user_id WHERE user_uuid = $1"
+	rows, err := m.db.QueryContext(ctx, q, userUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query user urls from db: %w", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var r model.URLStorageRecord
+		err = rows.Scan(&r.OrigURL, &r.ShortID, &r.UserUUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user url from db: %w", err)
+		}
+		urls = append(urls, r)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user urls from db: %w", err)
+	}
+	return &urls, nil
+}
+
 var (
 	ErrDataNotFoundInDB = errors.New("data not found in db")
 )

@@ -28,7 +28,6 @@ func AuthMiddleware(logger *zap.Logger, authSrv *service.AuthService, um reposit
 
 			cookie, err := r.Cookie("auth")
 			if err == nil { // cookie exists
-				logger.Info("cookie exists", zap.String("cookie", cookie.Value))
 				token := cookie.Value
 				claims, vErr := authSrv.ValidateToken(token)
 				if vErr != nil {
@@ -61,7 +60,6 @@ func AuthMiddleware(logger *zap.Logger, authSrv *service.AuthService, um reposit
 					}
 				}
 			}
-			logger.Info(" cookie doesn't exist or need to extend expire time")
 
 			// cookie doesn't exist or need to extend expire time
 			if user == nil {

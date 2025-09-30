@@ -14,6 +14,7 @@ type IShortener interface {
 	Shorten(userUUID string, url string) (shortID string, err error)
 	Extract( /*userUUID string, */ shortID string) (OrigURL string, err error)
 	ShortenBatch(userUUID string, urls *[]string) (*[]string, error)
+	GetUserURLs(userUUID string) (*[]model.URLStorageRecord, error)
 }
 
 type IShortenerService interface {
@@ -128,6 +129,14 @@ func (s *Shortener) prepareURLBindToPersistItem(userUUID string, origURL string)
 
 func (s *Shortener) IsReady(ctx context.Context) error {
 	return s.urlStorage.Ping(ctx)
+}
+
+func (s *Shortener) GetUserURLs(userUUID string) (*[]model.URLStorageRecord, error) {
+	urls, err := s.urlStorage.GetByUserUUID(userUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve user urls from storage: %w", err)
+	}
+	return urls, nil
 }
 
 var (

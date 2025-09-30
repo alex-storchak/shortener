@@ -16,6 +16,7 @@ type IURLDBManager interface {
 	PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
+	GetByUserUUID(ctx context.Context, userUUID string) (*[]model.URLStorageRecord, error)
 }
 
 type DBURLStorage struct {
@@ -68,4 +69,12 @@ func (s *DBURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
 		return fmt.Errorf("failed to persist batch records to db: %w", err)
 	}
 	return nil
+}
+
+func (s *DBURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
+	urls, err := s.dbMgr.GetByUserUUID(context.Background(), userUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve user urls from db: %w", err)
+	}
+	return urls, nil
 }

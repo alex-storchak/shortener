@@ -54,3 +54,13 @@ func (s *MemoryURLStorage) BatchSet(records *[]model.URLStorageRecord) error {
 	s.records = append(s.records, *records...)
 	return nil
 }
+
+func (s *MemoryURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
+	var records []model.URLStorageRecord
+	for _, r := range s.records {
+		if r.UserUUID == userUUID {
+			records = append(records, r)
+		}
+	}
+	return &records, nil
+}

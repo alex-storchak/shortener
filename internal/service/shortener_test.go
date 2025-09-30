@@ -86,6 +86,11 @@ func (d *urlStorageStub) BatchSet(_ *[]model.URLStorageRecord) error {
 	}
 	return nil
 }
+
+func (d *urlStorageStub) GetByUserUUID(_ string) (*[]model.URLStorageRecord, error) {
+	return nil, nil
+}
+
 func TestShortener_Shorten(t *testing.T) {
 	type args struct {
 		url string
