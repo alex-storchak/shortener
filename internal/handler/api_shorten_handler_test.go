@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,7 +22,7 @@ type APIShortenSrvStub struct {
 	shortenError error
 }
 
-func (s *APIShortenSrvStub) Shorten(_ io.Reader) (*model.ShortenResponse, error) {
+func (s *APIShortenSrvStub) Shorten(_ context.Context, _ io.Reader) (*model.ShortenResponse, error) {
 	if s.shortenError != nil {
 		return nil, s.shortenError
 	}

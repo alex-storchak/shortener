@@ -9,6 +9,7 @@ import (
 	"github.com/alex-storchak/shortener/internal/handler"
 	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/alex-storchak/shortener/internal/repository"
+	"github.com/alex-storchak/shortener/internal/repository/factory"
 	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/teris-io/shortid"
@@ -35,12 +36,17 @@ func NewApp(cfg *config.Config, l *zap.Logger) (*App, error) {
 		logger: l,
 	}
 
-	shortener, err := app.initShortener()
+	sf, err := factory.NewStorageFactory(cfg, l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize storage factory: %w", err)
+	}
+	shortener, err := app.initShortener(sf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize shortener: %w", err)
 	}
-
-	app.initRouter(shortener)
+	if err := app.initRouter(shortener, sf); err != nil {
+		return nil, fmt.Errorf("failed to initialize router: %w", err)
+	}
 	return app, nil
 }
 
@@ -59,9 +65,8 @@ func (a *App) Run() error {
 	return handler.Serve(&a.cfg.Handler, a.router)
 }
 
-func (a *App) initURLStorage() (repository.URLStorage, error) {
-	sf := repository.NewStorageFactory(a.cfg, a.logger)
-	storage, err := sf.Produce()
+func (a *App) initURLStorage(sf factory.IStorageFactory) (repository.URLStorage, error) {
+	storage, err := sf.MakeURLStorage()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize url storage: %w", err)
 	}
@@ -77,12 +82,12 @@ func (a *App) initShortIDGenerator() (*service.ShortIDGenerator, error) {
 	return service.NewShortIDGenerator(generator), nil
 }
 
-func (a *App) initShortener() (*service.Shortener, error) {
+func (a *App) initShortener(sf factory.IStorageFactory) (*service.Shortener, error) {
 	gen, err := a.initShortIDGenerator()
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate shortid generator: %w", err)
 	}
-	storage, err := a.initURLStorage()
+	storage, err := a.initURLStorage(sf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize url storage: %w", err)
 	}
@@ -106,6 +111,9 @@ func (a *App) initHandlers(shortener service.IShortenerService) *handler.Handler
 	apiShortenBatchService := service.NewAPIShortenBatchService(a.cfg.Handler.BaseURL, shortener, batchDecoder, a.logger)
 	apiShortenBatchHandler := handler.NewAPIShortenBatchHandler(apiShortenBatchService, jsonEncoder, a.logger)
 
+	apiUserURLsService := service.NewAPIUserURLsService(a.cfg.Handler.BaseURL, shortener, a.logger)
+	apiUserURLsHandler := handler.NewAPIUserURLsHandler(apiUserURLsService, jsonEncoder, a.logger)
+
 	pingService := service.NewPingService(shortener, a.logger)
 	pingHandler := handler.NewPingHandler(pingService, a.logger)
 
@@ -114,20 +122,33 @@ func (a *App) initHandlers(shortener service.IShortenerService) *handler.Handler
 		shortURLHandler,
 		apiShortenHandler,
 		apiShortenBatchHandler,
+		apiUserURLsHandler,
 		pingHandler,
 	}
 }
 
-func (a *App) initMiddlewares() *handler.Middlewares {
+func (a *App) initMiddlewares(sf factory.IStorageFactory) (*handler.Middlewares, error) {
+	us, err := sf.MakeUserStorage()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize user storage: %w", err)
+	}
+	as := service.NewAuthService(a.logger, us, &a.cfg.Middleware)
+	um := repository.NewUserManager(a.logger, us)
+	authMWService := service.NewAuthMiddlewareService(as, um, &a.cfg.Middleware)
 	return &handler.Middlewares{
 		middleware.RequestLogger(a.logger),
+		middleware.AuthMiddleware(a.logger, authMWService, &a.cfg.Middleware),
 		middleware.GzipMiddleware(a.logger),
-	}
+	}, nil
 }
 
-func (a *App) initRouter(shortener service.IShortenerService) {
+func (a *App) initRouter(shortener service.IShortenerService, sf factory.IStorageFactory) error {
 	handlers := a.initHandlers(shortener)
-	middlewares := a.initMiddlewares()
+	middlewares, err := a.initMiddlewares(sf)
+	if err != nil {
+		return fmt.Errorf("failed to initialize middlewares: %w", err)
+	}
 	a.router = handler.NewRouter(handlers, middlewares)
 	a.logger.Info("router initialized")
+	return nil
 }

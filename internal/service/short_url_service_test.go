@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -18,13 +19,17 @@ func (s *stubExpandShortener) IsReady() error {
 	return nil
 }
 
-func (s *stubExpandShortener) Shorten(_ string) (string, error) {
+func (s *stubExpandShortener) Shorten(_, _ string) (string, error) {
 	return "", nil
 }
 func (s *stubExpandShortener) Extract(_ string) (string, error) {
 	return s.retURL, s.retErr
 }
-func (s *stubExpandShortener) ShortenBatch(_ *[]string) (*[]string, error) {
+func (s *stubExpandShortener) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
+	return nil, nil
+}
+
+func (s *stubExpandShortener) GetUserURLs(_ string) (*[]model.URLStorageRecord, error) {
 	return nil, nil
 }
 
@@ -56,9 +61,9 @@ func TestShortURLService_Expand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr}
-			svc := NewShortURLService(shortener, zap.NewNop())
+			srv := NewShortURLService(shortener, zap.NewNop())
 
-			gotURL, gotErr := svc.Expand(tt.shortID)
+			gotURL, gotErr := srv.Expand(tt.shortID)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

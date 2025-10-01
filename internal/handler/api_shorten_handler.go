@@ -35,7 +35,7 @@ func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request
 		return
 	}
 
-	resBody, err := h.apiShortenSrv.Shorten(req.Body)
+	resBody, err := h.apiShortenSrv.Shorten(req.Context(), req.Body)
 	if errors.Is(err, service.ErrEmptyInputURL) {
 		res.WriteHeader(http.StatusBadRequest)
 		return

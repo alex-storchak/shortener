@@ -1,0 +1,9 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS auth_user (
+    id         SERIAL PRIMARY KEY,
+    user_uuid  VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+COMMIT;

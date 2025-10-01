@@ -4,23 +4,24 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
-type fileRecords []fileRecord
+type urlFileRecords []urlFileRecord
 
 type FileURLStorage struct {
 	logger   *zap.Logger
 	fileMgr  *FileManager
-	fileScnr *FileScanner
+	fileScnr *URLFileScanner
 	uuidMgr  *UUIDManager
-	records  *fileRecords
+	records  *urlFileRecords
 }
 
 func NewFileURLStorage(
 	logger *zap.Logger,
 	fm *FileManager,
-	fs *FileScanner,
+	fs *URLFileScanner,
 	um *UUIDManager,
 ) (*FileURLStorage, error) {
 	storage := &FileURLStorage{
@@ -45,7 +46,7 @@ func (s *FileURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *FileURLStorage) persistToFile(record fileRecord) error {
+func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
 	data, err := record.toJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert record to json for store: %w", err)
@@ -72,11 +73,12 @@ func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 	return "", NewDataNotFoundError(nil)
 }
 
-func (s *FileURLStorage) Set(origURL, shortURL string) error {
-	record := fileRecord{
+func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
+	record := urlFileRecord{
 		UUID:        s.uuidMgr.next(),
-		ShortURL:    shortURL,
-		OriginalURL: origURL,
+		ShortURL:    r.ShortID,
+		OriginalURL: r.OrigURL,
+		UserUUID:    r.UserUUID,
 	}
 	*s.records = append(*s.records, record)
 	if err := s.persistToFile(record); err != nil {
@@ -85,13 +87,27 @@ func (s *FileURLStorage) Set(origURL, shortURL string) error {
 	return nil
 }
 
-func (s *FileURLStorage) BatchSet(binds *[]URLBind) error {
+func (s *FileURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
 	for _, b := range *binds {
-		if err := s.Set(b.OrigURL, b.ShortID); err != nil {
+		if err := s.Set(&b); err != nil {
 			return fmt.Errorf("failed to set record in storage: %w", err)
 		}
 	}
 	return nil
+}
+
+func (s *FileURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
+	var records []model.URLStorageRecord
+	for _, r := range *s.records {
+		if r.UserUUID == userUUID {
+			records = append(records, model.URLStorageRecord{
+				ShortID:  r.ShortURL,
+				OrigURL:  r.OriginalURL,
+				UserUUID: r.UserUUID,
+			})
+		}
+	}
+	return &records, nil
 }
 
 func (s *FileURLStorage) initUUIDMgr() {

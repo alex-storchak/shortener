@@ -1,15 +1,17 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
 
+	"github.com/alex-storchak/shortener/internal/helper"
 	"go.uber.org/zap"
 )
 
 type IMainPageService interface {
-	Shorten(body []byte) (shortURL string, err error)
+	Shorten(ctx context.Context, body []byte) (shortURL string, err error)
 }
 
 type MainPageService struct {
@@ -26,9 +28,13 @@ func NewMainPageService(bu string, s IShortener, l *zap.Logger) *MainPageService
 	}
 }
 
-func (s *MainPageService) Shorten(body []byte) (string, error) {
+func (s *MainPageService) Shorten(ctx context.Context, body []byte) (string, error) {
 	origURL := string(body)
-	shortID, err := s.shortener.Shorten(origURL)
+	userUUID, err := helper.GetCtxUserUUID(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user uuid from context: %w", err)
+	}
+	shortID, err := s.shortener.Shorten(userUUID, origURL)
 	if errors.Is(err, ErrURLAlreadyExists) {
 		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
 		if jpErr != nil {

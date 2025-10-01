@@ -1,16 +1,18 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
 
+	"github.com/alex-storchak/shortener/internal/helper"
 	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
 type IAPIShortenBatchService interface {
-	ShortenBatch(r io.Reader) ([]model.BatchShortenResponseItem, error)
+	ShortenBatch(ctx context.Context, r io.Reader) ([]model.BatchShortenResponseItem, error)
 }
 
 type APIShortenBatchService struct {
@@ -34,14 +36,18 @@ func NewAPIShortenBatchService(
 	}
 }
 
-func (s *APIShortenBatchService) ShortenBatch(r io.Reader) ([]model.BatchShortenResponseItem, error) {
+func (s *APIShortenBatchService) ShortenBatch(ctx context.Context, r io.Reader) ([]model.BatchShortenResponseItem, error) {
+	userUUID, err := helper.GetCtxUserUUID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)
+	}
 	reqItems, err := s.batchDec.DecodeBatch(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode batch request json: %w", err)
 	}
 
 	origURLs := s.buildURLList(reqItems)
-	shortIDs, err := s.shortener.ShortenBatch(origURLs)
+	shortIDs, err := s.shortener.ShortenBatch(userUUID, origURLs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to shorten batch: %w", err)
 	}

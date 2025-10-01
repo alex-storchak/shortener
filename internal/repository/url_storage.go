@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"fmt"
+
+	"github.com/alex-storchak/shortener/internal/model"
 )
 
 const (
@@ -10,17 +12,13 @@ const (
 	OrigURLType  = `originalURL`
 )
 
-type URLBind struct {
-	OrigURL string
-	ShortID string
-}
-
 type URLStorage interface {
 	Get(url, searchByType string) (string, error)
-	Set(origURL, shortURL string) error
-	BatchSet(binds *[]URLBind) error
+	Set(record *model.URLStorageRecord) error
+	BatchSet(records *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
+	GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error)
 }
 
 type DataNotFoundError struct {

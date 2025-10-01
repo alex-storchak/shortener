@@ -1,17 +1,19 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/url"
 
+	"github.com/alex-storchak/shortener/internal/helper"
 	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
 type IAPIShortenService interface {
-	Shorten(r io.Reader) (*model.ShortenResponse, error)
+	Shorten(ctx context.Context, r io.Reader) (*model.ShortenResponse, error)
 }
 
 type APIShortenService struct {
@@ -30,13 +32,17 @@ func NewAPIShortenService(bu string, s IShortener, d IJSONRequestDecoder, l *zap
 	}
 }
 
-func (s *APIShortenService) Shorten(r io.Reader) (*model.ShortenResponse, error) {
+func (s *APIShortenService) Shorten(ctx context.Context, r io.Reader) (*model.ShortenResponse, error) {
+	userUUID, err := helper.GetCtxUserUUID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)
+	}
 	req, err := s.decoder.Decode(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode request json: %w", err)
 	}
 
-	shortID, err := s.shortener.Shorten(req.OrigURL)
+	shortID, err := s.shortener.Shorten(userUUID, req.OrigURL)
 	if errors.Is(err, ErrURLAlreadyExists) {
 		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
 		if jpErr != nil {

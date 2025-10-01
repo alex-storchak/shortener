@@ -8,21 +8,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type FileScanner struct {
+type URLFileScanner struct {
 	logger *zap.Logger
-	parser FileRecordParser
+	parser URLFileRecordParser
 }
 
-func NewFileScanner(logger *zap.Logger, parser FileRecordParser) *FileScanner {
-	return &FileScanner{
+func NewFileScanner(logger *zap.Logger, parser URLFileRecordParser) *URLFileScanner {
+	return &URLFileScanner{
 		logger: logger,
 		parser: parser,
 	}
 }
 
-func (s *FileScanner) scan(file *os.File) (*fileRecords, error) {
+func (s *URLFileScanner) scan(file *os.File) (*urlFileRecords, error) {
 	scanner := bufio.NewScanner(file)
-	var records fileRecords
+	var records urlFileRecords
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {

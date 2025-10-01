@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 )
 
-type fileRecord struct {
+type urlFileRecord struct {
 	UUID        uint64 `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserUUID    string `json:"user_uuid,omitempty"`
 }
 
-func (r *fileRecord) toJSON() ([]byte, error) {
+func (r *urlFileRecord) toJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (r *fileRecord) fromJSON(data []byte) error {
+func (r *urlFileRecord) fromJSON(data []byte) error {
 	return json.Unmarshal(data, r)
 }
