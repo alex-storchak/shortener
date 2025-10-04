@@ -70,8 +70,7 @@ func TestFileURLStorage(t *testing.T) {
 			fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
 			frp := URLFileRecordParser{}
 			fs := NewFileScanner(lgr, frp)
-			um := NewUUIDManager(lgr)
-			storage, err := NewFileURLStorage(lgr, fm, fs, um)
+			storage, err := NewFileURLStorage(lgr, fm, fs)
 			require.NoError(t, err)
 
 			if tt.hasRecord {
@@ -87,8 +86,7 @@ func TestFileURLStorage(t *testing.T) {
 			assertStorageHasURL(t, tt, storage)
 
 			fm = NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
-			um = NewUUIDManager(lgr)
-			newStorage, err := NewFileURLStorage(lgr, fm, fs, um)
+			newStorage, err := NewFileURLStorage(lgr, fm, fs)
 			require.NoError(t, err)
 			assertStorageHasURL(t, tt, newStorage)
 		})
@@ -122,7 +120,6 @@ func createTmpStorageFile(t *testing.T) *os.File {
 
 func fillStorageFile(t *testing.T, testDBFile *os.File) {
 	testRecord := urlFileRecord{
-		UUID:        1,
 		ShortURL:    "abcde",
 		OriginalURL: "https://example.com",
 		UserUUID:    "userUUID",

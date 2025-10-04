@@ -14,7 +14,6 @@ type FileURLStorage struct {
 	logger   *zap.Logger
 	fileMgr  *FileManager
 	fileScnr *URLFileScanner
-	uuidMgr  *UUIDManager
 	records  *urlFileRecords
 }
 
@@ -22,19 +21,16 @@ func NewFileURLStorage(
 	logger *zap.Logger,
 	fm *FileManager,
 	fs *URLFileScanner,
-	um *UUIDManager,
 ) (*FileURLStorage, error) {
 	storage := &FileURLStorage{
 		logger:   logger,
 		fileMgr:  fm,
 		fileScnr: fs,
-		uuidMgr:  um,
 	}
 
 	if err := storage.restoreFromFile(false); err != nil {
 		return nil, fmt.Errorf("failed to restore storage from file: %w", err)
 	}
-	storage.initUUIDMgr()
 	return storage, nil
 }
 
@@ -55,9 +51,9 @@ func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
 		return fmt.Errorf("mgr failed to persist record to file: %w", err)
 	}
 	s.logger.Info("Stored record",
-		zap.Uint64("UUID", record.UUID),
 		zap.String("OriginalURL", record.OriginalURL),
 		zap.String("ShortURL", record.ShortURL),
+		zap.String("UserUUID", record.UserUUID),
 	)
 	return nil
 }
@@ -75,7 +71,6 @@ func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
 
 func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
 	record := urlFileRecord{
-		UUID:        s.uuidMgr.next(),
 		ShortURL:    r.ShortID,
 		OriginalURL: r.OrigURL,
 		UserUUID:    r.UserUUID,
@@ -108,16 +103,6 @@ func (s *FileURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageReco
 		}
 	}
 	return &records, nil
-}
-
-func (s *FileURLStorage) initUUIDMgr() {
-	var maxUUID uint64 = 0
-	for _, rec := range *s.records {
-		if rec.UUID > maxUUID {
-			maxUUID = rec.UUID
-		}
-	}
-	s.uuidMgr.init(maxUUID)
 }
 
 func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
