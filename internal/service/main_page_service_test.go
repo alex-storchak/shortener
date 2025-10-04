@@ -24,11 +24,11 @@ func (s *stubShortener) Shorten(_, _ string) (string, error) {
 func (s *stubShortener) Extract(_ string) (string, error) {
 	return "", nil
 }
-func (s *stubShortener) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
+func (s *stubShortener) ShortenBatch(_ string, _ []string) ([]string, error) {
 	return nil, nil
 }
 
-func (s *stubShortener) GetUserURLs(_ string) (*[]model.URLStorageRecord, error) {
+func (s *stubShortener) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 

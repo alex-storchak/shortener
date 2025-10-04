@@ -13,10 +13,10 @@ type IURLDBManager interface {
 	GetByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error)
 	GetByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error)
 	Persist(ctx context.Context, r *model.URLStorageRecord) error
-	PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error
+	PersistBatch(ctx context.Context, binds []*model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
-	GetByUserUUID(ctx context.Context, userUUID string) (*[]model.URLStorageRecord, error)
+	GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error)
 }
 
 type DBURLStorage struct {
@@ -67,14 +67,14 @@ func (s *DBURLStorage) Set(r *model.URLStorageRecord) error {
 	return nil
 }
 
-func (s *DBURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
+func (s *DBURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
 	if err := s.dbMgr.PersistBatch(context.Background(), binds); err != nil {
 		return fmt.Errorf("failed to persist batch records to db: %w", err)
 	}
 	return nil
 }
 
-func (s *DBURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
+func (s *DBURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
 	urls, err := s.dbMgr.GetByUserUUID(context.Background(), userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve user urls from db: %w", err)

@@ -75,14 +75,14 @@ func (d *urlStorageStub) Set(_ *model.URLStorageRecord) error {
 	return nil
 }
 
-func (d *urlStorageStub) BatchSet(_ *[]model.URLStorageRecord) error {
+func (d *urlStorageStub) BatchSet(_ []*model.URLStorageRecord) error {
 	if d.setBatchMethodShouldFail {
 		return errors.New("set batch method should fail")
 	}
 	return nil
 }
 
-func (d *urlStorageStub) GetByUserUUID(_ string) (*[]model.URLStorageRecord, error) {
+func (d *urlStorageStub) GetByUserUUID(_ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
@@ -262,12 +262,12 @@ func TestShortener_ShortenBatch(t *testing.T) {
 				logger:     zap.NewNop(),
 			}
 
-			got, err := s.ShortenBatch(userUUID, &tt.urls)
+			got, err := s.ShortenBatch(userUUID, tt.urls)
 
 			if !tt.wantErr {
 				require.NoError(t, err)
 				require.NotNil(t, got)
-				assert.Equal(t, tt.want, *got)
+				assert.Equal(t, tt.want, got)
 			} else {
 				require.Error(t, err)
 				if tt.err != nil {

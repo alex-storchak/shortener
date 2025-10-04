@@ -8,13 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type urlFileRecords []urlFileRecord
-
 type FileURLStorage struct {
 	logger   *zap.Logger
 	fileMgr  *FileManager
 	fileScnr *URLFileScanner
-	records  *urlFileRecords
+	records  []*model.URLStorageRecord
 }
 
 func NewFileURLStorage(
@@ -42,8 +40,8 @@ func (s *FileURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
-	data, err := record.toJSON()
+func (s *FileURLStorage) persistToFile(record model.URLStorageRecord) error {
+	data, err := record.ToJSON()
 	if err != nil {
 		return fmt.Errorf("failed to convert record to json for store: %w", err)
 	}
@@ -51,29 +49,29 @@ func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
 		return fmt.Errorf("mgr failed to persist record to file: %w", err)
 	}
 	s.logger.Info("Stored record",
-		zap.String("OriginalURL", record.OriginalURL),
-		zap.String("ShortURL", record.ShortURL),
+		zap.String("OriginalURL", record.OrigURL),
+		zap.String("ShortURL", record.ShortID),
 		zap.String("UserUUID", record.UserUUID),
 	)
 	return nil
 }
 
 func (s *FileURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
-	for _, r := range *s.records {
-		if searchByType == OrigURLType && r.OriginalURL == url && !r.IsDeleted {
+	for _, r := range s.records {
+		if searchByType == OrigURLType && r.OrigURL == url && !r.IsDeleted {
 			return &model.URLStorageRecord{
-				OrigURL:   r.OriginalURL,
-				ShortID:   r.ShortURL,
+				OrigURL:   r.OrigURL,
+				ShortID:   r.ShortID,
 				UserUUID:  r.UserUUID,
 				IsDeleted: r.IsDeleted,
 			}, nil
-		} else if searchByType == ShortURLType && r.ShortURL == url {
+		} else if searchByType == ShortURLType && r.ShortID == url {
 			if r.IsDeleted {
 				return nil, ErrDataDeleted
 			}
 			return &model.URLStorageRecord{
-				OrigURL:   r.OriginalURL,
-				ShortID:   r.ShortURL,
+				OrigURL:   r.OrigURL,
+				ShortID:   r.ShortID,
 				UserUUID:  r.UserUUID,
 				IsDeleted: r.IsDeleted,
 			}, nil
@@ -83,41 +81,41 @@ func (s *FileURLStorage) Get(url, searchByType string) (*model.URLStorageRecord,
 }
 
 func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
-	record := urlFileRecord{
-		ShortURL:    r.ShortID,
-		OriginalURL: r.OrigURL,
-		UserUUID:    r.UserUUID,
-		IsDeleted:   r.IsDeleted,
+	record := model.URLStorageRecord{
+		ShortID:   r.ShortID,
+		OrigURL:   r.OrigURL,
+		UserUUID:  r.UserUUID,
+		IsDeleted: r.IsDeleted,
 	}
-	*s.records = append(*s.records, record)
+	s.records = append(s.records, &record)
 	if err := s.persistToFile(record); err != nil {
 		return fmt.Errorf("failed to persist record `%v` to file: %w", record, err)
 	}
 	return nil
 }
 
-func (s *FileURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
-	for _, b := range *binds {
-		if err := s.Set(&b); err != nil {
+func (s *FileURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
+	for _, b := range binds {
+		if err := s.Set(b); err != nil {
 			return fmt.Errorf("failed to set record in storage: %w", err)
 		}
 	}
 	return nil
 }
 
-func (s *FileURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
-	var records []model.URLStorageRecord
-	for _, r := range *s.records {
+func (s *FileURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
+	var records []*model.URLStorageRecord
+	for _, r := range s.records {
 		if r.UserUUID == userUUID && !r.IsDeleted {
-			records = append(records, model.URLStorageRecord{
-				ShortID:   r.ShortURL,
-				OrigURL:   r.OriginalURL,
+			records = append(records, &model.URLStorageRecord{
+				ShortID:   r.ShortID,
+				OrigURL:   r.OrigURL,
 				UserUUID:  r.UserUUID,
 				IsDeleted: r.IsDeleted,
 			})
 		}
 	}
-	return &records, nil
+	return records, nil
 }
 
 func (s *FileURLStorage) restoreFromFile(useDefault bool) error {

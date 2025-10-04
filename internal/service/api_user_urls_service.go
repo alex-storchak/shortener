@@ -11,7 +11,7 @@ import (
 )
 
 type IAPIUserURLsService interface {
-	GetUserURLs(ctx context.Context) (*[]model.UserURLsResponseItem, error)
+	GetUserURLs(ctx context.Context) ([]model.UserURLsResponseItem, error)
 }
 
 type APIUserURLsService struct {
@@ -32,7 +32,7 @@ func NewAPIUserURLsService(
 	}
 }
 
-func (s *APIUserURLsService) GetUserURLs(ctx context.Context) (*[]model.UserURLsResponseItem, error) {
+func (s *APIUserURLsService) GetUserURLs(ctx context.Context) ([]model.UserURLsResponseItem, error) {
 	userUUID, err := helper.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)
@@ -47,12 +47,12 @@ func (s *APIUserURLsService) GetUserURLs(ctx context.Context) (*[]model.UserURLs
 		return nil, fmt.Errorf("failed to build response: %w", err)
 	}
 
-	return &resp, nil
+	return resp, nil
 }
 
-func (s *APIUserURLsService) buildResponse(urls *[]model.URLStorageRecord) ([]model.UserURLsResponseItem, error) {
-	resp := make([]model.UserURLsResponseItem, len(*urls))
-	for i, u := range *urls {
+func (s *APIUserURLsService) buildResponse(urls []*model.URLStorageRecord) ([]model.UserURLsResponseItem, error) {
+	resp := make([]model.UserURLsResponseItem, len(urls))
+	for i, u := range urls {
 		shortURL, err := url.JoinPath(s.baseURL, u.ShortID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build full short url for new url: %w", err)

@@ -9,10 +9,10 @@ type URLStorageRecord struct {
 	IsDeleted bool   `json:"is_deleted"`
 }
 
-func (r *URLStorageRecord) toJSON() ([]byte, error) {
+func (r *URLStorageRecord) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (r *URLStorageRecord) fromJSON(data []byte) error {
+func (r *URLStorageRecord) FromJSON(data []byte) error {
 	return json.Unmarshal(data, r)
 }

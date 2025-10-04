@@ -67,7 +67,7 @@ func (s *FileUserStorage) restoreFromFile() error {
 	}
 
 	users := make(map[string]struct{})
-	for _, record := range *records {
+	for _, record := range records {
 		users[record.UserUUID] = struct{}{}
 	}
 	s.users = users

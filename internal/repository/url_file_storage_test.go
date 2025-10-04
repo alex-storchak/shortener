@@ -119,10 +119,10 @@ func createTmpStorageFile(t *testing.T) *os.File {
 }
 
 func fillStorageFile(t *testing.T, testDBFile *os.File) {
-	testRecord := urlFileRecord{
-		ShortURL:    "abcde",
-		OriginalURL: "https://example.com",
-		UserUUID:    "userUUID",
+	testRecord := model.URLStorageRecord{
+		ShortID:  "abcde",
+		OrigURL:  "https://example.com",
+		UserUUID: "userUUID",
 	}
 	data, err := json.Marshal(testRecord)
 	require.NoError(t, err)

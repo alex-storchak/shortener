@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
@@ -20,9 +21,10 @@ func NewFileScanner(logger *zap.Logger, parser URLFileRecordParser) *URLFileScan
 	}
 }
 
-func (s *URLFileScanner) scan(file *os.File) (*urlFileRecords, error) {
+func (s *URLFileScanner) scan(file *os.File) ([]*model.URLStorageRecord, error) {
 	scanner := bufio.NewScanner(file)
-	var records urlFileRecords
+	var records []*model.URLStorageRecord
+
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
@@ -39,5 +41,5 @@ func (s *URLFileScanner) scan(file *os.File) (*urlFileRecords, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("failed to scan file: %w", err)
 	}
-	return &records, nil
+	return records, nil
 }

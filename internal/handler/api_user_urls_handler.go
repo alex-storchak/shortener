@@ -31,7 +31,7 @@ func (h *APIUserURLsHandler) ServeHTTP(res http.ResponseWriter, req *http.Reques
 		h.logger.Error("error getting user urls", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)
 		return
-	} else if len(*respItems) == 0 {
+	} else if len(respItems) == 0 {
 		res.WriteHeader(http.StatusNoContent)
 		return
 	}

@@ -16,10 +16,10 @@ const (
 type URLStorage interface {
 	Get(url, searchByType string) (*model.URLStorageRecord, error)
 	Set(record *model.URLStorageRecord) error
-	BatchSet(records *[]model.URLStorageRecord) error
+	BatchSet(records []*model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
-	GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error)
+	GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error)
 }
 
 type DataNotFoundError struct {

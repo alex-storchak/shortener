@@ -13,8 +13,8 @@ import (
 type IShortener interface {
 	Shorten(userUUID string, url string) (shortID string, err error)
 	Extract(shortID string) (OrigURL string, err error)
-	ShortenBatch(userUUID string, urls *[]string) (*[]string, error)
-	GetUserURLs(userUUID string) (*[]model.URLStorageRecord, error)
+	ShortenBatch(userUUID string, urls []string) ([]string, error)
+	GetUserURLs(userUUID string) ([]*model.URLStorageRecord, error)
 }
 
 type IShortenerService interface {
@@ -77,8 +77,8 @@ func (s *Shortener) Extract(shortID string) (string, error) {
 	return r.OrigURL, nil
 }
 
-func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, error) {
-	if len(*urls) == 0 {
+func (s *Shortener) ShortenBatch(userUUID string, urls []string) ([]string, error) {
+	if len(urls) == 0 {
 		return nil, ErrEmptyInputBatch
 	}
 
@@ -86,7 +86,7 @@ func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to segregate batch: %w", err)
 	}
-	if len(*toPersist) > 0 {
+	if len(toPersist) > 0 {
 		if err := s.urlStorage.BatchSet(toPersist); err != nil {
 			return nil, fmt.Errorf("failed to set url bindings batch in storage: %w", err)
 		}
@@ -94,11 +94,11 @@ func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, er
 	return res, nil
 }
 
-func (s *Shortener) segregateBatch(userUUID string, urls *[]string) (*[]string, *[]model.URLStorageRecord, error) {
-	res := make([]string, len(*urls))
-	toPersist := make([]model.URLStorageRecord, 0)
+func (s *Shortener) segregateBatch(userUUID string, urls []string) ([]string, []*model.URLStorageRecord, error) {
+	res := make([]string, len(urls))
+	toPersist := make([]*model.URLStorageRecord, 0)
 
-	for i, u := range *urls {
+	for i, u := range urls {
 		if u == "" {
 			return nil, nil, ErrEmptyInputURL
 		}
@@ -117,10 +117,10 @@ func (s *Shortener) segregateBatch(userUUID string, urls *[]string) (*[]string, 
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to prepare url bind to persist item: %w", err)
 		}
-		toPersist = append(toPersist, urlBindItem)
+		toPersist = append(toPersist, &urlBindItem)
 		res[i] = urlBindItem.ShortID
 	}
-	return &res, &toPersist, nil
+	return res, toPersist, nil
 }
 
 func (s *Shortener) prepareURLBindToPersistItem(userUUID string, origURL string) (model.URLStorageRecord, error) {
@@ -135,7 +135,7 @@ func (s *Shortener) IsReady(ctx context.Context) error {
 	return s.urlStorage.Ping(ctx)
 }
 
-func (s *Shortener) GetUserURLs(userUUID string) (*[]model.URLStorageRecord, error) {
+func (s *Shortener) GetUserURLs(userUUID string) ([]*model.URLStorageRecord, error) {
 	urls, err := s.urlStorage.GetByUserUUID(userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve user urls from storage: %w", err)

@@ -45,11 +45,11 @@ func (s dbManagerStub) Persist(_ context.Context, _ *model.URLStorageRecord) err
 	return s.persistErr
 }
 
-func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]model.URLStorageRecord) error {
+func (s dbManagerStub) PersistBatch(_ context.Context, _ []*model.URLStorageRecord) error {
 	return s.persistErr
 }
 
-func (s dbManagerStub) GetByUserUUID(_ context.Context, _ string) (*[]model.URLStorageRecord, error) {
+func (s dbManagerStub) GetByUserUUID(_ context.Context, _ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
@@ -190,7 +190,7 @@ func TestDBURLStorage_BatchSet(t *testing.T) {
 		},
 	}
 
-	binds := &[]model.URLStorageRecord{
+	binds := []*model.URLStorageRecord{
 		{OrigURL: "https://a.com", ShortID: "abc"},
 		{OrigURL: "https://b.com", ShortID: "def"},
 	}

@@ -60,21 +60,21 @@ func (s *APIShortenBatchService) ShortenBatch(ctx context.Context, r io.Reader) 
 	return resp, nil
 }
 
-func (s *APIShortenBatchService) buildURLList(reqItems *[]model.BatchShortenRequestItem) *[]string {
-	origURLs := make([]string, len(*reqItems))
-	for i, item := range *reqItems {
+func (s *APIShortenBatchService) buildURLList(reqItems []model.BatchShortenRequestItem) []string {
+	origURLs := make([]string, len(reqItems))
+	for i, item := range reqItems {
 		origURLs[i] = item.OriginalURL
 	}
-	return &origURLs
+	return origURLs
 }
 
 func (s *APIShortenBatchService) buildResponse(
-	reqItems *[]model.BatchShortenRequestItem,
-	shortIDs *[]string,
+	reqItems []model.BatchShortenRequestItem,
+	shortIDs []string,
 ) ([]model.BatchShortenResponseItem, error) {
-	resp := make([]model.BatchShortenResponseItem, len(*reqItems))
-	for i, item := range *reqItems {
-		shortURL, err := url.JoinPath(s.baseURL, (*shortIDs)[i])
+	resp := make([]model.BatchShortenResponseItem, len(reqItems))
+	for i, item := range reqItems {
+		shortURL, err := url.JoinPath(s.baseURL, shortIDs[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to build full short url for new url: %w", err)
 		}

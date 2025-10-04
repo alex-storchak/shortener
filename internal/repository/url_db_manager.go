@@ -75,7 +75,7 @@ func (m *URLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord) e
 	return nil
 }
 
-func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error {
+func (m *URLDBManager) PersistBatch(ctx context.Context, binds []*model.URLStorageRecord) error {
 	insertSQL := `
 		INSERT INTO url_storage (original_url, short_id, user_id) 
 		SELECT $1, $2, id 
@@ -106,7 +106,7 @@ func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLStora
 		}
 	}()
 
-	for _, b := range *binds {
+	for _, b := range binds {
 		if _, eErr := stmt.ExecContext(ctx, b.OrigURL, b.ShortID, b.UserUUID); eErr != nil {
 			return fmt.Errorf("failed to persist batch record `%v` to db: %w", b, eErr)
 		}
@@ -125,8 +125,8 @@ func (m *URLDBManager) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) (*[]model.URLStorageRecord, error) {
-	urls := make([]model.URLStorageRecord, 0)
+func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error) {
+	urls := make([]*model.URLStorageRecord, 0)
 
 	q := `
 		SELECT original_url, short_id, user_uuid, is_deleted 
@@ -148,14 +148,14 @@ func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) (*[]m
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user url from db: %w", err)
 		}
-		urls = append(urls, r)
+		urls = append(urls, &r)
 	}
 
 	err = rows.Err()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user urls from db: %w", err)
 	}
-	return &urls, nil
+	return urls, nil
 }
 
 var (
