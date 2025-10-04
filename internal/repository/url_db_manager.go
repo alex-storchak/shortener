@@ -28,31 +28,46 @@ func (m *URLDBManager) Close() error {
 	return m.db.Close()
 }
 
-func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (string, error) {
-	q := "SELECT short_id FROM url_storage WHERE original_url = $1"
+func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error) {
+	q := `
+		SELECT original_url, short_id, user_uuid, is_deleted 
+		FROM url_storage 
+		JOIN auth_user ON id = user_id 
+		WHERE original_url = $1
+	`
 	return m.getByQuery(ctx, q, origURL)
 }
 
-func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string) (string, error) {
-	q := "SELECT original_url FROM url_storage WHERE short_id = $1"
+func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error) {
+	q := `
+		SELECT original_url, short_id, user_uuid, is_deleted 
+		FROM url_storage 
+		JOIN auth_user ON id = user_id 
+		WHERE short_id = $1
+	`
 	return m.getByQuery(ctx, q, shortID)
 }
 
-func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (string, error) {
+func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (*model.URLStorageRecord, error) {
 	row := m.db.QueryRowContext(ctx, q, args...)
 
-	var url string
-	err := row.Scan(&url)
+	var r model.URLStorageRecord
+	err := row.Scan(&r.OrigURL, &r.ShortID, &r.UserUUID, &r.IsDeleted)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrDataNotFoundInDB
+		return nil, ErrDataNotFoundInDB
 	} else if err != nil {
-		return "", fmt.Errorf("failed to scan query result row: %w", err)
+		return nil, fmt.Errorf("failed to scan query result row: %w", err)
 	}
-	return url, nil
+	return &r, nil
 }
 
 func (m *URLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord) error {
-	q := "INSERT INTO url_storage (original_url, short_id, user_id) SELECT $1, $2, id FROM auth_user where user_uuid = $3"
+	q := `
+		INSERT INTO url_storage (original_url, short_id, user_id) 
+		SELECT $1, $2, id 
+		FROM auth_user 
+		WHERE user_uuid = $3
+	`
 	_, err := m.db.ExecContext(ctx, q, r.OrigURL, r.ShortID, r.UserUUID)
 	if err != nil {
 		return fmt.Errorf("failed to persist binding (%s, %s, %s) to db: %w", r.OrigURL, r.ShortID, r.UserUUID, err)
@@ -61,8 +76,12 @@ func (m *URLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord) e
 }
 
 func (m *URLDBManager) PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error {
-	insertSQL := "INSERT INTO url_storage (original_url, short_id, user_id) SELECT $1, $2, id FROM auth_user where user_uuid = $3"
-
+	insertSQL := `
+		INSERT INTO url_storage (original_url, short_id, user_id) 
+		SELECT $1, $2, id 
+		FROM auth_user 
+		WHERE user_uuid = $3
+	`
 	trx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error on begin transaction: %w", err)
@@ -109,7 +128,13 @@ func (m *URLDBManager) Ping(ctx context.Context) error {
 func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) (*[]model.URLStorageRecord, error) {
 	urls := make([]model.URLStorageRecord, 0)
 
-	q := "SELECT original_url, short_id, user_uuid FROM url_storage JOIN auth_user ON id = user_id WHERE user_uuid = $1"
+	q := `
+		SELECT original_url, short_id, user_uuid, is_deleted 
+		FROM url_storage 
+		JOIN auth_user ON id = user_id 
+		WHERE user_uuid = $1 
+		AND is_deleted = FALSE
+	`
 	rows, err := m.db.QueryContext(ctx, q, userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user urls from db: %w", err)
@@ -119,7 +144,7 @@ func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) (*[]m
 
 	for rows.Next() {
 		var r model.URLStorageRecord
-		err = rows.Scan(&r.OrigURL, &r.ShortID, &r.UserUUID)
+		err = rows.Scan(&r.OrigURL, &r.ShortID, &r.UserUUID, &r.IsDeleted)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user url from db: %w", err)
 		}

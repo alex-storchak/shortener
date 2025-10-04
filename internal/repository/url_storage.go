@@ -14,7 +14,7 @@ const (
 )
 
 type URLStorage interface {
-	Get(url, searchByType string) (string, error)
+	Get(url, searchByType string) (*model.URLStorageRecord, error)
 	Set(record *model.URLStorageRecord) error
 	BatchSet(records *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error
@@ -40,3 +40,7 @@ func (e *DataNotFoundError) Unwrap() error {
 func NewDataNotFoundError(err error) error {
 	return &DataNotFoundError{Err: err}
 }
+
+var (
+	ErrDataDeleted = errors.New("data deleted")
+)

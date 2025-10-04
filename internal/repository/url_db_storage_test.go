@@ -27,12 +27,18 @@ func (s dbManagerStub) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s dbManagerStub) GetByOriginalURL(_ context.Context, _ string) (string, error) {
-	return s.retByOrig, s.errByOrig
+func (s dbManagerStub) GetByOriginalURL(_ context.Context, origURL string) (*model.URLStorageRecord, error) {
+	return &model.URLStorageRecord{
+		OrigURL: origURL,
+		ShortID: s.retByOrig,
+	}, s.errByOrig
 }
 
-func (s dbManagerStub) GetByShortID(_ context.Context, _ string) (string, error) {
-	return s.retByShort, s.errByShort
+func (s dbManagerStub) GetByShortID(_ context.Context, shortID string) (*model.URLStorageRecord, error) {
+	return &model.URLStorageRecord{
+		OrigURL: s.retByShort,
+		ShortID: shortID,
+	}, s.errByShort
 }
 
 func (s dbManagerStub) Persist(_ context.Context, _ *model.URLStorageRecord) error {
@@ -57,7 +63,7 @@ func TestDBURLStorage_Get(t *testing.T) {
 		searchType string
 		stub       dbManagerStub
 		inputURL   string
-		wantURL    string
+		wantURL    model.URLStorageRecord
 		wantErr    bool
 		wantErrIs  error
 		wantErrAs  any
@@ -67,14 +73,14 @@ func TestDBURLStorage_Get(t *testing.T) {
 			searchType: OrigURLType,
 			stub:       dbManagerStub{retByOrig: "abcde"},
 			inputURL:   "https://example.com",
-			wantURL:    "abcde",
+			wantURL:    model.URLStorageRecord{OrigURL: "https://example.com", ShortID: "abcde"},
 		},
 		{
 			name:       "success by short",
 			searchType: ShortURLType,
 			stub:       dbManagerStub{retByShort: "https://example.com"},
 			inputURL:   "abcde",
-			wantURL:    "https://example.com",
+			wantURL:    model.URLStorageRecord{OrigURL: "https://example.com", ShortID: "abcde"},
 		},
 		{
 			name:       "returns not found error when not found by original url",
@@ -114,11 +120,12 @@ func TestDBURLStorage_Get(t *testing.T) {
 				if tt.wantErrAs != nil {
 					require.ErrorAs(t, err, tt.wantErrAs)
 				}
-				assert.Equal(t, "", got)
+				assert.Nil(t, got)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantURL, got)
+			assert.Equal(t, tt.wantURL.OrigURL, got.OrigURL)
+			assert.Equal(t, tt.wantURL.ShortID, got.ShortID)
 		})
 	}
 }

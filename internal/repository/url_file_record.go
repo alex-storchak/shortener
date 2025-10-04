@@ -8,6 +8,7 @@ type urlFileRecord struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 	UserUUID    string `json:"user_uuid"`
+	IsDeleted   bool   `json:"is_deleted"`
 }
 
 func (r *urlFileRecord) toJSON() ([]byte, error) {

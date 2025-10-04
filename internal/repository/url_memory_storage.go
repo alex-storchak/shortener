@@ -27,22 +27,25 @@ func (s *MemoryURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *MemoryURLStorage) Get(url, searchByType string) (string, error) {
+func (s *MemoryURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
 	switch searchByType {
 	case OrigURLType:
 		for _, r := range s.records {
-			if r.OrigURL == url {
-				return r.ShortID, nil
+			if r.OrigURL == url && !r.IsDeleted {
+				return &r, nil
 			}
 		}
 	case ShortURLType:
 		for _, r := range s.records {
 			if r.ShortID == url {
-				return r.OrigURL, nil
+				if r.IsDeleted {
+					return nil, ErrDataDeleted
+				}
+				return &r, nil
 			}
 		}
 	}
-	return "", NewDataNotFoundError(nil)
+	return nil, NewDataNotFoundError(nil)
 }
 
 func (s *MemoryURLStorage) Set(r *model.URLStorageRecord) error {
@@ -58,7 +61,7 @@ func (s *MemoryURLStorage) BatchSet(records *[]model.URLStorageRecord) error {
 func (s *MemoryURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
 	var records []model.URLStorageRecord
 	for _, r := range s.records {
-		if r.UserUUID == userUUID {
+		if r.UserUUID == userUUID && !r.IsDeleted {
 			records = append(records, r)
 		}
 	}

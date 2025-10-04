@@ -32,12 +32,7 @@ func (d *idGeneratorStub) Generate() (string, error) {
 type urlStorageStub struct {
 	setMethodShouldFail      bool
 	setBatchMethodShouldFail bool
-	storage                  []urlStorageStubRecord
-}
-
-type urlStorageStubRecord struct {
-	shortURL string
-	origURL  string
+	storage                  []model.URLStorageRecord
 }
 
 func newURLStorageStub(
@@ -47,10 +42,10 @@ func newURLStorageStub(
 	return &urlStorageStub{
 		setMethodShouldFail:      setMethodShouldFail,
 		setBatchMethodShouldFail: setBatchMethodShouldFail,
-		storage: []urlStorageStubRecord{
+		storage: []model.URLStorageRecord{
 			{
-				shortURL: "abcde",
-				origURL:  "http://existing.com",
+				OrigURL: "http://existing.com",
+				ShortID: "abcde",
 			},
 		},
 	}
@@ -64,13 +59,13 @@ func (d *urlStorageStub) Ping(_ context.Context) error {
 	return nil
 }
 
-func (d *urlStorageStub) Get(url, searchByType string) (string, error) {
-	if searchByType == repo.OrigURLType && d.storage[0].origURL == url {
-		return d.storage[0].shortURL, nil
-	} else if searchByType == repo.ShortURLType && d.storage[0].shortURL == url {
-		return d.storage[0].origURL, nil
+func (d *urlStorageStub) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+	if searchByType == repo.OrigURLType && d.storage[0].OrigURL == url {
+		return &d.storage[0], nil
+	} else if searchByType == repo.ShortURLType && d.storage[0].ShortID == url {
+		return &d.storage[0], nil
 	}
-	return "", repo.NewDataNotFoundError(nil)
+	return nil, repo.NewDataNotFoundError(nil)
 }
 
 func (d *urlStorageStub) Set(_ *model.URLStorageRecord) error {

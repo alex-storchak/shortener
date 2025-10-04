@@ -45,32 +45,36 @@ func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
 		return "", ErrEmptyInputURL
 	}
 
-	shortID, err := s.urlStorage.Get(url, repo.OrigURLType)
+	var (
+		r   *model.URLStorageRecord
+		err error
+	)
+	r, err = s.urlStorage.Get(url, repo.OrigURLType)
 	if err == nil {
-		return shortID, ErrURLAlreadyExists
+		return r.ShortID, ErrURLAlreadyExists
 	}
 	var nfErr *repo.DataNotFoundError
 	if !errors.As(err, &nfErr) {
 		return "", fmt.Errorf("failed to retrieve url from storage: %w", err)
 	}
 
-	shortID, err = s.generator.Generate()
+	shortID, err := s.generator.Generate()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate short id: %w", err)
 	}
-	record := &model.URLStorageRecord{OrigURL: url, ShortID: shortID, UserUUID: userUUID}
-	if err := s.urlStorage.Set(record); err != nil {
+	r = &model.URLStorageRecord{OrigURL: url, ShortID: shortID, UserUUID: userUUID}
+	if err := s.urlStorage.Set(r); err != nil {
 		return "", fmt.Errorf("failed to set url binding in storage: %w", err)
 	}
 	return shortID, nil
 }
 
 func (s *Shortener) Extract(shortID string) (string, error) {
-	origURL, err := s.urlStorage.Get(shortID, repo.ShortURLType)
+	r, err := s.urlStorage.Get(shortID, repo.ShortURLType)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve short url from storage: %w", err)
 	}
-	return origURL, nil
+	return r.OrigURL, nil
 }
 
 func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, error) {
@@ -99,9 +103,9 @@ func (s *Shortener) segregateBatch(userUUID string, urls *[]string) (*[]string, 
 			return nil, nil, ErrEmptyInputURL
 		}
 
-		shortID, err := s.urlStorage.Get(u, repo.OrigURLType)
+		r, err := s.urlStorage.Get(u, repo.OrigURLType)
 		if err == nil {
-			res[i] = shortID
+			res[i] = r.ShortID
 			continue
 		}
 		var nfErr *repo.DataNotFoundError

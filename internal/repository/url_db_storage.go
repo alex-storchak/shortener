@@ -10,8 +10,8 @@ import (
 )
 
 type IURLDBManager interface {
-	GetByOriginalURL(ctx context.Context, origURL string) (string, error)
-	GetByShortID(ctx context.Context, shortID string) (string, error)
+	GetByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error)
+	GetByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error)
 	Persist(ctx context.Context, r *model.URLStorageRecord) error
 	PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error
 	Ping(ctx context.Context) error
@@ -42,19 +42,22 @@ func (s *DBURLStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
-	var err error
+func (s *DBURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+	var (
+		r   *model.URLStorageRecord
+		err error
+	)
 	if searchByType == OrigURLType {
-		url, err = s.dbMgr.GetByOriginalURL(context.Background(), url)
+		r, err = s.dbMgr.GetByOriginalURL(context.Background(), url)
 	} else if searchByType == ShortURLType {
-		url, err = s.dbMgr.GetByShortID(context.Background(), url)
+		r, err = s.dbMgr.GetByShortID(context.Background(), url)
 	}
 	if errors.Is(err, ErrDataNotFoundInDB) {
-		return "", NewDataNotFoundError(ErrDataNotFoundInDB)
+		return nil, NewDataNotFoundError(ErrDataNotFoundInDB)
 	} else if err != nil {
-		return "", fmt.Errorf("failed to retrieve bind by url `%s` from db: %w", url, err)
+		return nil, fmt.Errorf("failed to retrieve bind by url `%s` from db: %w", url, err)
 	}
-	return url, nil
+	return r, nil
 }
 
 func (s *DBURLStorage) Set(r *model.URLStorageRecord) error {

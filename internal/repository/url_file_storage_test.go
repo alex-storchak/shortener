@@ -94,13 +94,13 @@ func TestFileURLStorage(t *testing.T) {
 }
 
 func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
-	origURL, err := storage.Get(tt.wantShortURL, ShortURLType)
+	ou, err := storage.Get(tt.wantShortURL, ShortURLType)
 	require.NoError(t, err)
-	assert.Equal(t, tt.wantOrigURL, origURL)
+	assert.Equal(t, tt.wantOrigURL, ou.OrigURL)
 
-	shortURL, err := storage.Get(tt.wantOrigURL, OrigURLType)
+	su, err := storage.Get(tt.wantOrigURL, OrigURLType)
 	require.NoError(t, err)
-	assert.Equal(t, tt.wantShortURL, shortURL)
+	assert.Equal(t, tt.wantShortURL, su.ShortID)
 }
 
 func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {

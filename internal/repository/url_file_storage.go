@@ -58,15 +58,28 @@ func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
 	return nil
 }
 
-func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
-	for _, record := range *s.records {
-		if searchByType == OrigURLType && record.OriginalURL == url {
-			return record.ShortURL, nil
-		} else if searchByType == ShortURLType && record.ShortURL == url {
-			return record.OriginalURL, nil
+func (s *FileURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+	for _, r := range *s.records {
+		if searchByType == OrigURLType && r.OriginalURL == url && !r.IsDeleted {
+			return &model.URLStorageRecord{
+				OrigURL:   r.OriginalURL,
+				ShortID:   r.ShortURL,
+				UserUUID:  r.UserUUID,
+				IsDeleted: r.IsDeleted,
+			}, nil
+		} else if searchByType == ShortURLType && r.ShortURL == url {
+			if r.IsDeleted {
+				return nil, ErrDataDeleted
+			}
+			return &model.URLStorageRecord{
+				OrigURL:   r.OriginalURL,
+				ShortID:   r.ShortURL,
+				UserUUID:  r.UserUUID,
+				IsDeleted: r.IsDeleted,
+			}, nil
 		}
 	}
-	return "", NewDataNotFoundError(nil)
+	return nil, NewDataNotFoundError(nil)
 }
 
 func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
@@ -74,6 +87,7 @@ func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
 		ShortURL:    r.ShortID,
 		OriginalURL: r.OrigURL,
 		UserUUID:    r.UserUUID,
+		IsDeleted:   r.IsDeleted,
 	}
 	*s.records = append(*s.records, record)
 	if err := s.persistToFile(record); err != nil {
@@ -94,11 +108,12 @@ func (s *FileURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
 func (s *FileURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
 	var records []model.URLStorageRecord
 	for _, r := range *s.records {
-		if r.UserUUID == userUUID {
+		if r.UserUUID == userUUID && !r.IsDeleted {
 			records = append(records, model.URLStorageRecord{
-				ShortID:  r.ShortURL,
-				OrigURL:  r.OriginalURL,
-				UserUUID: r.UserUUID,
+				ShortID:   r.ShortURL,
+				OrigURL:   r.OriginalURL,
+				UserUUID:  r.UserUUID,
+				IsDeleted: r.IsDeleted,
 			})
 		}
 	}
