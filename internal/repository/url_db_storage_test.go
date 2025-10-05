@@ -53,6 +53,10 @@ func (s dbManagerStub) GetByUserUUID(_ context.Context, _ string) ([]*model.URLS
 	return nil, nil
 }
 
+func (s dbManagerStub) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
+	return nil
+}
+
 func TestDBURLStorage_Get(t *testing.T) {
 	lgr := zap.NewNop()
 	unexpected := errors.New("random error")

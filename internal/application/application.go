@@ -111,7 +111,7 @@ func (a *App) initHandlers(shortener service.IShortenerService) *handler.Handler
 	apiShortenBatchService := service.NewAPIShortenBatchService(a.cfg.Handler.BaseURL, shortener, batchDecoder, a.logger)
 	apiShortenBatchHandler := handler.NewAPIShortenBatchHandler(apiShortenBatchService, jsonEncoder, a.logger)
 
-	apiUserURLsService := service.NewAPIUserURLsService(a.cfg.Handler.BaseURL, shortener, a.logger)
+	apiUserURLsService := service.NewAPIUserURLsService(a.cfg.Handler.BaseURL, shortener, batchDecoder, a.logger)
 	apiUserURLsHandler := handler.NewAPIUserURLsHandler(apiUserURLsService, jsonEncoder, a.logger)
 
 	pingService := service.NewPingService(shortener, a.logger)

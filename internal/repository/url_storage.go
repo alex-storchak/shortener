@@ -20,6 +20,7 @@ type URLStorage interface {
 	Ping(ctx context.Context) error
 	Close() error
 	GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error)
+	DeleteBatch(urls model.URLDeleteBatch) error
 }
 
 type DataNotFoundError struct {

@@ -86,6 +86,10 @@ func (d *urlStorageStub) GetByUserUUID(_ string) ([]*model.URLStorageRecord, err
 	return nil, nil
 }
 
+func (d *urlStorageStub) DeleteBatch(_ model.URLDeleteBatch) error {
+	return nil
+}
+
 func TestShortener_Shorten(t *testing.T) {
 	type args struct {
 		url string

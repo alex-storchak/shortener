@@ -19,8 +19,12 @@ type stubBatchDecoder struct {
 	retErr error
 }
 
-func (s *stubBatchDecoder) DecodeBatch(_ io.Reader) ([]model.BatchShortenRequestItem, error) {
+func (s *stubBatchDecoder) DecodeShortenBatch(_ io.Reader) ([]model.BatchShortenRequestItem, error) {
 	return s.retReq, s.retErr
+}
+
+func (s *stubBatchDecoder) DecodeDeleteBatch(_ io.Reader) ([]string, error) {
+	return nil, nil
 }
 
 type stubShortenerBatch struct {
@@ -45,6 +49,10 @@ func (s *stubShortenerBatch) ShortenBatch(_ string, _ []string) ([]string, error
 
 func (s *stubShortenerBatch) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
+}
+
+func (s *stubShortenerBatch) DeleteBatch(_ model.URLDeleteBatch) error {
+	return nil
 }
 
 func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {

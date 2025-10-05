@@ -30,6 +30,9 @@ func (h *ShortURLHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 	if errors.As(err, &nfErr) {
 		res.WriteHeader(http.StatusNotFound)
 		return
+	} else if errors.Is(err, repository.ErrDataDeleted) {
+		res.WriteHeader(http.StatusGone)
+		return
 	} else if err != nil {
 		h.logger.Error("failed to expand short url", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)

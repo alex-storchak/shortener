@@ -44,6 +44,10 @@ func (s *stubShortenerAPI) GetUserURLs(_ string) ([]*model.URLStorageRecord, err
 	return nil, nil
 }
 
+func (s *stubShortenerAPI) DeleteBatch(_ model.URLDeleteBatch) error {
+	return nil
+}
+
 func TestAPIShortenService_Shorten(t *testing.T) {
 	tests := []struct {
 		name       string

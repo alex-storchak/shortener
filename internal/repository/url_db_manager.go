@@ -34,6 +34,7 @@ func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (*m
 		FROM url_storage 
 		JOIN auth_user ON id = user_id 
 		WHERE original_url = $1
+		AND is_deleted = FALSE
 	`
 	return m.getByQuery(ctx, q, origURL)
 }
@@ -156,6 +157,55 @@ func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) ([]*m
 		return nil, fmt.Errorf("failed to get user urls from db: %w", err)
 	}
 	return urls, nil
+}
+
+func (m *URLDBManager) DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error {
+	if len(urls) == 0 {
+		return nil
+	}
+	shortIDs, userUUIDs := m.segregateBatch(urls)
+
+	q := `
+    UPDATE url_storage 
+    SET is_deleted = true
+    WHERE short_id = ANY($1) 
+    AND user_id IN (
+        SELECT id FROM auth_user WHERE user_uuid = ANY($2)
+    )
+    AND is_deleted = false
+	`
+
+	trx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("error on begin transaction: %w", err)
+	}
+	defer func() {
+		if err := trx.Rollback(); err != nil {
+			if !errors.Is(err, sql.ErrTxDone) {
+				m.logger.Error("failed to rollback transaction", zap.Error(err))
+			}
+		}
+	}()
+
+	_, err = trx.ExecContext(ctx, q, shortIDs, userUUIDs)
+	if err != nil {
+		return fmt.Errorf("failed to update `is_deleted` field for urls batch: %w", err)
+	}
+
+	if cErr := trx.Commit(); cErr != nil {
+		return fmt.Errorf("error on commiting delete batch transaction: %w", cErr)
+	}
+	return nil
+}
+
+func (m *URLDBManager) segregateBatch(urls model.URLDeleteBatch) (shortIds, userUUIDs []string) {
+	shortIds = make([]string, len(urls))
+	userUUIDs = make([]string, len(urls))
+	for i, u := range urls {
+		shortIds[i] = u.ShortID
+		userUUIDs[i] = u.UserUUID
+	}
+	return
 }
 
 var (

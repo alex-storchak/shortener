@@ -33,6 +33,10 @@ func (s *stubExpandShortener) GetUserURLs(_ string) ([]*model.URLStorageRecord, 
 	return nil, nil
 }
 
+func (s *stubExpandShortener) DeleteBatch(_ model.URLDeleteBatch) error {
+	return nil
+}
+
 func TestShortURLService_Expand(t *testing.T) {
 	tests := []struct {
 		name        string

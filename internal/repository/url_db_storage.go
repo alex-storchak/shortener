@@ -17,6 +17,7 @@ type IURLDBManager interface {
 	Ping(ctx context.Context) error
 	Close() error
 	GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error)
+	DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error
 }
 
 type DBURLStorage struct {
@@ -51,6 +52,9 @@ func (s *DBURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, e
 		r, err = s.dbMgr.GetByOriginalURL(context.Background(), url)
 	} else if searchByType == ShortURLType {
 		r, err = s.dbMgr.GetByShortID(context.Background(), url)
+		if err == nil && r.IsDeleted {
+			return nil, ErrDataDeleted
+		}
 	}
 	if errors.Is(err, ErrDataNotFoundInDB) {
 		return nil, NewDataNotFoundError(ErrDataNotFoundInDB)
@@ -75,9 +79,9 @@ func (s *DBURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
 }
 
 func (s *DBURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
-	urls, err := s.dbMgr.GetByUserUUID(context.Background(), userUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve user urls from db: %w", err)
-	}
-	return urls, nil
+	return s.dbMgr.GetByUserUUID(context.Background(), userUUID)
+}
+
+func (s *DBURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
+	return s.dbMgr.DeleteBatch(context.Background(), urls)
 }

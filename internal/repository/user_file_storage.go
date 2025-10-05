@@ -53,7 +53,7 @@ func (s *FileUserStorage) Set(user *model.User) error {
 }
 
 func (s *FileUserStorage) restoreFromFile() error {
-	file, err := s.fileMgr.open(false)
+	file, err := s.fileMgr.openForAppend(false)
 	if err != nil {
 		return fmt.Errorf("failed to open requested file: %w", err)
 	}

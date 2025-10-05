@@ -25,7 +25,7 @@ func NewAPIUserURLsHandler(
 	}
 }
 
-func (h *APIUserURLsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *APIUserURLsHandler) ServeHTTPGet(res http.ResponseWriter, req *http.Request) {
 	respItems, err := h.srv.GetUserURLs(req.Context())
 	if err != nil {
 		h.logger.Error("error getting user urls", zap.Error(err))
@@ -45,12 +45,26 @@ func (h *APIUserURLsHandler) ServeHTTP(res http.ResponseWriter, req *http.Reques
 	}
 }
 
+func (h *APIUserURLsHandler) ServeHTTPDelete(res http.ResponseWriter, req *http.Request) {
+	if err := h.srv.DeleteUserURLs(req.Context(), req.Body); err != nil {
+		h.logger.Error("error deleting user urls", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusAccepted)
+}
+
 func (h *APIUserURLsHandler) Routes() []Route {
 	return []Route{
 		{
 			Method:  http.MethodGet,
 			Pattern: "/api/user/urls",
-			Handler: h.ServeHTTP,
+			Handler: h.ServeHTTPGet,
+		},
+		{
+			Method:  http.MethodDelete,
+			Pattern: "/api/user/urls",
+			Handler: h.ServeHTTPDelete,
 		},
 	}
 }

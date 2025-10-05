@@ -41,9 +41,9 @@ func (s *APIShortenBatchService) ShortenBatch(ctx context.Context, r io.Reader) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)
 	}
-	reqItems, err := s.batchDec.DecodeBatch(r)
+	reqItems, err := s.batchDec.DecodeShortenBatch(r)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode batch request json: %w", err)
+		return nil, fmt.Errorf("failed to decode shorten batch request json: %w", err)
 	}
 
 	origURLs := s.buildURLList(reqItems)

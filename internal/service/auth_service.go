@@ -48,7 +48,7 @@ func (a *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 	if !token.Valid {
 		return nil, ErrAuthInvalidToken
 	}
-	a.logger.Info("auth token is valid")
+	a.logger.Debug("auth token is valid")
 	return claims, nil
 }
 
