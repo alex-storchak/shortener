@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type IURLDBManager interface {
+type URLDBManager interface {
 	GetByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error)
 	GetByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error)
 	Persist(ctx context.Context, r *model.URLStorageRecord) error
@@ -22,10 +22,10 @@ type IURLDBManager interface {
 
 type DBURLStorage struct {
 	logger *zap.Logger
-	dbMgr  IURLDBManager
+	dbMgr  URLDBManager
 }
 
-func NewDBURLStorage(logger *zap.Logger, dbm IURLDBManager) *DBURLStorage {
+func NewDBURLStorage(logger *zap.Logger, dbm URLDBManager) *DBURLStorage {
 	return &DBURLStorage{
 		logger: logger,
 		dbMgr:  dbm,

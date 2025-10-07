@@ -14,7 +14,7 @@ type FileURLStorage struct {
 	fileMgr  *FileManager
 	fileScnr *URLFileScanner
 	records  []*model.URLStorageRecord
-	mu       sync.RWMutex
+	mu       *sync.Mutex
 }
 
 func NewFileURLStorage(
@@ -26,6 +26,7 @@ func NewFileURLStorage(
 		logger:   logger,
 		fileMgr:  fm,
 		fileScnr: fs,
+		mu:       &sync.Mutex{},
 	}
 
 	if err := storage.restoreFromFile(false); err != nil {
@@ -43,8 +44,8 @@ func (s *FileURLStorage) Ping(_ context.Context) error {
 }
 
 func (s *FileURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for _, r := range s.records {
 		if searchByType == OrigURLType && r.OrigURL == url && !r.IsDeleted {
@@ -81,8 +82,8 @@ func (s *FileURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
 }
 
 func (s *FileURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	var records []*model.URLStorageRecord
 	for _, r := range s.records {

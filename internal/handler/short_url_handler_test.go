@@ -15,7 +15,7 @@ type ShortURLSrvStub struct {
 	expandError error
 }
 
-func (s *ShortURLSrvStub) Expand(_ string) (origURL string, err error) {
+func (s *ShortURLSrvStub) Process(_ string) (origURL string, err error) {
 	if s.expandError != nil {
 		return "", s.expandError
 	}

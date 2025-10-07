@@ -48,7 +48,7 @@ func (s *stubShortenerAPI) DeleteBatch(_ model.URLDeleteBatch) error {
 	return nil
 }
 
-func TestAPIShortenService_Shorten(t *testing.T) {
+func TestShortenService_Shorten(t *testing.T) {
 	tests := []struct {
 		name       string
 		body       []byte
@@ -111,11 +111,11 @@ func TestAPIShortenService_Shorten(t *testing.T) {
 			if baseURL == "" {
 				baseURL = "http://any"
 			}
-			srv := NewAPIShortenService(baseURL, shortener, dec, zap.NewNop())
-			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
+			srv := NewShortenService(baseURL, shortener, dec, zap.NewNop())
+			ctx := helper.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			var r io.Reader = bytes.NewReader(tt.body)
-			resp, err := srv.Shorten(ctx, r)
+			resp, err := srv.Process(ctx, r)
 
 			if tt.wantErr {
 				require.Error(t, err)

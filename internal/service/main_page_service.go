@@ -10,17 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
-type IMainPageService interface {
-	Shorten(ctx context.Context, body []byte) (shortURL string, err error)
-}
-
 type MainPageService struct {
 	baseURL   string
-	shortener IShortener
+	shortener URLShortener
 	logger    *zap.Logger
 }
 
-func NewMainPageService(bu string, s IShortener, l *zap.Logger) *MainPageService {
+func NewMainPageService(bu string, s URLShortener, l *zap.Logger) *MainPageService {
 	return &MainPageService{
 		baseURL:   bu,
 		shortener: s,
@@ -28,7 +24,7 @@ func NewMainPageService(bu string, s IShortener, l *zap.Logger) *MainPageService
 	}
 }
 
-func (s *MainPageService) Shorten(ctx context.Context, body []byte) (string, error) {
+func (s *MainPageService) Process(ctx context.Context, body []byte) (string, error) {
 	origURL := string(body)
 	userUUID, err := helper.GetCtxUserUUID(ctx)
 	if err != nil {

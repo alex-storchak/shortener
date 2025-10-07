@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -43,7 +42,7 @@ func AuthMiddleware(
 				})
 			}
 
-			ctx := context.WithValue(r.Context(), helper.UserCtxKey{}, user)
+			ctx := helper.WithUser(r.Context(), user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -22,18 +22,18 @@ type AuthMiddlewareService interface {
 
 type authMiddlewareService struct {
 	authSrv *AuthService
-	um      repository.IUserManager
+	uc      repository.UserCreator
 	cfg     *mwcfg.Config
 }
 
 func NewAuthMiddlewareService(
 	authSrv *AuthService,
-	um repository.IUserManager,
+	uc repository.UserCreator,
 	cfg *mwcfg.Config,
 ) AuthMiddlewareService {
 	return &authMiddlewareService{
 		authSrv: authSrv,
-		um:      um,
+		uc:      uc,
 		cfg:     cfg,
 	}
 }
@@ -74,7 +74,7 @@ func (s *authMiddlewareService) ResolveUser(token string) (*model.User, *AuthCoo
 }
 
 func (s *authMiddlewareService) issueNewUserAndCookie() (*model.User, *AuthCookieOpts, error) {
-	user, err := s.um.NewUser()
+	user, err := s.uc.NewUser()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create new user: %w", err)
 	}

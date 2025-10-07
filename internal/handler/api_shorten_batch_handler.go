@@ -1,28 +1,35 @@
 package handler
 
 import (
+	"context"
 	"errors"
+	"io"
 	"net/http"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
+type ShortenBatchProcessor interface {
+	Process(ctx context.Context, r io.Reader) ([]model.BatchShortenResponseItem, error)
+}
+
 type APIShortenBatchHandler struct {
-	batchSrv service.IAPIShortenBatchService
-	jsonEnc  service.IJSONEncoder
-	logger   *zap.Logger
+	srv     ShortenBatchProcessor
+	jsonEnc service.Encoder
+	logger  *zap.Logger
 }
 
 func NewAPIShortenBatchHandler(
-	batchService service.IAPIShortenBatchService,
-	jsonEncoder service.IJSONEncoder,
-	logger *zap.Logger,
+	srv ShortenBatchProcessor,
+	enc service.Encoder,
+	l *zap.Logger,
 ) *APIShortenBatchHandler {
 	return &APIShortenBatchHandler{
-		batchSrv: batchService,
-		jsonEnc:  jsonEncoder,
-		logger:   logger,
+		srv:     srv,
+		jsonEnc: enc,
+		logger:  l,
 	}
 }
 
@@ -33,7 +40,7 @@ func (h *APIShortenBatchHandler) ServeHTTP(res http.ResponseWriter, req *http.Re
 		return
 	}
 
-	respItems, err := h.batchSrv.ShortenBatch(req.Context(), req.Body)
+	respItems, err := h.srv.Process(req.Context(), req.Body)
 	if errors.Is(err, service.ErrEmptyInputURL) || errors.Is(err, service.ErrEmptyInputBatch) {
 		res.WriteHeader(http.StatusBadRequest)
 		return

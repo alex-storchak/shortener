@@ -14,22 +14,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type IAPIUserURLsService interface {
-	GetUserURLs(ctx context.Context) ([]model.UserURLsResponseItem, error)
-	DeleteUserURLs(ctx context.Context, r io.Reader) error
+type DeleteBatchRequestDecoder interface {
+	Decode(io.Reader) ([]string, error)
 }
 
 type APIUserURLsService struct {
 	baseURL   string
-	shortener IShortener
-	dec       IJSONBatchRequestDecoder
+	shortener URLShortener
+	dec       DeleteBatchRequestDecoder
 	logger    *zap.Logger
 }
 
 func NewAPIUserURLsService(
 	baseURL string,
-	shortener IShortener,
-	dec IJSONBatchRequestDecoder,
+	shortener URLShortener,
+	dec DeleteBatchRequestDecoder,
 	logger *zap.Logger,
 ) *APIUserURLsService {
 	return &APIUserURLsService{
@@ -40,7 +39,7 @@ func NewAPIUserURLsService(
 	}
 }
 
-func (s *APIUserURLsService) GetUserURLs(ctx context.Context) ([]model.UserURLsResponseItem, error) {
+func (s *APIUserURLsService) ProcessGet(ctx context.Context) ([]model.UserURLsResponseItem, error) {
 	userUUID, err := helper.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)
@@ -73,12 +72,12 @@ func (s *APIUserURLsService) buildResponse(urls []*model.URLStorageRecord) ([]mo
 	return resp, nil
 }
 
-func (s *APIUserURLsService) DeleteUserURLs(ctx context.Context, r io.Reader) error {
+func (s *APIUserURLsService) ProcessDelete(ctx context.Context, r io.Reader) error {
 	userUUID, err := helper.GetCtxUserUUID(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get user uuid from context: %w", err)
 	}
-	shortIDs, err := s.dec.DecodeDeleteBatch(r)
+	shortIDs, err := s.dec.Decode(r)
 	if err != nil {
 		return fmt.Errorf("failed to decode delete batch request json: %w", err)
 	}

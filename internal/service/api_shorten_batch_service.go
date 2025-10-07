@@ -11,37 +11,37 @@ import (
 	"go.uber.org/zap"
 )
 
-type IAPIShortenBatchService interface {
-	ShortenBatch(ctx context.Context, r io.Reader) ([]model.BatchShortenResponseItem, error)
+type ShortenBatchRequestDecoder interface {
+	Decode(io.Reader) ([]model.BatchShortenRequestItem, error)
 }
 
-type APIShortenBatchService struct {
+type ShortenBatchService struct {
 	baseURL   string
-	shortener IShortener
-	batchDec  IJSONBatchRequestDecoder
+	shortener URLShortener
+	dec       ShortenBatchRequestDecoder
 	logger    *zap.Logger
 }
 
-func NewAPIShortenBatchService(
+func NewShortenBatchService(
 	baseURL string,
-	shortener IShortener,
-	decoder IJSONBatchRequestDecoder,
-	logger *zap.Logger,
-) *APIShortenBatchService {
-	return &APIShortenBatchService{
+	shortener URLShortener,
+	dec ShortenBatchRequestDecoder,
+	l *zap.Logger,
+) *ShortenBatchService {
+	return &ShortenBatchService{
 		baseURL:   baseURL,
 		shortener: shortener,
-		batchDec:  decoder,
-		logger:    logger,
+		dec:       dec,
+		logger:    l,
 	}
 }
 
-func (s *APIShortenBatchService) ShortenBatch(ctx context.Context, r io.Reader) ([]model.BatchShortenResponseItem, error) {
+func (s *ShortenBatchService) Process(ctx context.Context, r io.Reader) ([]model.BatchShortenResponseItem, error) {
 	userUUID, err := helper.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)
 	}
-	reqItems, err := s.batchDec.DecodeShortenBatch(r)
+	reqItems, err := s.dec.Decode(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode shorten batch request json: %w", err)
 	}
@@ -60,7 +60,7 @@ func (s *APIShortenBatchService) ShortenBatch(ctx context.Context, r io.Reader) 
 	return resp, nil
 }
 
-func (s *APIShortenBatchService) buildURLList(reqItems []model.BatchShortenRequestItem) []string {
+func (s *ShortenBatchService) buildURLList(reqItems []model.BatchShortenRequestItem) []string {
 	origURLs := make([]string, len(reqItems))
 	for i, item := range reqItems {
 		origURLs[i] = item.OriginalURL
@@ -68,7 +68,7 @@ func (s *APIShortenBatchService) buildURLList(reqItems []model.BatchShortenReque
 	return origURLs
 }
 
-func (s *APIShortenBatchService) buildResponse(
+func (s *ShortenBatchService) buildResponse(
 	reqItems []model.BatchShortenRequestItem,
 	shortIDs []string,
 ) ([]model.BatchShortenResponseItem, error) {

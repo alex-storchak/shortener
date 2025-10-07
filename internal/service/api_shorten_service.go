@@ -12,19 +12,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type IAPIShortenService interface {
-	Shorten(ctx context.Context, r io.Reader) (*model.ShortenResponse, error)
+type ShortenRequestDecoder interface {
+	Decode(io.Reader) (model.ShortenRequest, error)
 }
 
-type APIShortenService struct {
+type ShortenService struct {
 	baseURL   string
-	shortener IShortener
-	decoder   IJSONRequestDecoder
+	shortener URLShortener
+	decoder   ShortenRequestDecoder
 	logger    *zap.Logger
 }
 
-func NewAPIShortenService(bu string, s IShortener, d IJSONRequestDecoder, l *zap.Logger) *APIShortenService {
-	return &APIShortenService{
+func NewShortenService(bu string, s URLShortener, d ShortenRequestDecoder, l *zap.Logger) *ShortenService {
+	return &ShortenService{
 		baseURL:   bu,
 		shortener: s,
 		decoder:   d,
@@ -32,7 +32,7 @@ func NewAPIShortenService(bu string, s IShortener, d IJSONRequestDecoder, l *zap
 	}
 }
 
-func (s *APIShortenService) Shorten(ctx context.Context, r io.Reader) (*model.ShortenResponse, error) {
+func (s *ShortenService) Process(ctx context.Context, r io.Reader) (*model.ShortenResponse, error) {
 	userUUID, err := helper.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)

@@ -7,10 +7,14 @@ import (
 	"github.com/alex-storchak/shortener/internal/model"
 )
 
-type UserCtxKey struct{}
+type userCtxKey struct{}
+
+func WithUser(ctx context.Context, user *model.User) context.Context {
+	return context.WithValue(ctx, userCtxKey{}, user)
+}
 
 func GetCtxUserUUID(ctx context.Context) (string, error) {
-	value := ctx.Value(UserCtxKey{})
+	value := ctx.Value(userCtxKey{})
 	if value == nil {
 		return "", fmt.Errorf("user not found in context")
 	}

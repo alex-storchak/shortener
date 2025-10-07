@@ -18,11 +18,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type APIShortenSrvStub struct {
+type ShortenSrvStub struct {
 	shortenError error
 }
 
-func (s *APIShortenSrvStub) Shorten(_ context.Context, _ io.Reader) (*model.ShortenResponse, error) {
+func (s *ShortenSrvStub) Process(_ context.Context, _ io.Reader) (*model.ShortenResponse, error) {
 	if s.shortenError != nil {
 		return nil, s.shortenError
 	}
@@ -106,7 +106,7 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			srv := &APIShortenSrvStub{tt.shortenError}
+			srv := &ShortenSrvStub{tt.shortenError}
 			enc := &JSONEncoderStub{tt.encodeError}
 			h := NewAPIShortenHandler(srv, enc, zap.NewNop())
 

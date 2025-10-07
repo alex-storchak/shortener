@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/alex-storchak/shortener/internal/model"
@@ -10,21 +12,25 @@ import (
 	"go.uber.org/zap"
 )
 
+type ShortenProcessor interface {
+	Process(ctx context.Context, r io.Reader) (*model.ShortenResponse, error)
+}
+
 type APIShortenHandler struct {
-	apiShortenSrv service.IAPIShortenService
-	jsonEncoder   service.IJSONEncoder
-	logger        *zap.Logger
+	srv    ShortenProcessor
+	enc    service.Encoder
+	logger *zap.Logger
 }
 
 func NewAPIShortenHandler(
-	apiShortenService service.IAPIShortenService,
-	jsonEncoder service.IJSONEncoder,
-	logger *zap.Logger,
+	srv ShortenProcessor,
+	enc service.Encoder,
+	l *zap.Logger,
 ) *APIShortenHandler {
 	return &APIShortenHandler{
-		apiShortenSrv: apiShortenService,
-		jsonEncoder:   jsonEncoder,
-		logger:        logger,
+		srv:    srv,
+		enc:    enc,
+		logger: l,
 	}
 }
 
@@ -35,7 +41,7 @@ func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request
 		return
 	}
 
-	resBody, err := h.apiShortenSrv.Shorten(req.Context(), req.Body)
+	resBody, err := h.srv.Process(req.Context(), req.Body)
 	if errors.Is(err, service.ErrEmptyInputURL) {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -58,7 +64,7 @@ func (h *APIShortenHandler) ServeHTTP(res http.ResponseWriter, req *http.Request
 func (h *APIShortenHandler) writeResponse(res http.ResponseWriter, status int, resBody *model.ShortenResponse) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(status)
-	if err := h.jsonEncoder.Encode(res, resBody); err != nil {
+	if err := h.enc.Encode(res, resBody); err != nil {
 		return fmt.Errorf("failed to encode response body `%v`: %w", resBody, err)
 	}
 	return nil

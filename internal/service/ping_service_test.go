@@ -66,7 +66,7 @@ func TestPingService_Ping(t *testing.T) {
 				start = time.Now()
 			}
 
-			err := srv.Ping()
+			err := srv.Process()
 
 			if tt.wantErr {
 				require.Error(t, err)

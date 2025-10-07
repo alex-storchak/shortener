@@ -81,9 +81,9 @@ func TestMainPageService_Shorten(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			core := &stubShortener{tt.stubShortID, tt.stubErr}
 			srv := NewMainPageService("https://short.host", core, zap.NewNop())
-			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
+			ctx := helper.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
-			gotURL, gotErr := srv.Shorten(ctx, tt.body)
+			gotURL, gotErr := srv.Process(ctx, tt.body)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

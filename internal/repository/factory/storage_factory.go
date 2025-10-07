@@ -12,14 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
-type IStorageFactory interface {
+type StorageFactory interface {
 	MakeURLStorage() (repository.URLStorage, error)
 	MakeUserStorage() (repository.UserStorage, error)
 }
 
-func NewStorageFactory(cfg *config.Config, zl *zap.Logger) (IStorageFactory, error) {
+func NewStorageFactory(cfg *config.Config, zl *zap.Logger) (StorageFactory, error) {
 	var (
-		sf  IStorageFactory
+		sf  StorageFactory
 		err error
 	)
 	switch {

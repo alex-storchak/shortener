@@ -14,7 +14,7 @@ type PingSrvStub struct {
 	pingErr error
 }
 
-func (s *PingSrvStub) Ping() error {
+func (s *PingSrvStub) Process() error {
 	return s.pingErr
 }
 

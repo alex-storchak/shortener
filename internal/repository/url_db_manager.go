@@ -12,44 +12,44 @@ import (
 	"go.uber.org/zap"
 )
 
-type URLDBManager struct {
+type PgURLDBManager struct {
 	logger *zap.Logger
 	db     *sql.DB
 }
 
-func NewURLDBManager(logger *zap.Logger, db *sql.DB) *URLDBManager {
-	return &URLDBManager{
+func NewPgURLDBManager(logger *zap.Logger, db *sql.DB) *PgURLDBManager {
+	return &PgURLDBManager{
 		logger: logger,
 		db:     db,
 	}
 }
 
-func (m *URLDBManager) Close() error {
+func (m *PgURLDBManager) Close() error {
 	return m.db.Close()
 }
 
-func (m *URLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error) {
+func (m *PgURLDBManager) GetByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error) {
 	q := `
-		SELECT original_url, short_id, user_uuid, is_deleted 
-		FROM url_storage 
-		JOIN auth_user ON id = user_id 
-		WHERE original_url = $1
-		AND is_deleted = FALSE
+		SELECT us.original_url, us.short_id, au.user_uuid, us.is_deleted 
+		FROM url_storage us
+		JOIN auth_user au ON au.id = us.user_id 
+		WHERE us.original_url = $1
+		AND us.is_deleted = FALSE
 	`
 	return m.getByQuery(ctx, q, origURL)
 }
 
-func (m *URLDBManager) GetByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error) {
+func (m *PgURLDBManager) GetByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error) {
 	q := `
-		SELECT original_url, short_id, user_uuid, is_deleted 
-		FROM url_storage 
-		JOIN auth_user ON id = user_id 
-		WHERE short_id = $1
+		SELECT us.original_url, us.short_id, au.user_uuid, us.is_deleted 
+		FROM url_storage us
+		JOIN auth_user au ON au.id = us.user_id 
+		WHERE us.short_id = $1
 	`
 	return m.getByQuery(ctx, q, shortID)
 }
 
-func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (*model.URLStorageRecord, error) {
+func (m *PgURLDBManager) getByQuery(ctx context.Context, q string, args ...any) (*model.URLStorageRecord, error) {
 	row := m.db.QueryRowContext(ctx, q, args...)
 
 	var r model.URLStorageRecord
@@ -62,7 +62,7 @@ func (m *URLDBManager) getByQuery(ctx context.Context, q string, args ...any) (*
 	return &r, nil
 }
 
-func (m *URLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord) error {
+func (m *PgURLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord) error {
 	q := `
 		INSERT INTO url_storage (original_url, short_id, user_id) 
 		SELECT $1, $2, id 
@@ -76,7 +76,7 @@ func (m *URLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord) e
 	return nil
 }
 
-func (m *URLDBManager) PersistBatch(ctx context.Context, binds []*model.URLStorageRecord) error {
+func (m *PgURLDBManager) PersistBatch(ctx context.Context, binds []*model.URLStorageRecord) error {
 	insertSQL := `
 		INSERT INTO url_storage (original_url, short_id, user_id) 
 		SELECT $1, $2, id 
@@ -119,22 +119,22 @@ func (m *URLDBManager) PersistBatch(ctx context.Context, binds []*model.URLStora
 	return nil
 }
 
-func (m *URLDBManager) Ping(ctx context.Context) error {
+func (m *PgURLDBManager) Ping(ctx context.Context) error {
 	if err := m.db.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to ping db: %w", err)
 	}
 	return nil
 }
 
-func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error) {
+func (m *PgURLDBManager) GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error) {
 	urls := make([]*model.URLStorageRecord, 0)
 
 	q := `
-		SELECT original_url, short_id, user_uuid, is_deleted 
-		FROM url_storage 
-		JOIN auth_user ON id = user_id 
+		SELECT us.original_url, us.short_id, au.user_uuid, us.is_deleted 
+		FROM url_storage us 
+		JOIN auth_user au ON au.id = us.user_id 
 		WHERE user_uuid = $1 
-		AND is_deleted = FALSE
+		AND us.is_deleted = FALSE
 	`
 	rows, err := m.db.QueryContext(ctx, q, userUUID)
 	if err != nil {
@@ -159,7 +159,7 @@ func (m *URLDBManager) GetByUserUUID(ctx context.Context, userUUID string) ([]*m
 	return urls, nil
 }
 
-func (m *URLDBManager) DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error {
+func (m *PgURLDBManager) DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error {
 	if len(urls) == 0 {
 		return nil
 	}
@@ -198,7 +198,7 @@ func (m *URLDBManager) DeleteBatch(ctx context.Context, urls model.URLDeleteBatc
 	return nil
 }
 
-func (m *URLDBManager) segregateBatch(urls model.URLDeleteBatch) (shortIds, userUUIDs []string) {
+func (m *PgURLDBManager) segregateBatch(urls model.URLDeleteBatch) (shortIds, userUUIDs []string) {
 	shortIds = make([]string, len(urls))
 	userUUIDs = make([]string, len(urls))
 	for i, u := range urls {

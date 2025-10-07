@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,15 +11,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type MainPageHandler struct {
-	mainPageSrv service.IMainPageService
-	logger      *zap.Logger
+type MainPageProcessor interface {
+	Process(ctx context.Context, body []byte) (shortURL string, err error)
 }
 
-func NewMainPageHandler(mainPageService service.IMainPageService, logger *zap.Logger) *MainPageHandler {
+type MainPageHandler struct {
+	srv    MainPageProcessor
+	logger *zap.Logger
+}
+
+func NewMainPageHandler(srv MainPageProcessor, l *zap.Logger) *MainPageHandler {
 	return &MainPageHandler{
-		mainPageSrv: mainPageService,
-		logger:      logger,
+		srv:    srv,
+		logger: l,
 	}
 }
 
@@ -30,7 +35,7 @@ func (h *MainPageHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	shortURL, err := h.mainPageSrv.Shorten(req.Context(), body)
+	shortURL, err := h.srv.Process(req.Context(), body)
 	if errors.Is(err, service.ErrEmptyInputURL) {
 		res.WriteHeader(http.StatusBadRequest)
 		return

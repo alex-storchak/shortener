@@ -67,7 +67,7 @@ func TestShortURLService_Expand(t *testing.T) {
 			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr}
 			srv := NewShortURLService(shortener, zap.NewNop())
 
-			gotURL, gotErr := srv.Expand(tt.shortID)
+			gotURL, gotErr := srv.Process(tt.shortID)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

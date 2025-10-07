@@ -1,7 +1,7 @@
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS url_storage (
-    uuid         SERIAL PRIMARY KEY,
+    id           INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     short_id     VARCHAR(255) NOT NULL UNIQUE,
     original_url TEXT         NOT NULL,
     created_at   TIMESTAMP DEFAULT NOW()

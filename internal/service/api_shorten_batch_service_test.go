@@ -19,12 +19,8 @@ type stubBatchDecoder struct {
 	retErr error
 }
 
-func (s *stubBatchDecoder) DecodeShortenBatch(_ io.Reader) ([]model.BatchShortenRequestItem, error) {
+func (s *stubBatchDecoder) Decode(_ io.Reader) ([]model.BatchShortenRequestItem, error) {
 	return s.retReq, s.retErr
-}
-
-func (s *stubBatchDecoder) DecodeDeleteBatch(_ io.Reader) ([]string, error) {
-	return nil, nil
 }
 
 type stubShortenerBatch struct {
@@ -55,7 +51,7 @@ func (s *stubShortenerBatch) DeleteBatch(_ model.URLDeleteBatch) error {
 	return nil
 }
 
-func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
+func TestShortenBatchService_ShortenBatch(t *testing.T) {
 	tests := []struct {
 		name         string
 		body         []byte
@@ -135,11 +131,11 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 			if baseURL == "" {
 				baseURL = "http://any"
 			}
-			srv := NewAPIShortenBatchService(baseURL, shortener, dec, zap.NewNop())
-			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
+			srv := NewShortenBatchService(baseURL, shortener, dec, zap.NewNop())
+			ctx := helper.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			var r io.Reader = bytes.NewReader(tt.body)
-			resp, err := srv.ShortenBatch(ctx, r)
+			resp, err := srv.Process(ctx, r)
 
 			if tt.wantErr {
 				require.Error(t, err)

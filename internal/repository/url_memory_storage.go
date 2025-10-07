@@ -11,13 +11,14 @@ import (
 type MemoryURLStorage struct {
 	logger  *zap.Logger
 	records []*model.URLStorageRecord
-	mu      sync.RWMutex
+	mu      *sync.Mutex
 }
 
 func NewMemoryURLStorage(logger *zap.Logger) *MemoryURLStorage {
 	return &MemoryURLStorage{
 		logger:  logger,
 		records: make([]*model.URLStorageRecord, 0),
+		mu:      &sync.Mutex{},
 	}
 }
 
@@ -30,8 +31,8 @@ func (s *MemoryURLStorage) Ping(_ context.Context) error {
 }
 
 func (s *MemoryURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	switch searchByType {
 	case OrigURLType:
@@ -70,8 +71,8 @@ func (s *MemoryURLStorage) BatchSet(records []*model.URLStorageRecord) error {
 }
 
 func (s *MemoryURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	var records []*model.URLStorageRecord
 	for _, r := range s.records {

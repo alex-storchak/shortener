@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type IShortener interface {
+type URLShortener interface {
 	Shorten(userUUID string, url string) (shortID string, err error)
 	Extract(shortID string) (OrigURL string, err error)
 	ShortenBatch(userUUID string, urls []string) ([]string, error)
@@ -18,8 +18,8 @@ type IShortener interface {
 	DeleteBatch(urls model.URLDeleteBatch) error
 }
 
-type IShortenerService interface {
-	IShortener
+type PingableURLShortener interface {
+	URLShortener
 	Pinger
 }
 
