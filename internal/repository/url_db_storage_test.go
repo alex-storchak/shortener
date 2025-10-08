@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -34,12 +35,16 @@ func (s dbManagerStub) GetByShortID(_ context.Context, _ string) (string, error)
 	return s.retByShort, s.errByShort
 }
 
-func (s dbManagerStub) Persist(_ context.Context, _, _ string) error {
+func (s dbManagerStub) Persist(_ context.Context, _ *model.URLStorageRecord) error {
 	return s.persistErr
 }
 
-func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]URLBind) error {
+func (s dbManagerStub) PersistBatch(_ context.Context, _ *[]model.URLStorageRecord) error {
 	return s.persistErr
+}
+
+func (s dbManagerStub) GetByUserUUID(_ context.Context, _ string) (*[]model.URLStorageRecord, error) {
+	return nil, nil
 }
 
 func TestDBURLStorage_Get(t *testing.T) {
@@ -143,7 +148,7 @@ func TestDBURLStorage_Set(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st := NewDBURLStorage(lgr, tt.stub)
-			err := st.Set("https://example.com", "abcde")
+			err := st.Set(&model.URLStorageRecord{OrigURL: "https://example.com", ShortID: "abcde"})
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.wantErrIs != nil {
@@ -178,7 +183,7 @@ func TestDBURLStorage_BatchSet(t *testing.T) {
 		},
 	}
 
-	binds := &[]URLBind{
+	binds := &[]model.URLStorageRecord{
 		{OrigURL: "https://a.com", ShortID: "abc"},
 		{OrigURL: "https://b.com", ShortID: "def"},
 	}

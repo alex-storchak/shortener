@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	repo "github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,23 +73,30 @@ func (d *urlStorageStub) Get(url, searchByType string) (string, error) {
 	return "", repo.NewDataNotFoundError(nil)
 }
 
-func (d *urlStorageStub) Set(_, _ string) error {
+func (d *urlStorageStub) Set(_ *model.URLStorageRecord) error {
 	if d.setMethodShouldFail {
 		return errors.New("set method should fail")
 	}
 	return nil
 }
 
-func (d *urlStorageStub) BatchSet(_ *[]repo.URLBind) error {
+func (d *urlStorageStub) BatchSet(_ *[]model.URLStorageRecord) error {
 	if d.setBatchMethodShouldFail {
 		return errors.New("set batch method should fail")
 	}
 	return nil
 }
+
+func (d *urlStorageStub) GetByUserUUID(_ string) (*[]model.URLStorageRecord, error) {
+	return nil, nil
+}
+
 func TestShortener_Shorten(t *testing.T) {
 	type args struct {
 		url string
 	}
+	userUUID := "userUUID"
+
 	tests := []struct {
 		name              string
 		args              args
@@ -143,7 +151,7 @@ func TestShortener_Shorten(t *testing.T) {
 				logger:     zap.NewNop(),
 			}
 
-			got, err := s.Shorten(tt.args.url)
+			got, err := s.Shorten(userUUID, tt.args.url)
 
 			if !tt.wantErr {
 				require.NoError(t, err)
@@ -214,6 +222,8 @@ func TestShortener_Extract(t *testing.T) {
 }
 
 func TestShortener_ShortenBatch(t *testing.T) {
+	userUUID := "userUUID"
+
 	tests := []struct {
 		name                  string
 		urls                  []string
@@ -257,7 +267,7 @@ func TestShortener_ShortenBatch(t *testing.T) {
 				logger:     zap.NewNop(),
 			}
 
-			got, err := s.ShortenBatch(&tt.urls)
+			got, err := s.ShortenBatch(userUUID, &tt.urls)
 
 			if !tt.wantErr {
 				require.NoError(t, err)

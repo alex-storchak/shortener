@@ -8,6 +8,7 @@ import (
 	dbCfg "github.com/alex-storchak/shortener/internal/db/config"
 	handlerCfg "github.com/alex-storchak/shortener/internal/handler/config"
 	loggerCfg "github.com/alex-storchak/shortener/internal/logger/config"
+	mwcfg "github.com/alex-storchak/shortener/internal/middleware/config"
 	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
 	"github.com/stretchr/testify/suite"
 )
@@ -89,6 +90,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 	dfltDBCfg := dbCfg.Config{
 		DSN: dbCfg.DefaultDatabaseDSN,
 	}
+	dfltMWCfg := mwcfg.Config{
+		AuthCookieName:       mwcfg.DefaultAuthCookieName,
+		AuthTokenMaxAge:      mwcfg.DefaultAuthTokenMaxAge,
+		AuthRefreshThreshold: mwcfg.DefaultAuthRefreshThreshold,
+		SecretKey:            mwcfg.DefaultAuthSecretKey,
+	}
 
 	tests := []struct {
 		name  string
@@ -105,6 +112,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -127,7 +135,8 @@ func (s *ConfigTestSuite) TestParseConfig() {
 						Path: "./data/some_file.json",
 					},
 				},
-				DB: dbCfg.Config{DSN: "postgres:flagsDSN"},
+				DB:         dbCfg.Config{DSN: "postgres:flagsDSN"},
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -144,6 +153,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -160,6 +170,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -181,7 +192,8 @@ func (s *ConfigTestSuite) TestParseConfig() {
 						Path: "./data/some_file.json",
 					},
 				},
-				DB: dfltDBCfg,
+				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -207,7 +219,8 @@ func (s *ConfigTestSuite) TestParseConfig() {
 						Path: "./data/some_another_file.json",
 					},
 				},
-				DB: dfltDBCfg,
+				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -226,6 +239,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -244,6 +258,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -261,6 +276,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -276,6 +292,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -291,6 +308,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				},
 				Repository: dfltRepoCfg,
 				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -309,7 +327,8 @@ func (s *ConfigTestSuite) TestParseConfig() {
 						Path: "./data/env_file.json",
 					},
 				},
-				DB: dfltDBCfg,
+				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -326,7 +345,8 @@ func (s *ConfigTestSuite) TestParseConfig() {
 						Path: "./data/env_file.json",
 					},
 				},
-				DB: dfltDBCfg,
+				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -343,7 +363,8 @@ func (s *ConfigTestSuite) TestParseConfig() {
 						Path: "./data/flags_file.json",
 					},
 				},
-				DB: dfltDBCfg,
+				DB:         dfltDBCfg,
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -359,6 +380,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dbCfg.Config{DSN: "postgres:envDSN"},
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -372,6 +394,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dbCfg.Config{DSN: "postgres:envDSN"},
+				Middleware: dfltMWCfg,
 			},
 		},
 		{
@@ -385,6 +408,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Logger:     dfltLoggerCfg,
 				Repository: dfltRepoCfg,
 				DB:         dbCfg.Config{DSN: "postgres:flagsDSN"},
+				Middleware: dfltMWCfg,
 			},
 		},
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -25,6 +26,8 @@ func TestFileURLStorage(t *testing.T) {
 
 	badTestDBFile := createTmpStorageFile(t)
 	defer os.Remove(badTestDBFile.Name())
+
+	userUUID := "userUUID"
 
 	tests := []testCaseData{
 		{
@@ -65,7 +68,7 @@ func TestFileURLStorage(t *testing.T) {
 
 			lgr := zap.NewNop()
 			fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
-			frp := FileRecordParser{}
+			frp := URLFileRecordParser{}
 			fs := NewFileScanner(lgr, frp)
 			um := NewUUIDManager(lgr)
 			storage, err := NewFileURLStorage(lgr, fm, fs, um)
@@ -78,7 +81,7 @@ func TestFileURLStorage(t *testing.T) {
 
 			assertStorageDoesNotHaveURL(t, tt, storage)
 
-			err = storage.Set(tt.wantOrigURL, tt.wantShortURL)
+			err = storage.Set(&model.URLStorageRecord{OrigURL: tt.wantOrigURL, ShortID: tt.wantShortURL, UserUUID: userUUID})
 			require.NoError(t, err)
 
 			assertStorageHasURL(t, tt, storage)
@@ -118,10 +121,11 @@ func createTmpStorageFile(t *testing.T) *os.File {
 }
 
 func fillStorageFile(t *testing.T, testDBFile *os.File) {
-	testRecord := fileRecord{
+	testRecord := urlFileRecord{
 		UUID:        1,
 		ShortURL:    "abcde",
 		OriginalURL: "https://example.com",
+		UserUUID:    "userUUID",
 	}
 	data, err := json.Marshal(testRecord)
 	require.NoError(t, err)

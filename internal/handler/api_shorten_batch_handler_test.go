@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,7 +22,7 @@ type APIShortenBatchSrvStub struct {
 	shortenError error
 }
 
-func (s *APIShortenBatchSrvStub) ShortenBatch(_ io.Reader) ([]model.BatchShortenResponseItem, error) {
+func (s *APIShortenBatchSrvStub) ShortenBatch(_ context.Context, _ io.Reader) ([]model.BatchShortenResponseItem, error) {
 	if s.shortenError != nil {
 		return nil, s.shortenError
 	}
