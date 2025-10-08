@@ -5,30 +5,36 @@ import (
 	"net/http"
 
 	"github.com/alex-storchak/shortener/internal/repository"
-	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
-type ShortURLHandler struct {
-	shortURLSrv service.IShortURLService
-	logger      *zap.Logger
+type ShortURLProcessor interface {
+	Process(shortID string) (origURL string, err error)
 }
 
-func NewShortURLHandler(shortURLService service.IShortURLService, logger *zap.Logger) *ShortURLHandler {
+type ShortURLHandler struct {
+	srv    ShortURLProcessor
+	logger *zap.Logger
+}
+
+func NewShortURLHandler(srv ShortURLProcessor, l *zap.Logger) *ShortURLHandler {
 	return &ShortURLHandler{
-		shortURLSrv: shortURLService,
-		logger:      logger,
+		srv:    srv,
+		logger: l,
 	}
 }
 
 func (h *ShortURLHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	shortID := chi.URLParam(req, "id")
 
-	origURL, err := h.shortURLSrv.Expand(shortID)
+	origURL, err := h.srv.Process(shortID)
 	var nfErr *repository.DataNotFoundError
 	if errors.As(err, &nfErr) {
 		res.WriteHeader(http.StatusNotFound)
+		return
+	} else if errors.Is(err, repository.ErrDataDeleted) {
+		res.WriteHeader(http.StatusGone)
 		return
 	} else if err != nil {
 		h.logger.Error("failed to expand short url", zap.Error(err))

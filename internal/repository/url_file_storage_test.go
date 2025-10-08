@@ -70,8 +70,7 @@ func TestFileURLStorage(t *testing.T) {
 			fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
 			frp := URLFileRecordParser{}
 			fs := NewFileScanner(lgr, frp)
-			um := NewUUIDManager(lgr)
-			storage, err := NewFileURLStorage(lgr, fm, fs, um)
+			storage, err := NewFileURLStorage(lgr, fm, fs)
 			require.NoError(t, err)
 
 			if tt.hasRecord {
@@ -87,8 +86,7 @@ func TestFileURLStorage(t *testing.T) {
 			assertStorageHasURL(t, tt, storage)
 
 			fm = NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
-			um = NewUUIDManager(lgr)
-			newStorage, err := NewFileURLStorage(lgr, fm, fs, um)
+			newStorage, err := NewFileURLStorage(lgr, fm, fs)
 			require.NoError(t, err)
 			assertStorageHasURL(t, tt, newStorage)
 		})
@@ -96,13 +94,13 @@ func TestFileURLStorage(t *testing.T) {
 }
 
 func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
-	origURL, err := storage.Get(tt.wantShortURL, ShortURLType)
+	ou, err := storage.Get(tt.wantShortURL, ShortURLType)
 	require.NoError(t, err)
-	assert.Equal(t, tt.wantOrigURL, origURL)
+	assert.Equal(t, tt.wantOrigURL, ou.OrigURL)
 
-	shortURL, err := storage.Get(tt.wantOrigURL, OrigURLType)
+	su, err := storage.Get(tt.wantOrigURL, OrigURLType)
 	require.NoError(t, err)
-	assert.Equal(t, tt.wantShortURL, shortURL)
+	assert.Equal(t, tt.wantShortURL, su.ShortID)
 }
 
 func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {
@@ -121,11 +119,10 @@ func createTmpStorageFile(t *testing.T) *os.File {
 }
 
 func fillStorageFile(t *testing.T, testDBFile *os.File) {
-	testRecord := urlFileRecord{
-		UUID:        1,
-		ShortURL:    "abcde",
-		OriginalURL: "https://example.com",
-		UserUUID:    "userUUID",
+	testRecord := model.URLStorageRecord{
+		ShortID:  "abcde",
+		OrigURL:  "https://example.com",
+		UserUUID: "userUUID",
 	}
 	data, err := json.Marshal(testRecord)
 	require.NoError(t, err)

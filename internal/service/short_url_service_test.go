@@ -25,12 +25,16 @@ func (s *stubExpandShortener) Shorten(_, _ string) (string, error) {
 func (s *stubExpandShortener) Extract(_ string) (string, error) {
 	return s.retURL, s.retErr
 }
-func (s *stubExpandShortener) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
+func (s *stubExpandShortener) ShortenBatch(_ string, _ []string) ([]string, error) {
 	return nil, nil
 }
 
-func (s *stubExpandShortener) GetUserURLs(_ string) (*[]model.URLStorageRecord, error) {
+func (s *stubExpandShortener) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
+}
+
+func (s *stubExpandShortener) DeleteBatch(_ model.URLDeleteBatch) error {
+	return nil
 }
 
 func TestShortURLService_Expand(t *testing.T) {
@@ -63,7 +67,7 @@ func TestShortURLService_Expand(t *testing.T) {
 			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr}
 			srv := NewShortURLService(shortener, zap.NewNop())
 
-			gotURL, gotErr := srv.Expand(tt.shortID)
+			gotURL, gotErr := srv.Process(tt.shortID)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

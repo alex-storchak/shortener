@@ -8,13 +8,9 @@ import (
 	"github.com/alex-storchak/shortener/internal/model"
 )
 
-type IJSONRequestDecoder interface {
-	Decode(io.Reader) (model.ShortenRequest, error)
-}
+type JSONShortenRequestDecoder struct{}
 
-type JSONRequestDecoder struct{}
-
-func (d JSONRequestDecoder) Decode(r io.Reader) (model.ShortenRequest, error) {
+func (d JSONShortenRequestDecoder) Decode(r io.Reader) (model.ShortenRequest, error) {
 	var req model.ShortenRequest
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&req); err != nil {
@@ -23,22 +19,29 @@ func (d JSONRequestDecoder) Decode(r io.Reader) (model.ShortenRequest, error) {
 	return req, nil
 }
 
-type IJSONBatchRequestDecoder interface {
-	DecodeBatch(io.Reader) (*[]model.BatchShortenRequestItem, error)
-}
+type JSONShortenBatchRequestDecoder struct{}
 
-type JSONBatchRequestDecoder struct{}
-
-func (d JSONBatchRequestDecoder) DecodeBatch(r io.Reader) (*[]model.BatchShortenRequestItem, error) {
+func (d JSONShortenBatchRequestDecoder) Decode(r io.Reader) ([]model.BatchShortenRequestItem, error) {
 	var req []model.BatchShortenRequestItem
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&req); err != nil {
-		return nil, fmt.Errorf("failed to decode batch request json: %w", err)
+		return nil, fmt.Errorf("failed to decode shorten batch request json: %w", err)
 	}
-	return &req, nil
+	return req, nil
 }
 
-type IJSONEncoder interface {
+type JSONDeleteBatchRequestDecoder struct{}
+
+func (d JSONDeleteBatchRequestDecoder) Decode(r io.Reader) ([]string, error) {
+	var req []string
+	dec := json.NewDecoder(r)
+	if err := dec.Decode(&req); err != nil {
+		return nil, fmt.Errorf("failed to decode delete batch request json: %w", err)
+	}
+	return req, nil
+}
+
+type Encoder interface {
 	Encode(io.Writer, any) error
 }
 

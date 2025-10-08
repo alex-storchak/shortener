@@ -8,10 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type IPingService interface {
-	Ping() error
-}
-
 type Pinger interface {
 	IsReady(ctx context.Context) error
 }
@@ -28,7 +24,7 @@ func NewPingService(pinger Pinger, logger *zap.Logger) *PingService {
 	}
 }
 
-func (s *PingService) Ping() error {
+func (s *PingService) Process() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	if err := s.pinger.IsReady(ctx); err != nil {

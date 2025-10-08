@@ -10,15 +10,16 @@ import (
 	"go.uber.org/zap"
 )
 
-type IShortener interface {
+type URLShortener interface {
 	Shorten(userUUID string, url string) (shortID string, err error)
 	Extract(shortID string) (OrigURL string, err error)
-	ShortenBatch(userUUID string, urls *[]string) (*[]string, error)
-	GetUserURLs(userUUID string) (*[]model.URLStorageRecord, error)
+	ShortenBatch(userUUID string, urls []string) ([]string, error)
+	GetUserURLs(userUUID string) ([]*model.URLStorageRecord, error)
+	DeleteBatch(urls model.URLDeleteBatch) error
 }
 
-type IShortenerService interface {
-	IShortener
+type PingableURLShortener interface {
+	URLShortener
 	Pinger
 }
 
@@ -45,36 +46,40 @@ func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
 		return "", ErrEmptyInputURL
 	}
 
-	shortID, err := s.urlStorage.Get(url, repo.OrigURLType)
+	var (
+		r   *model.URLStorageRecord
+		err error
+	)
+	r, err = s.urlStorage.Get(url, repo.OrigURLType)
 	if err == nil {
-		return shortID, ErrURLAlreadyExists
+		return r.ShortID, ErrURLAlreadyExists
 	}
 	var nfErr *repo.DataNotFoundError
 	if !errors.As(err, &nfErr) {
 		return "", fmt.Errorf("failed to retrieve url from storage: %w", err)
 	}
 
-	shortID, err = s.generator.Generate()
+	shortID, err := s.generator.Generate()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate short id: %w", err)
 	}
-	record := &model.URLStorageRecord{OrigURL: url, ShortID: shortID, UserUUID: userUUID}
-	if err := s.urlStorage.Set(record); err != nil {
+	r = &model.URLStorageRecord{OrigURL: url, ShortID: shortID, UserUUID: userUUID}
+	if err := s.urlStorage.Set(r); err != nil {
 		return "", fmt.Errorf("failed to set url binding in storage: %w", err)
 	}
 	return shortID, nil
 }
 
 func (s *Shortener) Extract(shortID string) (string, error) {
-	origURL, err := s.urlStorage.Get(shortID, repo.ShortURLType)
+	r, err := s.urlStorage.Get(shortID, repo.ShortURLType)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve short url from storage: %w", err)
 	}
-	return origURL, nil
+	return r.OrigURL, nil
 }
 
-func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, error) {
-	if len(*urls) == 0 {
+func (s *Shortener) ShortenBatch(userUUID string, urls []string) ([]string, error) {
+	if len(urls) == 0 {
 		return nil, ErrEmptyInputBatch
 	}
 
@@ -82,7 +87,7 @@ func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to segregate batch: %w", err)
 	}
-	if len(*toPersist) > 0 {
+	if len(toPersist) > 0 {
 		if err := s.urlStorage.BatchSet(toPersist); err != nil {
 			return nil, fmt.Errorf("failed to set url bindings batch in storage: %w", err)
 		}
@@ -90,18 +95,18 @@ func (s *Shortener) ShortenBatch(userUUID string, urls *[]string) (*[]string, er
 	return res, nil
 }
 
-func (s *Shortener) segregateBatch(userUUID string, urls *[]string) (*[]string, *[]model.URLStorageRecord, error) {
-	res := make([]string, len(*urls))
-	toPersist := make([]model.URLStorageRecord, 0)
+func (s *Shortener) segregateBatch(userUUID string, urls []string) ([]string, []*model.URLStorageRecord, error) {
+	res := make([]string, len(urls))
+	toPersist := make([]*model.URLStorageRecord, 0)
 
-	for i, u := range *urls {
+	for i, u := range urls {
 		if u == "" {
 			return nil, nil, ErrEmptyInputURL
 		}
 
-		shortID, err := s.urlStorage.Get(u, repo.OrigURLType)
+		r, err := s.urlStorage.Get(u, repo.OrigURLType)
 		if err == nil {
-			res[i] = shortID
+			res[i] = r.ShortID
 			continue
 		}
 		var nfErr *repo.DataNotFoundError
@@ -113,10 +118,10 @@ func (s *Shortener) segregateBatch(userUUID string, urls *[]string) (*[]string, 
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to prepare url bind to persist item: %w", err)
 		}
-		toPersist = append(toPersist, urlBindItem)
+		toPersist = append(toPersist, &urlBindItem)
 		res[i] = urlBindItem.ShortID
 	}
-	return &res, &toPersist, nil
+	return res, toPersist, nil
 }
 
 func (s *Shortener) prepareURLBindToPersistItem(userUUID string, origURL string) (model.URLStorageRecord, error) {
@@ -131,12 +136,12 @@ func (s *Shortener) IsReady(ctx context.Context) error {
 	return s.urlStorage.Ping(ctx)
 }
 
-func (s *Shortener) GetUserURLs(userUUID string) (*[]model.URLStorageRecord, error) {
-	urls, err := s.urlStorage.GetByUserUUID(userUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve user urls from storage: %w", err)
-	}
-	return urls, nil
+func (s *Shortener) GetUserURLs(userUUID string) ([]*model.URLStorageRecord, error) {
+	return s.urlStorage.GetByUserUUID(userUUID)
+}
+
+func (s *Shortener) DeleteBatch(urls model.URLDeleteBatch) error {
+	return s.urlStorage.DeleteBatch(urls)
 }
 
 var (

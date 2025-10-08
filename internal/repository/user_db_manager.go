@@ -10,23 +10,23 @@ import (
 	"go.uber.org/zap"
 )
 
-type UserDBManager struct {
+type PgUserDBManager struct {
 	logger *zap.Logger
 	db     *sql.DB
 }
 
-func NewUserDBManager(logger *zap.Logger, db *sql.DB) *UserDBManager {
-	return &UserDBManager{
+func NewUserDBManager(logger *zap.Logger, db *sql.DB) *PgUserDBManager {
+	return &PgUserDBManager{
 		logger: logger,
 		db:     db,
 	}
 }
 
-func (m *UserDBManager) Close() error {
+func (m *PgUserDBManager) Close() error {
 	return m.db.Close()
 }
 
-func (m *UserDBManager) HasByUUID(ctx context.Context, uuid string) (bool, error) {
+func (m *PgUserDBManager) HasByUUID(ctx context.Context, uuid string) (bool, error) {
 	q := "SELECT id FROM auth_user WHERE user_uuid = $1"
 	row := m.db.QueryRowContext(ctx, q, uuid)
 
@@ -40,7 +40,7 @@ func (m *UserDBManager) HasByUUID(ctx context.Context, uuid string) (bool, error
 	return true, nil
 }
 
-func (m *UserDBManager) Persist(ctx context.Context, user *model.User) error {
+func (m *PgUserDBManager) Persist(ctx context.Context, user *model.User) error {
 	q := "INSERT INTO auth_user (user_uuid) VALUES ($1)"
 	_, err := m.db.ExecContext(ctx, q, user.UUID)
 	if err != nil {

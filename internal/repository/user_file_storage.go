@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
@@ -12,6 +13,7 @@ type FileUserStorage struct {
 	fileMgr  *FileManager
 	fileScnr *URLFileScanner
 	users    map[string]struct{}
+	mu       *sync.Mutex
 }
 
 func NewFileUserStorage(
@@ -23,6 +25,7 @@ func NewFileUserStorage(
 		logger:   logger,
 		fileMgr:  fm,
 		fileScnr: fs,
+		mu:       &sync.Mutex{},
 	}
 
 	if err := storage.restoreFromFile(); err != nil {
@@ -36,12 +39,21 @@ func (s *FileUserStorage) Close() error {
 }
 
 func (s *FileUserStorage) HasByUUID(uuid string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.hasByUUIDUnsafe(uuid)
+}
+
+func (s *FileUserStorage) hasByUUIDUnsafe(uuid string) (bool, error) {
 	_, ok := s.users[uuid]
 	return ok, nil
 }
 
 func (s *FileUserStorage) Set(user *model.User) error {
-	has, err := s.HasByUUID(user.UUID)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	has, err := s.hasByUUIDUnsafe(user.UUID)
 	if err != nil {
 		return fmt.Errorf("failed to check if user exists before setting: %w", err)
 	}
@@ -53,7 +65,7 @@ func (s *FileUserStorage) Set(user *model.User) error {
 }
 
 func (s *FileUserStorage) restoreFromFile() error {
-	file, err := s.fileMgr.open(false)
+	file, err := s.fileMgr.openForAppend(false)
 	if err != nil {
 		return fmt.Errorf("failed to open requested file: %w", err)
 	}
@@ -67,7 +79,7 @@ func (s *FileUserStorage) restoreFromFile() error {
 	}
 
 	users := make(map[string]struct{})
-	for _, record := range *records {
+	for _, record := range records {
 		users[record.UserUUID] = struct{}{}
 	}
 	s.users = users

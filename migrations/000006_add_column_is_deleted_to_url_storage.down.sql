@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE url_storage DROP COLUMN IF EXISTS is_deleted;
+
+COMMIT;

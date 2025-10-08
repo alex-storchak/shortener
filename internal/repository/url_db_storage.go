@@ -9,22 +9,23 @@ import (
 	"go.uber.org/zap"
 )
 
-type IURLDBManager interface {
-	GetByOriginalURL(ctx context.Context, origURL string) (string, error)
-	GetByShortID(ctx context.Context, shortID string) (string, error)
+type URLDBManager interface {
+	GetByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error)
+	GetByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error)
 	Persist(ctx context.Context, r *model.URLStorageRecord) error
-	PersistBatch(ctx context.Context, binds *[]model.URLStorageRecord) error
+	PersistBatch(ctx context.Context, binds []*model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
-	GetByUserUUID(ctx context.Context, userUUID string) (*[]model.URLStorageRecord, error)
+	GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error)
+	DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error
 }
 
 type DBURLStorage struct {
 	logger *zap.Logger
-	dbMgr  IURLDBManager
+	dbMgr  URLDBManager
 }
 
-func NewDBURLStorage(logger *zap.Logger, dbm IURLDBManager) *DBURLStorage {
+func NewDBURLStorage(logger *zap.Logger, dbm URLDBManager) *DBURLStorage {
 	return &DBURLStorage{
 		logger: logger,
 		dbMgr:  dbm,
@@ -42,19 +43,25 @@ func (s *DBURLStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (s *DBURLStorage) Get(url, searchByType string) (string, error) {
-	var err error
+func (s *DBURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+	var (
+		r   *model.URLStorageRecord
+		err error
+	)
 	if searchByType == OrigURLType {
-		url, err = s.dbMgr.GetByOriginalURL(context.Background(), url)
+		r, err = s.dbMgr.GetByOriginalURL(context.Background(), url)
 	} else if searchByType == ShortURLType {
-		url, err = s.dbMgr.GetByShortID(context.Background(), url)
+		r, err = s.dbMgr.GetByShortID(context.Background(), url)
+		if err == nil && r.IsDeleted {
+			return nil, ErrDataDeleted
+		}
 	}
 	if errors.Is(err, ErrDataNotFoundInDB) {
-		return "", NewDataNotFoundError(ErrDataNotFoundInDB)
+		return nil, NewDataNotFoundError(ErrDataNotFoundInDB)
 	} else if err != nil {
-		return "", fmt.Errorf("failed to retrieve bind by url `%s` from db: %w", url, err)
+		return nil, fmt.Errorf("failed to retrieve bind by url `%s` from db: %w", url, err)
 	}
-	return url, nil
+	return r, nil
 }
 
 func (s *DBURLStorage) Set(r *model.URLStorageRecord) error {
@@ -64,17 +71,17 @@ func (s *DBURLStorage) Set(r *model.URLStorageRecord) error {
 	return nil
 }
 
-func (s *DBURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
+func (s *DBURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
 	if err := s.dbMgr.PersistBatch(context.Background(), binds); err != nil {
 		return fmt.Errorf("failed to persist batch records to db: %w", err)
 	}
 	return nil
 }
 
-func (s *DBURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
-	urls, err := s.dbMgr.GetByUserUUID(context.Background(), userUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve user urls from db: %w", err)
-	}
-	return urls, nil
+func (s *DBURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
+	return s.dbMgr.GetByUserUUID(context.Background(), userUUID)
+}
+
+func (s *DBURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
+	return s.dbMgr.DeleteBatch(context.Background(), urls)
 }

@@ -33,7 +33,7 @@ func (m *FileManager) getAbsPath(filePath string) (string, error) {
 	return absPath, nil
 }
 
-func (m *FileManager) open(useDefault bool) (*os.File, error) {
+func (m *FileManager) open(useDefault bool, flag int) (*os.File, error) {
 	if useDefault {
 		m.logger.Info("Using default file path")
 		m.filePath = m.dfltFilePath
@@ -42,13 +42,21 @@ func (m *FileManager) open(useDefault bool) (*os.File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path for `%s`: %w", m.filePath, err)
 	}
-	file, err := os.OpenFile(absPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile(absPath, flag, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file by path `%s`: %w", absPath, err)
 	}
 	m.file = file
 	m.writer = bufio.NewWriter(file)
 	return m.file, nil
+}
+
+func (m *FileManager) openForAppend(useDefault bool) (*os.File, error) {
+	return m.open(useDefault, os.O_RDWR|os.O_CREATE|os.O_APPEND)
+}
+
+func (m *FileManager) openForWrite(useDefault bool) (*os.File, error) {
+	return m.open(useDefault, os.O_RDWR|os.O_CREATE|os.O_TRUNC)
 }
 
 func (m *FileManager) close() error {

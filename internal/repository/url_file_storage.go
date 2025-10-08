@@ -3,38 +3,35 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
-type urlFileRecords []urlFileRecord
-
 type FileURLStorage struct {
 	logger   *zap.Logger
 	fileMgr  *FileManager
 	fileScnr *URLFileScanner
-	uuidMgr  *UUIDManager
-	records  *urlFileRecords
+	records  []*model.URLStorageRecord
+	mu       *sync.Mutex
 }
 
 func NewFileURLStorage(
 	logger *zap.Logger,
 	fm *FileManager,
 	fs *URLFileScanner,
-	um *UUIDManager,
 ) (*FileURLStorage, error) {
 	storage := &FileURLStorage{
 		logger:   logger,
 		fileMgr:  fm,
 		fileScnr: fs,
-		uuidMgr:  um,
+		mu:       &sync.Mutex{},
 	}
 
 	if err := storage.restoreFromFile(false); err != nil {
 		return nil, fmt.Errorf("failed to restore storage from file: %w", err)
 	}
-	storage.initUUIDMgr()
 	return storage, nil
 }
 
@@ -46,82 +43,111 @@ func (s *FileURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *FileURLStorage) persistToFile(record urlFileRecord) error {
-	data, err := record.toJSON()
-	if err != nil {
-		return fmt.Errorf("failed to convert record to json for store: %w", err)
-	}
-	if err := s.fileMgr.writeData(data); err != nil {
-		return fmt.Errorf("mgr failed to persist record to file: %w", err)
-	}
-	s.logger.Info("Stored record",
-		zap.Uint64("UUID", record.UUID),
-		zap.String("OriginalURL", record.OriginalURL),
-		zap.String("ShortURL", record.ShortURL),
-	)
-	return nil
-}
+func (s *FileURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-func (s *FileURLStorage) Get(url, searchByType string) (string, error) {
-	for _, record := range *s.records {
-		if searchByType == OrigURLType && record.OriginalURL == url {
-			return record.ShortURL, nil
-		} else if searchByType == ShortURLType && record.ShortURL == url {
-			return record.OriginalURL, nil
+	for _, r := range s.records {
+		if searchByType == OrigURLType && r.OrigURL == url && !r.IsDeleted {
+			return r, nil
+		} else if searchByType == ShortURLType && r.ShortID == url {
+			if r.IsDeleted {
+				return nil, ErrDataDeleted
+			}
+			return r, nil
 		}
 	}
-	return "", NewDataNotFoundError(nil)
+	return nil, NewDataNotFoundError(nil)
 }
 
 func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
-	record := urlFileRecord{
-		UUID:        s.uuidMgr.next(),
-		ShortURL:    r.ShortID,
-		OriginalURL: r.OrigURL,
-		UserUUID:    r.UserUUID,
+	return s.BatchSet([]*model.URLStorageRecord{r})
+}
+
+func (s *FileURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
+	if len(binds) == 0 {
+		return nil
 	}
-	*s.records = append(*s.records, record)
-	if err := s.persistToFile(record); err != nil {
-		return fmt.Errorf("failed to persist record `%v` to file: %w", record, err)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.records = append(s.records, binds...)
+	if err := s.appendToFile(binds); err != nil {
+		// rollback
+		s.records = s.records[:len(s.records)-len(binds)]
+		return fmt.Errorf("failed to persist records batch to file: %w", err)
 	}
 	return nil
 }
 
-func (s *FileURLStorage) BatchSet(binds *[]model.URLStorageRecord) error {
-	for _, b := range *binds {
-		if err := s.Set(&b); err != nil {
-			return fmt.Errorf("failed to set record in storage: %w", err)
+func (s *FileURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var records []*model.URLStorageRecord
+	for _, r := range s.records {
+		if r.UserUUID == userUUID && !r.IsDeleted {
+			records = append(records, r)
 		}
+	}
+	return records, nil
+}
+
+func (s *FileURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	ProcessMemDeleteBatch(s.records, urls)
+	if err := s.saveToFile(); err != nil {
+		return fmt.Errorf("failed to save records to file: %w", err)
 	}
 	return nil
 }
 
-func (s *FileURLStorage) GetByUserUUID(userUUID string) (*[]model.URLStorageRecord, error) {
-	var records []model.URLStorageRecord
-	for _, r := range *s.records {
-		if r.UserUUID == userUUID {
-			records = append(records, model.URLStorageRecord{
-				ShortID:  r.ShortURL,
-				OrigURL:  r.OriginalURL,
-				UserUUID: r.UserUUID,
-			})
-		}
+func (s *FileURLStorage) appendToFile(records []*model.URLStorageRecord) error {
+	_, err := s.fileMgr.openForAppend(false)
+	if err != nil {
+		return fmt.Errorf("failed to open file for append: %w", err)
 	}
-	return &records, nil
+	defer s.fileMgr.close()
+
+	if err := s.writeRecords(records); err != nil {
+		return fmt.Errorf("failed to write records to file: %w", err)
+	}
+
+	return nil
 }
 
-func (s *FileURLStorage) initUUIDMgr() {
-	var maxUUID uint64 = 0
-	for _, rec := range *s.records {
-		if rec.UUID > maxUUID {
-			maxUUID = rec.UUID
+func (s *FileURLStorage) saveToFile() error {
+	_, err := s.fileMgr.openForWrite(false)
+	if err != nil {
+		return fmt.Errorf("failed to open file for write: %w", err)
+	}
+	defer s.fileMgr.close()
+
+	if err = s.writeRecords(s.records); err != nil {
+		return fmt.Errorf("failed to write records to file: %w", err)
+	}
+	return nil
+}
+
+func (s *FileURLStorage) writeRecords(records []*model.URLStorageRecord) error {
+	for _, r := range records {
+		data, err := r.ToJSON()
+		if err != nil {
+			return fmt.Errorf("failed to convert record to json for store: %w", err)
+		}
+
+		if err := s.fileMgr.writeData(data); err != nil {
+			return fmt.Errorf("mgr failed to persist record to file: %w", err)
 		}
 	}
-	s.uuidMgr.init(maxUUID)
+	return nil
 }
 
 func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
-	file, err := s.fileMgr.open(useDefault)
+	file, err := s.fileMgr.openForAppend(useDefault)
 	if err != nil && !useDefault {
 		s.logger.Warn("failed to restore from requested file, trying default: ", zap.Error(err))
 		if err := s.restoreFromFile(true); err != nil {
@@ -131,6 +157,7 @@ func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
 	} else if err != nil {
 		return fmt.Errorf("failed to open default file: %w", err)
 	}
+	defer s.fileMgr.close()
 
 	records, err := s.fileScnr.scan(file)
 	if err != nil && !useDefault {

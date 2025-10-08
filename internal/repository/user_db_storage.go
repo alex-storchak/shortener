@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type IUserDBManager interface {
+type UserDBManager interface {
 	HasByUUID(ctx context.Context, uuid string) (bool, error)
 	Persist(ctx context.Context, user *model.User) error
 	Close() error
@@ -16,10 +16,10 @@ type IUserDBManager interface {
 
 type DBUserStorage struct {
 	logger *zap.Logger
-	dbMgr  IUserDBManager
+	dbMgr  UserDBManager
 }
 
-func NewDBUserStorage(logger *zap.Logger, dbm IUserDBManager) *DBUserStorage {
+func NewDBUserStorage(logger *zap.Logger, dbm UserDBManager) *DBUserStorage {
 	return &DBUserStorage{
 		logger: logger,
 		dbMgr:  dbm,

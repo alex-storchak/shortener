@@ -65,7 +65,7 @@ func (a *App) Run() error {
 	return handler.Serve(&a.cfg.Handler, a.router)
 }
 
-func (a *App) initURLStorage(sf factory.IStorageFactory) (repository.URLStorage, error) {
+func (a *App) initURLStorage(sf factory.StorageFactory) (repository.URLStorage, error) {
 	storage, err := sf.MakeURLStorage()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize url storage: %w", err)
@@ -82,7 +82,7 @@ func (a *App) initShortIDGenerator() (*service.ShortIDGenerator, error) {
 	return service.NewShortIDGenerator(generator), nil
 }
 
-func (a *App) initShortener(sf factory.IStorageFactory) (*service.Shortener, error) {
+func (a *App) initShortener(sf factory.StorageFactory) (*service.Shortener, error) {
 	gen, err := a.initShortIDGenerator()
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate shortid generator: %w", err)
@@ -95,24 +95,25 @@ func (a *App) initShortener(sf factory.IStorageFactory) (*service.Shortener, err
 	return service.NewShortener(gen, storage, a.logger), nil
 }
 
-func (a *App) initHandlers(shortener service.IShortenerService) *handler.Handlers {
+func (a *App) initHandlers(shortener service.PingableURLShortener) *handler.Handlers {
 	mainPageService := service.NewMainPageService(a.cfg.Handler.BaseURL, shortener, a.logger)
 	mainPageHandler := handler.NewMainPageHandler(mainPageService, a.logger)
 
 	shortURLService := service.NewShortURLService(shortener, a.logger)
 	shortURLHandler := handler.NewShortURLHandler(shortURLService, a.logger)
 
-	jsonDecoder := service.JSONRequestDecoder{}
-	apiShortenService := service.NewAPIShortenService(a.cfg.Handler.BaseURL, shortener, jsonDecoder, a.logger)
-	jsonEncoder := service.JSONEncoder{}
-	apiShortenHandler := handler.NewAPIShortenHandler(apiShortenService, jsonEncoder, a.logger)
+	shortenRequestDecoder := service.JSONShortenRequestDecoder{}
+	shortenService := service.NewShortenService(a.cfg.Handler.BaseURL, shortener, shortenRequestDecoder, a.logger)
+	enc := service.JSONEncoder{}
+	apiShortenHandler := handler.NewAPIShortenHandler(shortenService, enc, a.logger)
 
-	batchDecoder := service.JSONBatchRequestDecoder{}
-	apiShortenBatchService := service.NewAPIShortenBatchService(a.cfg.Handler.BaseURL, shortener, batchDecoder, a.logger)
-	apiShortenBatchHandler := handler.NewAPIShortenBatchHandler(apiShortenBatchService, jsonEncoder, a.logger)
+	shortenDec := service.JSONShortenBatchRequestDecoder{}
+	apiShortenBatchService := service.NewShortenBatchService(a.cfg.Handler.BaseURL, shortener, shortenDec, a.logger)
+	apiShortenBatchHandler := handler.NewAPIShortenBatchHandler(apiShortenBatchService, enc, a.logger)
 
-	apiUserURLsService := service.NewAPIUserURLsService(a.cfg.Handler.BaseURL, shortener, a.logger)
-	apiUserURLsHandler := handler.NewAPIUserURLsHandler(apiUserURLsService, jsonEncoder, a.logger)
+	deleteDec := service.JSONDeleteBatchRequestDecoder{}
+	apiUserURLsService := service.NewAPIUserURLsService(a.cfg.Handler.BaseURL, shortener, deleteDec, a.logger)
+	apiUserURLsHandler := handler.NewAPIUserURLsHandler(apiUserURLsService, enc, a.logger)
 
 	pingService := service.NewPingService(shortener, a.logger)
 	pingHandler := handler.NewPingHandler(pingService, a.logger)
@@ -127,7 +128,7 @@ func (a *App) initHandlers(shortener service.IShortenerService) *handler.Handler
 	}
 }
 
-func (a *App) initMiddlewares(sf factory.IStorageFactory) (*handler.Middlewares, error) {
+func (a *App) initMiddlewares(sf factory.StorageFactory) (*handler.Middlewares, error) {
 	us, err := sf.MakeUserStorage()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user storage: %w", err)
@@ -142,7 +143,7 @@ func (a *App) initMiddlewares(sf factory.IStorageFactory) (*handler.Middlewares,
 	}, nil
 }
 
-func (a *App) initRouter(shortener service.IShortenerService, sf factory.IStorageFactory) error {
+func (a *App) initRouter(shortener service.PingableURLShortener, sf factory.StorageFactory) error {
 	handlers := a.initHandlers(shortener)
 	middlewares, err := a.initMiddlewares(sf)
 	if err != nil {

@@ -3,24 +3,27 @@ package handler
 import (
 	"net/http"
 
-	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
-type PingHandler struct {
-	pingSrv service.IPingService
-	logger  *zap.Logger
+type PingProcessor interface {
+	Process() error
 }
 
-func NewPingHandler(s service.IPingService, l *zap.Logger) *PingHandler {
+type PingHandler struct {
+	srv    PingProcessor
+	logger *zap.Logger
+}
+
+func NewPingHandler(s PingProcessor, l *zap.Logger) *PingHandler {
 	return &PingHandler{
-		pingSrv: s,
-		logger:  l,
+		srv:    s,
+		logger: l,
 	}
 }
 
 func (h *PingHandler) ServeHTTP(res http.ResponseWriter, _ *http.Request) {
-	err := h.pingSrv.Ping()
+	err := h.srv.Process()
 	if err != nil {
 		h.logger.Error("failed to ping service", zap.Error(err))
 		res.WriteHeader(http.StatusInternalServerError)

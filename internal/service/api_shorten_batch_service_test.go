@@ -15,16 +15,16 @@ import (
 )
 
 type stubBatchDecoder struct {
-	retReq *[]model.BatchShortenRequestItem
+	retReq []model.BatchShortenRequestItem
 	retErr error
 }
 
-func (s *stubBatchDecoder) DecodeBatch(_ io.Reader) (*[]model.BatchShortenRequestItem, error) {
+func (s *stubBatchDecoder) Decode(_ io.Reader) ([]model.BatchShortenRequestItem, error) {
 	return s.retReq, s.retErr
 }
 
 type stubShortenerBatch struct {
-	retIDs *[]string
+	retIDs []string
 	retErr error
 }
 
@@ -39,21 +39,25 @@ func (s *stubShortenerBatch) Shorten(_ string, _ string) (string, error) {
 func (s *stubShortenerBatch) Extract(_ string) (string, error) {
 	return "", nil
 }
-func (s *stubShortenerBatch) ShortenBatch(_ string, _ *[]string) (*[]string, error) {
+func (s *stubShortenerBatch) ShortenBatch(_ string, _ []string) ([]string, error) {
 	return s.retIDs, s.retErr
 }
 
-func (s *stubShortenerBatch) GetUserURLs(_ string) (*[]model.URLStorageRecord, error) {
+func (s *stubShortenerBatch) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
-func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
+func (s *stubShortenerBatch) DeleteBatch(_ model.URLDeleteBatch) error {
+	return nil
+}
+
+func TestShortenBatchService_ShortenBatch(t *testing.T) {
 	tests := []struct {
 		name         string
 		body         []byte
-		decReq       *[]model.BatchShortenRequestItem
+		decReq       []model.BatchShortenRequestItem
 		decErr       error
-		stubShortIDs *[]string
+		stubShortIDs []string
 		stubErr      error
 		baseURL      string
 		wantResp     []model.BatchShortenResponseItem
@@ -69,7 +73,7 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 		{
 			name:      "returns ErrEmptyInputBatch on empty request list",
 			body:      []byte("[]"),
-			decReq:    &[]model.BatchShortenRequestItem{},
+			decReq:    []model.BatchShortenRequestItem{},
 			stubErr:   ErrEmptyInputBatch,
 			wantErr:   true,
 			wantErrIs: ErrEmptyInputBatch,
@@ -77,7 +81,7 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 		{
 			name: "returns ErrEmptyInputURL if any item has empty OriginalURL",
 			body: []byte("[{}]"),
-			decReq: &[]model.BatchShortenRequestItem{
+			decReq: []model.BatchShortenRequestItem{
 				{CorrelationID: "1", OriginalURL: ""},
 			},
 			stubErr:   ErrEmptyInputURL,
@@ -87,7 +91,7 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 		{
 			name: "returns ErrEmptyInputURL from shortener",
 			body: []byte(`[{"correlation_id":"1","original_url":"https://example.com"}]}"`),
-			decReq: &[]model.BatchShortenRequestItem{
+			decReq: []model.BatchShortenRequestItem{
 				{CorrelationID: "1", OriginalURL: "https://example.com"},
 			},
 			stubErr:   ErrEmptyInputURL,
@@ -97,7 +101,7 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 		{
 			name: "returns unexpected error",
 			body: []byte(`[{"correlation_id":"1","original_url":"https://example.com"}]`),
-			decReq: &[]model.BatchShortenRequestItem{
+			decReq: []model.BatchShortenRequestItem{
 				{CorrelationID: "1", OriginalURL: "https://example.com"},
 			},
 			stubErr: errors.New("random error"),
@@ -106,11 +110,11 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 		{
 			name: "success builds response with baseURL and preserves order",
 			body: []byte("[]"),
-			decReq: &[]model.BatchShortenRequestItem{
+			decReq: []model.BatchShortenRequestItem{
 				{CorrelationID: "1", OriginalURL: "https://a"},
 				{CorrelationID: "2", OriginalURL: "https://b"},
 			},
-			stubShortIDs: &[]string{"abc", "def"},
+			stubShortIDs: []string{"abc", "def"},
 			baseURL:      "http://short.host",
 			wantResp: []model.BatchShortenResponseItem{
 				{CorrelationID: "1", ShortURL: "http://short.host/abc"},
@@ -127,11 +131,11 @@ func TestAPIShortenBatchService_ShortenBatch(t *testing.T) {
 			if baseURL == "" {
 				baseURL = "http://any"
 			}
-			srv := NewAPIShortenBatchService(baseURL, shortener, dec, zap.NewNop())
-			ctx := context.WithValue(context.Background(), helper.UserCtxKey{}, &model.User{UUID: "userUUID"})
+			srv := NewShortenBatchService(baseURL, shortener, dec, zap.NewNop())
+			ctx := helper.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			var r io.Reader = bytes.NewReader(tt.body)
-			resp, err := srv.ShortenBatch(ctx, r)
+			resp, err := srv.Process(ctx, r)
 
 			if tt.wantErr {
 				require.Error(t, err)

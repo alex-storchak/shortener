@@ -30,8 +30,7 @@ func NewFileStorageFactory(
 }
 
 func (f *FileStorageFactory) MakeURLStorage() (repository.URLStorage, error) {
-	um := repository.NewUUIDManager(f.logger)
-	storage, err := repository.NewFileURLStorage(f.logger, f.fm, f.ufs, um)
+	storage, err := repository.NewFileURLStorage(f.logger, f.fm, f.ufs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to instantiate file url storage: %w", err)
 	}
