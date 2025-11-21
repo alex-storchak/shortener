@@ -108,7 +108,7 @@ func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
 
 			srv := &ShortenSrvStub{tt.shortenError}
 			enc := &JSONEncoderStub{tt.encodeError}
-			h := NewAPIShortenHandler(srv, enc, zap.NewNop())
+			h := handleAPIShorten(srv, enc, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader(`{"url":"https://existing.com"}`))
 			request.Header.Set("Content-Type", "application/json")

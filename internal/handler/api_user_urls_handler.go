@@ -15,64 +15,35 @@ type UserURLsProcessor interface {
 	ProcessDelete(ctx context.Context, r io.Reader) error
 }
 
-type APIUserURLsHandler struct {
-	srv    UserURLsProcessor
-	enc    service.Encoder
-	logger *zap.Logger
-}
+func handleGetUserURLs(p UserURLsProcessor, enc service.Encoder, l *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		respItems, err := p.ProcessGet(r.Context())
+		if err != nil {
+			l.Error("error getting user urls", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		} else if len(respItems) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 
-func NewAPIUserURLsHandler(
-	srv UserURLsProcessor,
-	enc service.Encoder,
-	l *zap.Logger,
-) *APIUserURLsHandler {
-	return &APIUserURLsHandler{
-		srv:    srv,
-		enc:    enc,
-		logger: l,
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		if err := enc.Encode(w, respItems); err != nil {
+			l.Error("failed to encode response", zap.Error(err))
+			return
+		}
 	}
 }
 
-func (h *APIUserURLsHandler) ServeHTTPGet(res http.ResponseWriter, req *http.Request) {
-	respItems, err := h.srv.ProcessGet(req.Context())
-	if err != nil {
-		h.logger.Error("error getting user urls", zap.Error(err))
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	} else if len(respItems) == 0 {
-		res.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusOK)
-
-	if err := h.enc.Encode(res, respItems); err != nil {
-		h.logger.Error("failed to encode response", zap.Error(err))
-		return
-	}
-}
-
-func (h *APIUserURLsHandler) ServeHTTPDelete(res http.ResponseWriter, req *http.Request) {
-	if err := h.srv.ProcessDelete(req.Context(), req.Body); err != nil {
-		h.logger.Error("error deleting user urls", zap.Error(err))
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	res.WriteHeader(http.StatusAccepted)
-}
-
-func (h *APIUserURLsHandler) Routes() []Route {
-	return []Route{
-		{
-			Method:  http.MethodGet,
-			Pattern: "/api/user/urls",
-			Handler: h.ServeHTTPGet,
-		},
-		{
-			Method:  http.MethodDelete,
-			Pattern: "/api/user/urls",
-			Handler: h.ServeHTTPDelete,
-		},
+func handleDeleteUserURLs(p UserURLsProcessor, l *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := p.ProcessDelete(r.Context(), r.Body); err != nil {
+			l.Error("error deleting user urls", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
 	}
 }

@@ -121,7 +121,7 @@ func TestAPIShortenBatchHandler_ServeHTTP(t *testing.T) {
 
 			srv := &ShortenBatchSrvStub{tt.shortenError}
 			enc := &JSONEncoderBatchStub{tt.encodeError}
-			h := NewAPIShortenBatchHandler(srv, enc, zap.NewNop())
+			h := handleAPIShortenBatch(srv, enc, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, "/api/shorten/batch", strings.NewReader(`[{"correlation_id":"1","original_url":"https://existing.com/1"}]`))
 			if tt.contentType != "" {

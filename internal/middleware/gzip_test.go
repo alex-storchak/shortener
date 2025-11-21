@@ -61,7 +61,7 @@ func TestGzipMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := newTestHandler(tt.contentType)
-			gzippedHandler := GzipMiddleware(zap.NewNop())(handler)
+			gzippedHandler := NewGzip(zap.NewNop())(handler)
 
 			buf, err := makeRequestBody(tt.body, tt.contentEncoding)
 			require.NoError(t, err)

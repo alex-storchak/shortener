@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func NewLogger(cfg *config.Logger) (*zap.Logger, error) {
+func New(cfg *config.Logger) (*zap.Logger, error) {
 	lvl, err := zap.ParseAtomicLevel(cfg.LogLevel)
 	if err != nil {
 		return nil, fmt.Errorf("parse log level: %w", err)

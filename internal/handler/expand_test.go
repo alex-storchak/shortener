@@ -69,7 +69,7 @@ func TestShortURLHandler_ServeHTTP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := &ShortURLSrvStub{tt.expandError}
-			h := NewShortURLHandler(srv, zap.NewNop())
+			h := handleExpand(srv, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, tt.path, nil)
 			w := httptest.NewRecorder()

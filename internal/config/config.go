@@ -4,9 +4,13 @@ import (
 	"time"
 )
 
+type Server struct {
+	ServerAddr               string        `env:"SERVER_ADDRESS"`
+	ShutdownWaitSecsDuration time.Duration `env:"SHUTDOWN_WAIT_SECS_DURATION"`
+}
+
 type Handler struct {
-	ServerAddr string `env:"SERVER_ADDRESS"`
-	BaseURL    string `env:"BASE_URL"`
+	BaseURL string `env:"BASE_URL"`
 }
 
 type Logger struct {
@@ -34,6 +38,7 @@ type Audit struct {
 }
 
 type Config struct {
+	Server  Server
 	Handler Handler
 	Logger  Logger
 	Repo    Repo

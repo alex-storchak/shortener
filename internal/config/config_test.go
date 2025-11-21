@@ -80,9 +80,12 @@ func (s *ConfigTestSuite) TearDownSubTest() {
 }
 
 func (s *ConfigTestSuite) TestParseConfig() {
+	defServerCfg := Server{
+		ServerAddr:               DefServerAddr,
+		ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
+	}
 	defHandlerCfg := Handler{
-		ServerAddr: DefServerAddr,
-		BaseURL:    DefBaseURL,
+		BaseURL: DefBaseURL,
 	}
 	defLoggerCfg := Logger{
 		LogLevel: DefLogLevel,
@@ -115,6 +118,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			flags: []string{},
 			envs:  map[string]string{},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo:    defRepoCfg,
@@ -132,9 +136,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
+				Server: Server{
+					ServerAddr:               "example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
+				},
 				Handler: Handler{
-					ServerAddr: "example.com:1111",
-					BaseURL:    "http://example.com:1111",
+					BaseURL: "http://example.com:1111",
 				},
 				Logger: defLoggerCfg,
 				Repo: Repo{
@@ -152,15 +159,16 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: Handler{
-					ServerAddr: "example.com:1111",
-					BaseURL:    DefBaseURL,
+				Server: Server{
+					ServerAddr:               "example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
-				Logger: defLoggerCfg,
-				Repo:   defRepoCfg,
-				DB:     defDBCfg,
-				Auth:   defAuthCfg,
-				Audit:  defAuditCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo:    defRepoCfg,
+				DB:      defDBCfg,
+				Auth:    defAuthCfg,
+				Audit:   defAuditCfg,
 			},
 		},
 		{
@@ -170,9 +178,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
+				Server: defServerCfg,
 				Handler: Handler{
-					ServerAddr: DefServerAddr,
-					BaseURL:    "http://example.com:1111",
+					BaseURL: "http://example.com:1111",
 				},
 				Logger: defLoggerCfg,
 				Repo:   defRepoCfg,
@@ -190,9 +198,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath:   "./data/some_file.json",
 			},
 			want: &Config{
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
+				},
 				Handler: Handler{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    "http://env-example.com:1111",
+					BaseURL: "http://env-example.com:1111",
 				},
 				Logger: defLoggerCfg,
 				Repo: Repo{
@@ -216,9 +227,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath:   "./data/some_another_file.json",
 			},
 			want: &Config{
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
+				},
 				Handler: Handler{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    "http://env-example.com:1111",
+					BaseURL: "http://env-example.com:1111",
 				},
 				Logger: defLoggerCfg,
 				Repo: Repo{
@@ -238,9 +252,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameServerAddress: "env-example.com:1111",
 			},
 			want: &Config{
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
+				},
 				Handler: Handler{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    "http://flags-example.com:1111",
+					BaseURL: "http://flags-example.com:1111",
 				},
 				Logger: defLoggerCfg,
 				Repo:   defRepoCfg,
@@ -258,9 +275,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameServerAddress: "env-example.com:1111",
 			},
 			want: &Config{
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
+				},
 				Handler: Handler{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    DefBaseURL,
+					BaseURL: DefBaseURL,
 				},
 				Logger: defLoggerCfg,
 				Repo:   defRepoCfg,
@@ -278,6 +298,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameLogLevel: "debug",
 			},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger: Logger{
 					LogLevel: "debug",
@@ -295,6 +316,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameLogLevel: "debug",
 			},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger: Logger{
 					LogLevel: "debug",
@@ -312,6 +334,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger: Logger{
 					LogLevel: "error",
@@ -331,6 +354,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath: "./data/env_file.json",
 			},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo: Repo{
@@ -348,6 +372,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath: "./data/env_file.json",
 			},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo: Repo{
@@ -365,6 +390,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo: Repo{
@@ -384,6 +410,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envDatabaseDSN: "postgres:envDSN",
 			},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo:    defRepoCfg,
@@ -399,6 +426,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envDatabaseDSN: "postgres:envDSN",
 			},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo:    defRepoCfg,
@@ -414,6 +442,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
+				Server:  defServerCfg,
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo:    defRepoCfg,

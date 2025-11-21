@@ -41,7 +41,7 @@ func TestPingHandler_ServeHTTP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := &PingSrvStub{pingErr: tt.pingErr}
-			h := NewPingHandler(srv, zap.NewNop())
+			h := handlePing(srv, zap.NewNop())
 
 			req := httptest.NewRequest(tt.method, "/ping", nil)
 			w := httptest.NewRecorder()

@@ -18,7 +18,9 @@ func Load() (*Config, error) {
 }
 
 func parseFlags(cfg *Config) {
-	flag.StringVar(&cfg.Handler.ServerAddr, "a", DefServerAddr, "address of HTTP server")
+	flag.StringVar(&cfg.Server.ServerAddr, "a", DefServerAddr, "address of HTTP server")
+	flag.DurationVar(&cfg.Server.ShutdownWaitSecsDuration, "shutdown-wait-secs-duration", DefShutdownWaitSecsDuration, "server shutdown wait seconds duration")
+
 	flag.StringVar(&cfg.Handler.BaseURL, "b", DefBaseURL, "base URL of short url service")
 
 	flag.StringVar(&cfg.Logger.LogLevel, "l", DefLogLevel, "log level")

@@ -139,7 +139,7 @@ func wrapReqBodyWithDecompress(r *http.Request) (io.Closer, error) {
 	return nil, nil
 }
 
-func GzipMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
+func NewGzip(logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			resWriter, respCloser := wrapWriterWithCompress(w, r)

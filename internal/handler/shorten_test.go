@@ -82,7 +82,7 @@ func TestMainPageHandler_ServeHTTP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := &MainPageSrvStub{tt.shortenError}
-			h := NewMainPageHandler(srv, zap.NewNop())
+			h := handleShorten(srv, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader("https://existing.com"))
 			w := httptest.NewRecorder()

@@ -3,8 +3,10 @@ package config
 import "time"
 
 const (
-	DefServerAddr = "localhost:8080"
-	DefBaseURL    = "http://localhost:8080"
+	DefServerAddr               = "localhost:8080"
+	DefShutdownWaitSecsDuration = 10 * time.Second
+
+	DefBaseURL = "http://localhost:8080"
 
 	DefLogLevel = "info"
 
