@@ -133,12 +133,12 @@ func (a *App) initMiddlewares(sf factory.StorageFactory) (*handler.Middlewares, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user storage: %w", err)
 	}
-	as := service.NewAuthService(a.logger, us, &a.cfg.Middleware)
+	as := service.NewAuthService(a.logger, us, &a.cfg.Auth)
 	um := repository.NewUserManager(a.logger, us)
-	authMWService := service.NewAuthMiddlewareService(as, um, &a.cfg.Middleware)
+	authMWService := service.NewAuthMiddlewareService(as, um, &a.cfg.Auth)
 	return &handler.Middlewares{
 		middleware.RequestLogger(a.logger),
-		middleware.AuthMiddleware(a.logger, authMWService, &a.cfg.Middleware),
+		middleware.AuthMiddleware(a.logger, authMWService, &a.cfg.Auth),
 		middleware.GzipMiddleware(a.logger),
 	}, nil
 }

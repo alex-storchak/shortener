@@ -3,11 +3,11 @@ package handler
 import (
 	"net/http"
 
-	"github.com/alex-storchak/shortener/internal/handler/config"
+	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/go-chi/chi/v5"
 )
 
-func Serve(cfg *config.Config, router *chi.Mux) error {
+func Serve(cfg *config.Handler, router *chi.Mux) error {
 	srv := &http.Server{
 		Addr:    cfg.ServerAddr,
 		Handler: router,

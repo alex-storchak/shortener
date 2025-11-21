@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/helper"
-	mwCfg "github.com/alex-storchak/shortener/internal/middleware/config"
 	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
@@ -13,12 +13,12 @@ import (
 func AuthMiddleware(
 	logger *zap.Logger,
 	srv service.AuthMiddlewareService,
-	cfg *mwCfg.Config,
+	cfg *config.Auth,
 ) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var token string
-			if cookie, err := r.Cookie(cfg.AuthCookieName); err == nil {
+			if cookie, err := r.Cookie(cfg.CookieName); err == nil {
 				token = cookie.Value
 			}
 

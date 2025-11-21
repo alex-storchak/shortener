@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/db/config"
+	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
 
-func NewDB(cfg *config.Config, migrationsPath string, zl *zap.Logger) (*sql.DB, error) {
+func NewDB(cfg *config.DB, migrationsPath string, zl *zap.Logger) (*sql.DB, error) {
 	db, err := sql.Open("pgx", cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open db: %w", err)

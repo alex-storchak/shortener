@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	mwcfg "github.com/alex-storchak/shortener/internal/middleware/config"
+	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/repository"
 )
@@ -23,13 +23,13 @@ type AuthMiddlewareService interface {
 type authMiddlewareService struct {
 	authSrv *AuthService
 	uc      repository.UserCreator
-	cfg     *mwcfg.Config
+	cfg     *config.Auth
 }
 
 func NewAuthMiddlewareService(
 	authSrv *AuthService,
 	uc repository.UserCreator,
-	cfg *mwcfg.Config,
+	cfg *config.Auth,
 ) AuthMiddlewareService {
 	return &authMiddlewareService{
 		authSrv: authSrv,
@@ -58,15 +58,15 @@ func (s *authMiddlewareService) ResolveUser(token string) (*model.User, *AuthCoo
 
 	user := &model.User{UUID: claims.UserUUID}
 
-	if claims.ExpiresAt.Before(time.Now().Add(s.cfg.AuthRefreshThreshold)) {
+	if claims.ExpiresAt.Before(time.Now().Add(s.cfg.RefreshThreshold)) {
 		newToken, err := s.authSrv.CreateToken(user)
 		if err != nil {
 			return nil, nil, err
 		}
 		return user, &AuthCookieOpts{
-			Name:   s.cfg.AuthCookieName,
+			Name:   s.cfg.CookieName,
 			Value:  newToken,
-			MaxAge: int(s.cfg.AuthTokenMaxAge.Seconds()),
+			MaxAge: int(s.cfg.TokenMaxAge.Seconds()),
 		}, nil
 	}
 
@@ -83,9 +83,9 @@ func (s *authMiddlewareService) issueNewUserAndCookie() (*model.User, *AuthCooki
 		return nil, nil, fmt.Errorf("failed to create token for new user: %w", err)
 	}
 	return user, &AuthCookieOpts{
-		Name:   s.cfg.AuthCookieName,
+		Name:   s.cfg.CookieName,
 		Value:  token,
-		MaxAge: int(s.cfg.AuthTokenMaxAge.Seconds()),
+		MaxAge: int(s.cfg.TokenMaxAge.Seconds()),
 	}, nil
 }
 

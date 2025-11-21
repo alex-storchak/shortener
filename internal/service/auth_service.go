@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	mwCfg "github.com/alex-storchak/shortener/internal/middleware/config"
+	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/golang-jwt/jwt/v4"
@@ -24,12 +24,12 @@ type AuthService struct {
 	ttl    time.Duration
 }
 
-func NewAuthService(logger *zap.Logger, us repository.UserStorage, cfg *mwCfg.Config) *AuthService {
+func NewAuthService(logger *zap.Logger, us repository.UserStorage, cfg *config.Auth) *AuthService {
 	return &AuthService{
 		logger: logger,
 		us:     us,
 		secret: cfg.SecretKey,
-		ttl:    cfg.AuthTokenMaxAge,
+		ttl:    cfg.TokenMaxAge,
 	}
 }
 
