@@ -65,7 +65,7 @@ func (h *APIShortenHandler) writeResponse(res http.ResponseWriter, status int, r
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(status)
 	if err := h.enc.Encode(res, resBody); err != nil {
-		return fmt.Errorf("failed to encode response body `%v`: %w", resBody, err)
+		return fmt.Errorf("encode response body `%v`: %w", resBody, err)
 	}
 	return nil
 }

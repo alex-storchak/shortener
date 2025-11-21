@@ -57,7 +57,7 @@ func (m *PgURLDBManager) getByQuery(ctx context.Context, q string, args ...any) 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrDataNotFoundInDB
 	} else if err != nil {
-		return nil, fmt.Errorf("failed to scan query result row: %w", err)
+		return nil, fmt.Errorf("scan query result row: %w", err)
 	}
 	return &r, nil
 }
@@ -71,7 +71,7 @@ func (m *PgURLDBManager) Persist(ctx context.Context, r *model.URLStorageRecord)
 	`
 	_, err := m.db.ExecContext(ctx, q, r.OrigURL, r.ShortID, r.UserUUID)
 	if err != nil {
-		return fmt.Errorf("failed to persist binding (%s, %s, %s) to db: %w", r.OrigURL, r.ShortID, r.UserUUID, err)
+		return fmt.Errorf("persist binding (%s, %s, %s) to db: %w", r.OrigURL, r.ShortID, r.UserUUID, err)
 	}
 	return nil
 }
@@ -85,7 +85,7 @@ func (m *PgURLDBManager) PersistBatch(ctx context.Context, binds []*model.URLSto
 	`
 	trx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("error on begin transaction: %w", err)
+		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer func() {
 		if err := trx.Rollback(); err != nil {
@@ -97,7 +97,7 @@ func (m *PgURLDBManager) PersistBatch(ctx context.Context, binds []*model.URLSto
 
 	stmt, err := trx.PrepareContext(ctx, insertSQL)
 	if err != nil {
-		return fmt.Errorf("error on prepare statement: %w", err)
+		return fmt.Errorf("prepare statement: %w", err)
 	}
 	defer func() {
 		if err := stmt.Close(); err != nil {
@@ -109,19 +109,19 @@ func (m *PgURLDBManager) PersistBatch(ctx context.Context, binds []*model.URLSto
 
 	for _, b := range binds {
 		if _, eErr := stmt.ExecContext(ctx, b.OrigURL, b.ShortID, b.UserUUID); eErr != nil {
-			return fmt.Errorf("failed to persist batch record `%v` to db: %w", b, eErr)
+			return fmt.Errorf("persist batch record `%v` to db: %w", b, eErr)
 		}
 	}
 
 	if cErr := trx.Commit(); cErr != nil {
-		return fmt.Errorf("error on commiting transaction: %w", cErr)
+		return fmt.Errorf("commiting transaction: %w", cErr)
 	}
 	return nil
 }
 
 func (m *PgURLDBManager) Ping(ctx context.Context) error {
 	if err := m.db.PingContext(ctx); err != nil {
-		return fmt.Errorf("failed to ping db: %w", err)
+		return fmt.Errorf("ping db: %w", err)
 	}
 	return nil
 }
@@ -138,7 +138,7 @@ func (m *PgURLDBManager) GetByUserUUID(ctx context.Context, userUUID string) ([]
 	`
 	rows, err := m.db.QueryContext(ctx, q, userUUID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query user urls from db: %w", err)
+		return nil, fmt.Errorf("query user urls from db: %w", err)
 	}
 
 	defer rows.Close()
@@ -147,14 +147,14 @@ func (m *PgURLDBManager) GetByUserUUID(ctx context.Context, userUUID string) ([]
 		var r model.URLStorageRecord
 		err = rows.Scan(&r.OrigURL, &r.ShortID, &r.UserUUID, &r.IsDeleted)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan user url from db: %w", err)
+			return nil, fmt.Errorf("scan user url from db: %w", err)
 		}
 		urls = append(urls, &r)
 	}
 
 	err = rows.Err()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user urls from db: %w", err)
+		return nil, fmt.Errorf("get user urls from db: %w", err)
 	}
 	return urls, nil
 }
@@ -177,7 +177,7 @@ func (m *PgURLDBManager) DeleteBatch(ctx context.Context, urls model.URLDeleteBa
 
 	trx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("error on begin transaction: %w", err)
+		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer func() {
 		if err := trx.Rollback(); err != nil {
@@ -189,11 +189,11 @@ func (m *PgURLDBManager) DeleteBatch(ctx context.Context, urls model.URLDeleteBa
 
 	_, err = trx.ExecContext(ctx, q, shortIDs, userUUIDs)
 	if err != nil {
-		return fmt.Errorf("failed to update `is_deleted` field for urls batch: %w", err)
+		return fmt.Errorf("update `is_deleted` field for urls batch: %w", err)
 	}
 
 	if cErr := trx.Commit(); cErr != nil {
-		return fmt.Errorf("error on commiting delete batch transaction: %w", cErr)
+		return fmt.Errorf("commiting delete batch transaction: %w", cErr)
 	}
 	return nil
 }

@@ -39,22 +39,22 @@ func NewShortenBatchService(
 func (s *ShortenBatchService) Process(ctx context.Context, r io.Reader) ([]model.BatchShortenResponseItem, error) {
 	userUUID, err := helper.GetCtxUserUUID(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user uuid from context: %w", err)
+		return nil, fmt.Errorf("get user uuid from context: %w", err)
 	}
 	reqItems, err := s.dec.Decode(r)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode shorten batch request json: %w", err)
+		return nil, fmt.Errorf("decode shorten batch request json: %w", err)
 	}
 
 	origURLs := s.buildURLList(reqItems)
 	shortIDs, err := s.shortener.ShortenBatch(userUUID, origURLs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to shorten batch: %w", err)
+		return nil, fmt.Errorf("shorten batch: %w", err)
 	}
 
 	resp, err := s.buildResponse(reqItems, shortIDs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build response: %w", err)
+		return nil, fmt.Errorf("build response: %w", err)
 	}
 
 	return resp, nil
@@ -76,7 +76,7 @@ func (s *ShortenBatchService) buildResponse(
 	for i, item := range reqItems {
 		shortURL, err := url.JoinPath(s.baseURL, shortIDs[i])
 		if err != nil {
-			return nil, fmt.Errorf("failed to build full short url for new url: %w", err)
+			return nil, fmt.Errorf("build full short url for new url: %w", err)
 		}
 		resp[i] = model.BatchShortenResponseItem{
 			CorrelationID: item.CorrelationID,

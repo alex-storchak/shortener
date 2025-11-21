@@ -38,14 +38,14 @@ func NewApp(cfg *config.Config, l *zap.Logger) (*App, error) {
 
 	sf, err := factory.NewStorageFactory(cfg, l)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize storage factory: %w", err)
+		return nil, fmt.Errorf("initialize storage factory: %w", err)
 	}
 	shortener, err := app.initShortener(sf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize shortener: %w", err)
+		return nil, fmt.Errorf("initialize shortener: %w", err)
 	}
 	if err := app.initRouter(shortener, sf); err != nil {
-		return nil, fmt.Errorf("failed to initialize router: %w", err)
+		return nil, fmt.Errorf("initialize router: %w", err)
 	}
 	return app, nil
 }
@@ -54,7 +54,7 @@ func (a *App) Close() error {
 	var errs []error
 	for i := len(a.closers) - 1; i >= 0; i-- {
 		if err := a.closers[i].closer.Close(); err != nil {
-			err = fmt.Errorf("failed to close `%s`: %w", a.closers[i].name, err)
+			err = fmt.Errorf("close `%s`: %w", a.closers[i].name, err)
 			errs = append(errs, err)
 		}
 	}
@@ -68,7 +68,7 @@ func (a *App) Run() error {
 func (a *App) initURLStorage(sf factory.StorageFactory) (repository.URLStorage, error) {
 	storage, err := sf.MakeURLStorage()
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize url storage: %w", err)
+		return nil, fmt.Errorf("initialize url storage: %w", err)
 	}
 	a.closers = append(a.closers, closer{"storage", storage})
 	return storage, nil
@@ -77,7 +77,7 @@ func (a *App) initURLStorage(sf factory.StorageFactory) (repository.URLStorage, 
 func (a *App) initShortIDGenerator() (*service.ShortIDGenerator, error) {
 	generator, err := shortid.New(1, shortid.DefaultABC, 1)
 	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate shortid generator: %w", err)
+		return nil, fmt.Errorf("instantiate shortid generator: %w", err)
 	}
 	return service.NewShortIDGenerator(generator), nil
 }
@@ -85,11 +85,11 @@ func (a *App) initShortIDGenerator() (*service.ShortIDGenerator, error) {
 func (a *App) initShortener(sf factory.StorageFactory) (*service.Shortener, error) {
 	gen, err := a.initShortIDGenerator()
 	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate shortid generator: %w", err)
+		return nil, fmt.Errorf("instantiate shortid generator: %w", err)
 	}
 	storage, err := a.initURLStorage(sf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize url storage: %w", err)
+		return nil, fmt.Errorf("initialize url storage: %w", err)
 	}
 	a.logger.Info("shortener initialized")
 	return service.NewShortener(gen, storage, a.logger), nil
@@ -131,7 +131,7 @@ func (a *App) initHandlers(shortener service.PingableURLShortener) *handler.Hand
 func (a *App) initMiddlewares(sf factory.StorageFactory) (*handler.Middlewares, error) {
 	us, err := sf.MakeUserStorage()
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize user storage: %w", err)
+		return nil, fmt.Errorf("initialize user storage: %w", err)
 	}
 	as := service.NewAuthService(a.logger, us, &a.cfg.Auth)
 	um := repository.NewUserManager(a.logger, us)
@@ -147,7 +147,7 @@ func (a *App) initRouter(shortener service.PingableURLShortener, sf factory.Stor
 	handlers := a.initHandlers(shortener)
 	middlewares, err := a.initMiddlewares(sf)
 	if err != nil {
-		return fmt.Errorf("failed to initialize middlewares: %w", err)
+		return fmt.Errorf("initialize middlewares: %w", err)
 	}
 	a.router = handler.NewRouter(handlers, middlewares)
 	a.logger.Info("router initialized")

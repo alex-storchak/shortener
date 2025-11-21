@@ -29,7 +29,7 @@ func (um *UserManager) NewUser() (*model.User, error) {
 		UUID: uuid.NewString(),
 	}
 	if err := um.us.Set(&user); err != nil {
-		return nil, fmt.Errorf("failed to create new user: %w", err)
+		return nil, fmt.Errorf("create new user: %w", err)
 	}
 	return &user, nil
 }

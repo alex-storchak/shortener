@@ -50,7 +50,7 @@ func (s *authMiddlewareService) ResolveUser(token string) (*model.User, *AuthCoo
 
 	ok, uErr := s.authSrv.ValidateUserUUID(claims.UserUUID)
 	if uErr != nil {
-		return nil, nil, fmt.Errorf("failed to validate user uuid: %w", uErr)
+		return nil, nil, fmt.Errorf("validate user uuid: %w", uErr)
 	}
 	if !ok {
 		return nil, nil, ErrUnauthorized
@@ -76,11 +76,11 @@ func (s *authMiddlewareService) ResolveUser(token string) (*model.User, *AuthCoo
 func (s *authMiddlewareService) issueNewUserAndCookie() (*model.User, *AuthCookieOpts, error) {
 	user, err := s.uc.NewUser()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create new user: %w", err)
+		return nil, nil, fmt.Errorf("create new user: %w", err)
 	}
 	token, err := s.authSrv.CreateToken(user)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create token for new user: %w", err)
+		return nil, nil, fmt.Errorf("create token for new user: %w", err)
 	}
 	return user, &AuthCookieOpts{
 		Name:   s.cfg.CookieName,

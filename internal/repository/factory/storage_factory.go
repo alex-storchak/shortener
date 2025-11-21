@@ -24,12 +24,12 @@ func NewStorageFactory(cfg *config.Config, zl *zap.Logger) (StorageFactory, erro
 	case strings.TrimSpace(cfg.DB.DSN) != "":
 		sf, err = initDBStorageFactory(cfg, zl)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize db storage factory: %w", err)
+			return nil, fmt.Errorf("initialize db storage factory: %w", err)
 		}
 	case strings.TrimSpace(cfg.Repo.FileStoragePath) != "":
 		sf, err = initFileStorageFactory(cfg, zl)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize file storage factory: %w", err)
+			return nil, fmt.Errorf("initialize file storage factory: %w", err)
 		}
 	default:
 		sf = initMemoryStorageFactory(cfg, zl)

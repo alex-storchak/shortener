@@ -13,7 +13,7 @@ func GetAbsFilePath(path string) (string, error) {
 
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		return "", fmt.Errorf("failed to get caller info")
+		return "", fmt.Errorf("get caller info")
 	}
 	baseDir := filepath.Dir(filename)
 	absolutePath := filepath.Join(baseDir, path)

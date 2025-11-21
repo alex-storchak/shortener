@@ -49,7 +49,7 @@ type gzipReader struct {
 func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	gzr, err := gzip.NewReader(r)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
+		return nil, fmt.Errorf("create gzip reader: %w", err)
 	}
 
 	return &gzipReader{
@@ -64,7 +64,7 @@ func (c *gzipReader) Read(p []byte) (n int, err error) {
 
 func (c *gzipReader) Close() error {
 	if err := c.r.Close(); err != nil {
-		return fmt.Errorf("failed to close gzip reader: %w", err)
+		return fmt.Errorf("close gzip reader: %w", err)
 	}
 	return c.gzr.Close()
 }
@@ -131,7 +131,7 @@ func wrapReqBodyWithDecompress(r *http.Request) (io.Closer, error) {
 	if isCompressed(r, "gzip") {
 		gzr, err := newGzipReader(r.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create new gzip reader: %w", err)
+			return nil, fmt.Errorf("create new gzip reader: %w", err)
 		}
 		r.Body = gzr
 		return gzr, nil

@@ -28,7 +28,7 @@ func (s *PingService) Process() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	if err := s.pinger.IsReady(ctx); err != nil {
-		return fmt.Errorf("failed to ping service: %w", err)
+		return fmt.Errorf("ping service: %w", err)
 	}
 	return nil
 }

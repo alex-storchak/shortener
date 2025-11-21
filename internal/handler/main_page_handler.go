@@ -59,7 +59,7 @@ func (h *MainPageHandler) writeResponse(res http.ResponseWriter, status int, sho
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(status)
 	if _, err := res.Write([]byte(shortURL)); err != nil {
-		return fmt.Errorf("failed to write response `%s`: %w", shortURL, err)
+		return fmt.Errorf("write response `%s`: %w", shortURL, err)
 	}
 	return nil
 }

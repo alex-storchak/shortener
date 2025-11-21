@@ -42,7 +42,7 @@ func (e *JSONEncoderBatchStub) Encode(w io.Writer, _ any) error {
 	}
 	_, err := w.Write([]byte(`[{"correlation_id":"1","short_url":"https://example.com/a1"},{"correlation_id":"2","short_url":"https://example.com/b2"}]`))
 	if err != nil {
-		return fmt.Errorf("failed to write response: %w", err)
+		return fmt.Errorf("write response: %w", err)
 	}
 	return nil
 }

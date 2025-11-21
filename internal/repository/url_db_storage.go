@@ -38,7 +38,7 @@ func (s *DBURLStorage) Close() error {
 
 func (s *DBURLStorage) Ping(ctx context.Context) error {
 	if err := s.dbMgr.Ping(ctx); err != nil {
-		return fmt.Errorf("failed to ping db: %w", err)
+		return fmt.Errorf("ping db: %w", err)
 	}
 	return nil
 }
@@ -59,21 +59,21 @@ func (s *DBURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, e
 	if errors.Is(err, ErrDataNotFoundInDB) {
 		return nil, NewDataNotFoundError(ErrDataNotFoundInDB)
 	} else if err != nil {
-		return nil, fmt.Errorf("failed to retrieve bind by url `%s` from db: %w", url, err)
+		return nil, fmt.Errorf("retrieve bind by url `%s` from db: %w", url, err)
 	}
 	return r, nil
 }
 
 func (s *DBURLStorage) Set(r *model.URLStorageRecord) error {
 	if err := s.dbMgr.Persist(context.Background(), r); err != nil {
-		return fmt.Errorf("failed to persist record to db: %w", err)
+		return fmt.Errorf("persist record to db: %w", err)
 	}
 	return nil
 }
 
 func (s *DBURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
 	if err := s.dbMgr.PersistBatch(context.Background(), binds); err != nil {
-		return fmt.Errorf("failed to persist batch records to db: %w", err)
+		return fmt.Errorf("persist batch records to db: %w", err)
 	}
 	return nil
 }

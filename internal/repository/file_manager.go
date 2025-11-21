@@ -28,7 +28,7 @@ func NewFileManager(filePath, dfltFilePath string, logger *zap.Logger) *FileMana
 func (m *FileManager) getAbsPath(filePath string) (string, error) {
 	absPath, err := helper.GetAbsFilePath(filePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to get absolute path for `%s`: %w", filePath, err)
+		return "", fmt.Errorf("get absolute path for `%s`: %w", filePath, err)
 	}
 	return absPath, nil
 }
@@ -40,11 +40,11 @@ func (m *FileManager) open(useDefault bool, flag int) (*os.File, error) {
 	}
 	absPath, err := m.getAbsPath(m.filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path for `%s`: %w", m.filePath, err)
+		return nil, fmt.Errorf("get absolute path for `%s`: %w", m.filePath, err)
 	}
 	file, err := os.OpenFile(absPath, flag, 0666)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file by path `%s`: %w", absPath, err)
+		return nil, fmt.Errorf("open file by path `%s`: %w", absPath, err)
 	}
 	m.file = file
 	m.writer = bufio.NewWriter(file)
@@ -68,10 +68,10 @@ func (m *FileManager) close() error {
 
 func (m *FileManager) writeData(data []byte) error {
 	if _, err := m.writer.Write(data); err != nil {
-		return fmt.Errorf("failed to write data to file: %w", err)
+		return fmt.Errorf("write data to file: %w", err)
 	}
 	if err := m.writer.WriteByte('\n'); err != nil {
-		return fmt.Errorf("failed to add line break to file: %w", err)
+		return fmt.Errorf("add line break to file: %w", err)
 	}
 	return m.writer.Flush()
 }

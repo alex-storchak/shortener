@@ -14,7 +14,7 @@ func (d JSONShortenRequestDecoder) Decode(r io.Reader) (model.ShortenRequest, er
 	var req model.ShortenRequest
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&req); err != nil {
-		return model.ShortenRequest{}, fmt.Errorf("failed to decode request json: %w", err)
+		return model.ShortenRequest{}, fmt.Errorf("decode request json: %w", err)
 	}
 	return req, nil
 }
@@ -25,7 +25,7 @@ func (d JSONShortenBatchRequestDecoder) Decode(r io.Reader) ([]model.BatchShorte
 	var req []model.BatchShortenRequestItem
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&req); err != nil {
-		return nil, fmt.Errorf("failed to decode shorten batch request json: %w", err)
+		return nil, fmt.Errorf("decode shorten batch request json: %w", err)
 	}
 	return req, nil
 }
@@ -36,7 +36,7 @@ func (d JSONDeleteBatchRequestDecoder) Decode(r io.Reader) ([]string, error) {
 	var req []string
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&req); err != nil {
-		return nil, fmt.Errorf("failed to decode delete batch request json: %w", err)
+		return nil, fmt.Errorf("decode delete batch request json: %w", err)
 	}
 	return req, nil
 }

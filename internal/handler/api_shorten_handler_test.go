@@ -40,7 +40,7 @@ func (e *JSONEncoderStub) Encode(w io.Writer, _ any) error {
 		return e.encodeError
 	}
 	if _, err := w.Write([]byte(`{"result":"https://example.com/abcde"}`)); err != nil {
-		return fmt.Errorf("failed to write encoded response: %w", err)
+		return fmt.Errorf("write encoded response: %w", err)
 	}
 	return nil
 }

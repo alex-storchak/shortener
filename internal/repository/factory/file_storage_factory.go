@@ -32,7 +32,7 @@ func NewFileStorageFactory(
 func (f *FileStorageFactory) MakeURLStorage() (repository.URLStorage, error) {
 	storage, err := repository.NewFileURLStorage(f.logger, f.fm, f.ufs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate file url storage: %w", err)
+		return nil, fmt.Errorf("instantiate file url storage: %w", err)
 	}
 	f.logger.Info("file url storage initialized")
 	return storage, nil
@@ -41,7 +41,7 @@ func (f *FileStorageFactory) MakeURLStorage() (repository.URLStorage, error) {
 func (f *FileStorageFactory) MakeUserStorage() (repository.UserStorage, error) {
 	storage, err := repository.NewFileUserStorage(f.logger, f.fm, f.ufs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate file user storage: %w", err)
+		return nil, fmt.Errorf("instantiate file user storage: %w", err)
 	}
 	f.logger.Info("file user storage initialized")
 	return storage, nil
