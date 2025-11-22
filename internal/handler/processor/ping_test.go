@@ -1,4 +1,4 @@
-package service
+package processor
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -35,7 +36,7 @@ func (s *stubSleepPinger) IsReady(ctx context.Context) error {
 func TestPingService_Ping(t *testing.T) {
 	tests := []struct {
 		name          string
-		db            Pinger
+		db            service.Pinger
 		wantErr       bool
 		checkDuration bool
 	}{
@@ -59,7 +60,7 @@ func TestPingService_Ping(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv := &PingService{pinger: tt.db, logger: zap.NewNop()}
+			srv := &Ping{pinger: tt.db, logger: zap.NewNop()}
 
 			var start time.Time
 			if tt.checkDuration {

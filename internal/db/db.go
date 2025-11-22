@@ -11,27 +11,27 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewDB(cfg *config.DB, migrationsPath string, zl *zap.Logger) (*sql.DB, error) {
+func NewDB(cfg *config.DB, migrationsPath string, l *zap.Logger) (*sql.DB, error) {
 	db, err := sql.Open("pgx", cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 
-	if err := applyMigrations(cfg.DSN, migrationsPath, zl); err != nil {
+	if err := applyMigrations(cfg.DSN, migrationsPath, l); err != nil {
 		return nil, err
 	}
 
 	return db, nil
 }
 
-func applyMigrations(dsn string, migrationsPath string, zl *zap.Logger) error {
+func applyMigrations(dsn string, migrationsPath string, l *zap.Logger) error {
 	mg, err := migrate.New(migrationsPath, dsn)
 	if err != nil {
-		return fmt.Errorf("initialize database for migrations: %w", err)
+		return fmt.Errorf("init db for migrations: %w", err)
 	}
 	err = mg.Up()
 	if errors.Is(err, migrate.ErrNoChange) {
-		zl.Info("No new migrations to apply")
+		l.Info("No new migrations to apply")
 	} else if err != nil {
 		return fmt.Errorf("apply migrations: %w", err)
 	}

@@ -10,6 +10,14 @@ import (
 	"go.uber.org/zap"
 )
 
+type IDGenerator interface {
+	Generate() (string, error)
+}
+
+type Pinger interface {
+	IsReady(ctx context.Context) error
+}
+
 type URLShortener interface {
 	Shorten(userUUID string, url string) (shortID string, err error)
 	Extract(shortID string) (OrigURL string, err error)

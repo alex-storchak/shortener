@@ -1,27 +1,17 @@
-package service
+package processor
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"io"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
-
-type stubDecoder struct {
-	retReq model.ShortenRequest
-	retErr error
-}
-
-func (s *stubDecoder) Decode(_ io.Reader) (model.ShortenRequest, error) {
-	return s.retReq, s.retErr
-}
 
 type stubShortenerAPI struct {
 	retShortID string
@@ -51,8 +41,7 @@ func (s *stubShortenerAPI) DeleteBatch(_ model.URLDeleteBatch) error {
 func TestShortenService_Shorten(t *testing.T) {
 	tests := []struct {
 		name       string
-		body       []byte
-		decoderReq model.ShortenRequest
+		decReq     model.ShortenRequest
 		decoderErr error
 		shortID    string
 		shortenErr error
@@ -62,60 +51,48 @@ func TestShortenService_Shorten(t *testing.T) {
 		wantErrIs  error
 	}{
 		{
-			name:       "returns error when decoder fails",
-			body:       []byte("{bad json}"),
-			decoderErr: errors.New("decode error"),
-			wantErr:    true,
-		},
-		{
 			name:       "returns ErrEmptyInputURL from shortener",
-			body:       []byte("{}"),
-			decoderReq: model.ShortenRequest{OrigURL: ""},
-			shortenErr: ErrEmptyInputURL,
+			decReq:     model.ShortenRequest{OrigURL: ""},
+			shortenErr: service.ErrEmptyInputURL,
 			wantErr:    true,
-			wantErrIs:  ErrEmptyInputURL,
+			wantErrIs:  service.ErrEmptyInputURL,
 		},
 		{
 			name:       "returns unexpected shortener error",
-			body:       []byte("{}"),
-			decoderReq: model.ShortenRequest{OrigURL: "https://example.com"},
+			decReq:     model.ShortenRequest{OrigURL: "https://example.com"},
 			shortenErr: errors.New("random error"),
 			wantErr:    true,
 		},
 		{
-			name:       "success returns short url in response",
-			body:       []byte("{}"),
-			decoderReq: model.ShortenRequest{OrigURL: "https://example.com"},
-			shortID:    "abcde",
-			baseURL:    "https://short.host",
-			wantResp:   &model.ShortenResponse{ShortURL: "https://short.host/abcde"},
+			name:     "success returns short url in response",
+			decReq:   model.ShortenRequest{OrigURL: "https://example.com"},
+			shortID:  "abcde",
+			baseURL:  "https://short.host",
+			wantResp: &model.ShortenResponse{ShortURL: "https://short.host/abcde"},
 		},
 		{
 			name:       "returns short url and ErrURLAlreadyExists when URL bind exists in storage",
-			body:       []byte("{}"),
-			decoderReq: model.ShortenRequest{OrigURL: "https://example.com"},
+			decReq:     model.ShortenRequest{OrigURL: "https://example.com"},
 			shortID:    "exist",
-			shortenErr: ErrURLAlreadyExists,
+			shortenErr: service.ErrURLAlreadyExists,
 			baseURL:    "https://short.host",
 			wantResp:   &model.ShortenResponse{ShortURL: "https://short.host/exist"},
 			wantErr:    true,
-			wantErrIs:  ErrURLAlreadyExists,
+			wantErrIs:  service.ErrURLAlreadyExists,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dec := &stubDecoder{tt.decoderReq, tt.decoderErr}
 			shortener := &stubShortenerAPI{tt.shortID, tt.shortenErr}
 			baseURL := tt.baseURL
 			if baseURL == "" {
 				baseURL = "http://any"
 			}
-			srv := NewShortenService(baseURL, shortener, dec, zap.NewNop())
-			ctx := helper.WithUser(context.Background(), &model.User{UUID: "userUUID"})
+			srv := NewAPIShorten(baseURL, shortener, zap.NewNop())
+			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
-			var r io.Reader = bytes.NewReader(tt.body)
-			resp, err := srv.Process(ctx, r)
+			resp, err := srv.Process(ctx, tt.decReq)
 
 			if tt.wantErr {
 				require.Error(t, err)

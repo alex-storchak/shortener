@@ -10,6 +10,7 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/handler"
+	"github.com/alex-storchak/shortener/internal/handler/processor"
 	"github.com/alex-storchak/shortener/internal/logger"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/repository/factory"
@@ -90,16 +91,8 @@ func initURLStorage(sf factory.StorageFactory) (repository.URLStorage, error) {
 	return storage, nil
 }
 
-func initShortIDGenerator() (*service.ShortIDGenerator, error) {
-	generator, err := shortid.New(1, shortid.DefaultABC, 1)
-	if err != nil {
-		return nil, fmt.Errorf("instantiate shortid generator: %w", err)
-	}
-	return service.NewShortIDGenerator(generator), nil
-}
-
 func initShortener(s repository.URLStorage, zl *zap.Logger) (*service.Shortener, error) {
-	g, err := initShortIDGenerator()
+	g, err := shortid.New(1, shortid.DefaultABC, 1)
 	if err != nil {
 		return nil, fmt.Errorf("instantiate shortid generator: %w", err)
 	}
@@ -119,24 +112,14 @@ func initRouter(
 	}
 	as := service.NewAuthService(zl, us, &cfg.Auth)
 	um := repository.NewUserManager(zl, us)
-	authMWService := service.NewAuthMiddlewareService(as, um, &cfg.Auth)
+	authMWService := service.NewAuthUserResolver(as, um, &cfg.Auth)
 
-	shortenProc := service.NewMainPageService(cfg.Handler.BaseURL, sh, zl)
-
-	shortURLProc := service.NewShortURLService(sh, zl)
-
-	pingProc := service.NewPingService(sh, zl)
-
-	shortenRequestDecoder := service.JSONShortenRequestDecoder{}
-	apiShortenProc := service.NewShortenService(cfg.Handler.BaseURL, sh, shortenRequestDecoder, zl)
-
-	enc := service.JSONEncoder{}
-
-	shortenDec := service.JSONShortenBatchRequestDecoder{}
-	apiShortenBatchProc := service.NewShortenBatchService(cfg.Handler.BaseURL, sh, shortenDec, zl)
-
-	deleteDec := service.JSONDeleteBatchRequestDecoder{}
-	apiUserURLsProc := service.NewAPIUserURLsService(cfg.Handler.BaseURL, sh, deleteDec, zl)
+	shortenProc := processor.NewShorten(cfg.Handler.BaseURL, sh, zl)
+	shortURLProc := processor.NewExpand(sh, zl)
+	pingProc := processor.NewPing(sh, zl)
+	apiShortenProc := processor.NewAPIShorten(cfg.Handler.BaseURL, sh, zl)
+	apiShortenBatchProc := processor.NewAPIShortenBatch(cfg.Handler.BaseURL, sh, zl)
+	apiUserURLsProc := processor.NewAPIUserURLs(cfg.Handler.BaseURL, sh, zl)
 
 	return handler.NewRouter(
 		zl,
@@ -146,7 +129,6 @@ func initRouter(
 		shortURLProc,
 		pingProc,
 		apiShortenProc,
-		enc,
 		apiShortenBatchProc,
 		apiUserURLsProc,
 	), nil

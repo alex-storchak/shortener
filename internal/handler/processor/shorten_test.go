@@ -1,12 +1,13 @@
-package service
+package processor
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -49,9 +50,9 @@ func TestMainPageService_Shorten(t *testing.T) {
 		{
 			name:      "returns ErrEmptyInputURL on empty body",
 			body:      []byte(""),
-			stubErr:   ErrEmptyInputURL,
+			stubErr:   service.ErrEmptyInputURL,
 			wantErr:   true,
-			wantErrIs: ErrEmptyInputURL,
+			wantErrIs: service.ErrEmptyInputURL,
 		},
 		{
 			name:         "returns shortURL on success",
@@ -70,18 +71,18 @@ func TestMainPageService_Shorten(t *testing.T) {
 			name:         "returns shortURL and ErrURLAlreadyExists when URL bind exists in storage",
 			body:         []byte("https://example.com"),
 			stubShortID:  "exist",
-			stubErr:      ErrURLAlreadyExists,
+			stubErr:      service.ErrURLAlreadyExists,
 			wantShortURL: "https://short.host/exist",
 			wantErr:      true,
-			wantErrIs:    ErrURLAlreadyExists,
+			wantErrIs:    service.ErrURLAlreadyExists,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			core := &stubShortener{tt.stubShortID, tt.stubErr}
-			srv := NewMainPageService("https://short.host", core, zap.NewNop())
-			ctx := helper.WithUser(context.Background(), &model.User{UUID: "userUUID"})
+			srv := NewShorten("https://short.host", core, zap.NewNop())
+			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			gotURL, gotErr := srv.Process(ctx, tt.body)
 

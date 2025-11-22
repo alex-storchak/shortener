@@ -5,16 +5,17 @@ import (
 	"net/http"
 
 	"github.com/alex-storchak/shortener/internal/config"
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/auth"
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
-func NewAuth(
-	logger *zap.Logger,
-	srv service.AuthMiddlewareService,
-	cfg config.Auth,
-) func(http.Handler) http.Handler {
+type UserResolver interface {
+	ResolveUser(tokenFromCookie string) (user *model.User, newCookie *service.AuthCookieOpts, err error)
+}
+
+func NewAuth(logger *zap.Logger, srv UserResolver, cfg config.Auth) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var token string
@@ -42,7 +43,7 @@ func NewAuth(
 				})
 			}
 
-			ctx := helper.WithUser(r.Context(), user)
+			ctx := auth.WithUser(r.Context(), user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

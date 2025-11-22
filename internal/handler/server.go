@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/alex-storchak/shortener/internal/config"
-	"github.com/alex-storchak/shortener/internal/service"
+	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
@@ -15,14 +15,13 @@ import (
 func NewRouter(
 	logger *zap.Logger,
 	cfg *config.Config,
-	authMWService service.AuthMiddlewareService,
+	authMWService middleware.UserResolver,
 	shortenProc ShortenProcessor,
-	shortURLProc ShortURLProcessor,
+	shortURLProc ExpandProcessor,
 	pingProc PingProcessor,
 	apiShortenProc APIShortenProcessor,
-	enc service.Encoder,
 	apiShortenBatchProc APIShortenBatchProcessor,
-	apiUserURLsProc UserURLsProcessor,
+	apiUserURLsProc APIUserURLsProcessor,
 ) http.Handler {
 	r := chi.NewRouter()
 	addRoutes(
@@ -34,7 +33,6 @@ func NewRouter(
 		shortURLProc,
 		pingProc,
 		apiShortenProc,
-		enc,
 		apiShortenBatchProc,
 		apiUserURLsProc,
 	)

@@ -1,46 +1,39 @@
-package service
+package processor
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"runtime"
 	"sync"
 	"time"
 
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
-type DeleteBatchRequestDecoder interface {
-	Decode(io.Reader) ([]string, error)
-}
-
-type APIUserURLsService struct {
+type APIUserURLs struct {
 	baseURL   string
-	shortener URLShortener
-	dec       DeleteBatchRequestDecoder
+	shortener service.URLShortener
 	logger    *zap.Logger
 }
 
-func NewAPIUserURLsService(
+func NewAPIUserURLs(
 	baseURL string,
-	shortener URLShortener,
-	dec DeleteBatchRequestDecoder,
+	shortener service.URLShortener,
 	logger *zap.Logger,
-) *APIUserURLsService {
-	return &APIUserURLsService{
+) *APIUserURLs {
+	return &APIUserURLs{
 		baseURL:   baseURL,
 		shortener: shortener,
-		dec:       dec,
 		logger:    logger,
 	}
 }
 
-func (s *APIUserURLsService) ProcessGet(ctx context.Context) ([]model.UserURLsResponseItem, error) {
-	userUUID, err := helper.GetCtxUserUUID(ctx)
+func (s *APIUserURLs) ProcessGet(ctx context.Context) ([]model.UserURLsResponseItem, error) {
+	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get user uuid from context: %w", err)
 	}
@@ -57,7 +50,7 @@ func (s *APIUserURLsService) ProcessGet(ctx context.Context) ([]model.UserURLsRe
 	return resp, nil
 }
 
-func (s *APIUserURLsService) buildResponse(urls []*model.URLStorageRecord) ([]model.UserURLsResponseItem, error) {
+func (s *APIUserURLs) buildResponse(urls []*model.URLStorageRecord) ([]model.UserURLsResponseItem, error) {
 	resp := make([]model.UserURLsResponseItem, len(urls))
 	for i, u := range urls {
 		shortURL, err := url.JoinPath(s.baseURL, u.ShortID)
@@ -72,14 +65,10 @@ func (s *APIUserURLsService) buildResponse(urls []*model.URLStorageRecord) ([]mo
 	return resp, nil
 }
 
-func (s *APIUserURLsService) ProcessDelete(ctx context.Context, r io.Reader) error {
-	userUUID, err := helper.GetCtxUserUUID(ctx)
+func (s *APIUserURLs) ProcessDelete(ctx context.Context, shortIDs []string) error {
+	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return fmt.Errorf("get user uuid from context: %w", err)
-	}
-	shortIDs, err := s.dec.Decode(r)
-	if err != nil {
-		return fmt.Errorf("decode delete batch request json: %w", err)
 	}
 
 	go s.processDeletion(context.Background(), userUUID, shortIDs)
@@ -87,7 +76,7 @@ func (s *APIUserURLsService) ProcessDelete(ctx context.Context, r io.Reader) err
 	return nil
 }
 
-func (s *APIUserURLsService) processDeletion(
+func (s *APIUserURLs) processDeletion(
 	ctx context.Context,
 	userUUID string,
 	shortIDs []string,
@@ -109,7 +98,7 @@ func (s *APIUserURLsService) processDeletion(
 	s.deleteBatch(batchesCh)
 }
 
-func (s *APIUserURLsService) fanOut(ctx context.Context, inputCh chan model.URLToDelete) []chan model.URLDeleteBatch {
+func (s *APIUserURLs) fanOut(ctx context.Context, inputCh chan model.URLToDelete) []chan model.URLDeleteBatch {
 	numWorkers := runtime.NumCPU()
 	channels := make([]chan model.URLDeleteBatch, numWorkers)
 	batchSize := 50
@@ -120,7 +109,7 @@ func (s *APIUserURLsService) fanOut(ctx context.Context, inputCh chan model.URLT
 	return channels
 }
 
-func (s *APIUserURLsService) batchWorker(
+func (s *APIUserURLs) batchWorker(
 	ctx context.Context,
 	inCh chan model.URLToDelete,
 	batchSize int,
@@ -171,7 +160,7 @@ func flush(
 	}
 }
 
-func (s *APIUserURLsService) fanIn(ctx context.Context, channels ...chan model.URLDeleteBatch) chan model.URLDeleteBatch {
+func (s *APIUserURLs) fanIn(ctx context.Context, channels ...chan model.URLDeleteBatch) chan model.URLDeleteBatch {
 	finalCh := make(chan model.URLDeleteBatch)
 	var wg sync.WaitGroup
 
@@ -198,7 +187,7 @@ func (s *APIUserURLsService) fanIn(ctx context.Context, channels ...chan model.U
 	return finalCh
 }
 
-func (s *APIUserURLsService) deleteBatch(batchesCh chan model.URLDeleteBatch) {
+func (s *APIUserURLs) deleteBatch(batchesCh chan model.URLDeleteBatch) {
 	for batch := range batchesCh {
 		if err := s.shortener.DeleteBatch(batch); err != nil {
 			s.logger.Error("error deleting batch", zap.Error(err))

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/datetime"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +40,7 @@ func newLoggingResponseWriter(w http.ResponseWriter, rd *responseData, logger *z
 
 func logSummary(logger *zap.Logger, r *http.Request, rd *responseData, start time.Time) {
 	duration := time.Since(start)
-	fmtDuration := helper.FormatDuration(duration)
+	fmtDuration := datetime.FormatDuration(duration)
 
 	logger.Info("got incoming HTTP request",
 		zap.String("method", r.Method),

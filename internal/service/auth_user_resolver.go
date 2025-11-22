@@ -7,8 +7,11 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/model"
-	"github.com/alex-storchak/shortener/internal/repository"
 )
+
+type UserCreator interface {
+	NewUser() (*model.User, error)
+}
 
 type AuthCookieOpts struct {
 	Name   string
@@ -16,29 +19,25 @@ type AuthCookieOpts struct {
 	MaxAge int
 }
 
-type AuthMiddlewareService interface {
-	ResolveUser(tokenFromCookie string) (user *model.User, newCookie *AuthCookieOpts, err error)
-}
-
-type authMiddlewareService struct {
+type AuthUserResolver struct {
 	authSrv *AuthService
-	uc      repository.UserCreator
+	uc      UserCreator
 	cfg     *config.Auth
 }
 
-func NewAuthMiddlewareService(
-	authSrv *AuthService,
-	uc repository.UserCreator,
+func NewAuthUserResolver(
+	a *AuthService,
+	uc UserCreator,
 	cfg *config.Auth,
-) AuthMiddlewareService {
-	return &authMiddlewareService{
-		authSrv: authSrv,
+) *AuthUserResolver {
+	return &AuthUserResolver{
+		authSrv: a,
 		uc:      uc,
 		cfg:     cfg,
 	}
 }
 
-func (s *authMiddlewareService) ResolveUser(token string) (*model.User, *AuthCookieOpts, error) {
+func (s *AuthUserResolver) ResolveUser(token string) (*model.User, *AuthCookieOpts, error) {
 	if token == "" {
 		return s.issueNewUserAndCookie()
 	}
@@ -73,7 +72,7 @@ func (s *authMiddlewareService) ResolveUser(token string) (*model.User, *AuthCoo
 	return user, nil, nil
 }
 
-func (s *authMiddlewareService) issueNewUserAndCookie() (*model.User, *AuthCookieOpts, error) {
+func (s *AuthUserResolver) issueNewUserAndCookie() (*model.User, *AuthCookieOpts, error) {
 	user, err := s.uc.NewUser()
 	if err != nil {
 		return nil, nil, fmt.Errorf("create new user: %w", err)

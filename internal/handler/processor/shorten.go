@@ -1,4 +1,4 @@
-package service
+package processor
 
 import (
 	"context"
@@ -6,32 +6,33 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/auth"
+	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
-type MainPageService struct {
+type Shorten struct {
 	baseURL   string
-	shortener URLShortener
+	shortener service.URLShortener
 	logger    *zap.Logger
 }
 
-func NewMainPageService(bu string, s URLShortener, l *zap.Logger) *MainPageService {
-	return &MainPageService{
+func NewShorten(bu string, s service.URLShortener, l *zap.Logger) *Shorten {
+	return &Shorten{
 		baseURL:   bu,
 		shortener: s,
 		logger:    l,
 	}
 }
 
-func (s *MainPageService) Process(ctx context.Context, body []byte) (string, error) {
+func (s *Shorten) Process(ctx context.Context, body []byte) (string, error) {
 	origURL := string(body)
-	userUUID, err := helper.GetCtxUserUUID(ctx)
+	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return "", fmt.Errorf("get user uuid from context: %w", err)
 	}
 	shortID, err := s.shortener.Shorten(userUUID, origURL)
-	if errors.Is(err, ErrURLAlreadyExists) {
+	if errors.Is(err, service.ErrURLAlreadyExists) {
 		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
 		if jpErr != nil {
 			return "", fmt.Errorf("build full short url path for existing url: %w", jpErr)

@@ -1,4 +1,4 @@
-package helper
+package filepath
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"runtime"
 )
 
-func GetAbsFilePath(path string) (string, error) {
+func GetAbsPath(path string) (string, error) {
 	if filepath.IsAbs(path) {
 		return path, nil
 	}

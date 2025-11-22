@@ -22,7 +22,7 @@ type ShortenBatchSrvStub struct {
 	shortenError error
 }
 
-func (s *ShortenBatchSrvStub) Process(_ context.Context, _ io.Reader) ([]model.BatchShortenResponseItem, error) {
+func (s *ShortenBatchSrvStub) Process(_ context.Context, _ []model.BatchShortenRequestItem) ([]model.BatchShortenResponseItem, error) {
 	if s.shortenError != nil {
 		return nil, s.shortenError
 	}
@@ -120,8 +120,7 @@ func TestAPIShortenBatchHandler_ServeHTTP(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			srv := &ShortenBatchSrvStub{tt.shortenError}
-			enc := &JSONEncoderBatchStub{tt.encodeError}
-			h := handleAPIShortenBatch(srv, enc, zap.NewNop())
+			h := handleAPIShortenBatch(srv, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, "/api/shorten/batch", strings.NewReader(`[{"correlation_id":"1","original_url":"https://existing.com/1"}]`))
 			if tt.contentType != "" {

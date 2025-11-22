@@ -8,10 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type UserCreator interface {
-	NewUser() (*model.User, error)
-}
-
 type UserManager struct {
 	logger *zap.Logger
 	us     UserStorage

@@ -9,11 +9,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type ShortURLProcessor interface {
+type ExpandProcessor interface {
 	Process(shortID string) (origURL string, err error)
 }
 
-func handleExpand(p ShortURLProcessor, l *zap.Logger) http.HandlerFunc {
+func handleExpand(p ExpandProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortID := chi.URLParam(r, ShortIDParam)
 

@@ -1,49 +1,39 @@
-package service
+package processor
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
-type ShortenRequestDecoder interface {
-	Decode(io.Reader) (model.ShortenRequest, error)
-}
-
-type ShortenService struct {
+type APIShorten struct {
 	baseURL   string
-	shortener URLShortener
-	decoder   ShortenRequestDecoder
+	shortener service.URLShortener
 	logger    *zap.Logger
 }
 
-func NewShortenService(bu string, s URLShortener, d ShortenRequestDecoder, l *zap.Logger) *ShortenService {
-	return &ShortenService{
+func NewAPIShorten(bu string, s service.URLShortener, l *zap.Logger) *APIShorten {
+	return &APIShorten{
 		baseURL:   bu,
 		shortener: s,
-		decoder:   d,
 		logger:    l,
 	}
 }
 
-func (s *ShortenService) Process(ctx context.Context, r io.Reader) (*model.ShortenResponse, error) {
-	userUUID, err := helper.GetCtxUserUUID(ctx)
+func (s *APIShorten) Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, error) {
+	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get user uuid from context: %w", err)
 	}
-	req, err := s.decoder.Decode(r)
-	if err != nil {
-		return nil, fmt.Errorf("decode request json: %w", err)
-	}
 
 	shortID, err := s.shortener.Shorten(userUUID, req.OrigURL)
-	if errors.Is(err, ErrURLAlreadyExists) {
+	if errors.Is(err, service.ErrURLAlreadyExists) {
 		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
 		if jpErr != nil {
 			return nil, fmt.Errorf("build full short url path for existing url: %w", jpErr)

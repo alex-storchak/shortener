@@ -1,4 +1,4 @@
-package service
+package processor
 
 import (
 	"errors"
@@ -65,7 +65,7 @@ func TestShortURLService_Expand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr}
-			srv := NewShortURLService(shortener, zap.NewNop())
+			srv := NewExpand(shortener, zap.NewNop())
 
 			gotURL, gotErr := srv.Process(tt.shortID)
 

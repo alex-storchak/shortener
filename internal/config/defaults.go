@@ -10,7 +10,7 @@ const (
 
 	DefLogLevel = "info"
 
-	DefFileStoragePath = "../../data/file_db.txt"
+	DefFileStoragePath = "../../../data/file_db.txt"
 
 	DefDatabaseDSN = ""
 	MigrationsPath = "file://migrations"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alex-storchak/shortener/internal/helper"
+	"github.com/alex-storchak/shortener/internal/helper/filepath"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +26,7 @@ func NewFileManager(filePath, dfltFilePath string, logger *zap.Logger) *FileMana
 }
 
 func (m *FileManager) getAbsPath(filePath string) (string, error) {
-	absPath, err := helper.GetAbsFilePath(filePath)
+	absPath, err := filepath.GetAbsPath(filePath)
 	if err != nil {
 		return "", fmt.Errorf("get absolute path for `%s`: %w", filePath, err)
 	}
