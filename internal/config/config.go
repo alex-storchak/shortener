@@ -33,8 +33,11 @@ type Auth struct {
 }
 
 type Audit struct {
-	File string `env:"AUDIT_FILE"`
-	URL  string `env:"AUDIT_URL"`
+	File             string        `env:"AUDIT_FILE"`
+	URL              string        `env:"AUDIT_URL"`
+	EventChanSize    int           `env:"AUDIT_EVENT_CHAN_SIZE"`
+	HTTPWorkersCount int           `env:"AUDIT_HTTP_WORKERS_COUNT"`
+	HTTPTimeout      time.Duration `env:"AUDIT_HTTP_TIMEOUT"`
 }
 
 type Config struct {

@@ -92,7 +92,7 @@ func TestShortenService_Shorten(t *testing.T) {
 			srv := NewAPIShorten(baseURL, shortener, zap.NewNop())
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
-			resp, err := srv.Process(ctx, tt.decReq)
+			resp, _, err := srv.Process(ctx, tt.decReq)
 
 			if tt.wantErr {
 				require.Error(t, err)

@@ -1,9 +1,11 @@
 package processor
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,8 +68,9 @@ func TestShortURLService_Expand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr}
 			srv := NewExpand(shortener, zap.NewNop())
+			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
-			gotURL, gotErr := srv.Process(tt.shortID)
+			gotURL, _, gotErr := srv.Process(ctx, tt.shortID)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

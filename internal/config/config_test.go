@@ -103,8 +103,11 @@ func (s *ConfigTestSuite) TestParseConfig() {
 		SecretKey:        DefAuthSecretKey,
 	}
 	defAuditCfg := Audit{
-		File: DefAuditFile,
-		URL:  DefAuditURL,
+		File:             DefAuditFile,
+		URL:              DefAuditURL,
+		EventChanSize:    DefAuditEventChanSize,
+		HTTPWorkersCount: DefAuditHTTPWorkersCount,
+		HTTPTimeout:      DefAuditHTTPTimeout,
 	}
 
 	tests := []struct {
@@ -124,6 +127,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Repo:    defRepoCfg,
 				DB:      defDBCfg,
 				Auth:    defAuthCfg,
+				Audit:   defAuditCfg,
 			},
 		},
 		{

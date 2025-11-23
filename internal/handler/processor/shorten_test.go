@@ -84,7 +84,7 @@ func TestMainPageService_Shorten(t *testing.T) {
 			srv := NewShorten("https://short.host", core, zap.NewNop())
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
-			gotURL, gotErr := srv.Process(ctx, tt.body)
+			gotURL, _, gotErr := srv.Process(ctx, tt.body)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/alex-storchak/shortener/internal/audit"
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/handler"
 	"github.com/alex-storchak/shortener/internal/handler/processor"
@@ -39,38 +40,46 @@ func run(ctx context.Context) error {
 	if err != nil {
 		log.Fatalf("initialize logger: %v", err)
 	}
-	defer func() {
-		//nolint:errcheck // there isn't any good strategy to log error
-		_ = zl.Sync()
-	}()
 
 	sf, err := factory.NewStorageFactory(cfg, zl)
 	if err != nil {
 		return fmt.Errorf("init storage factory: %w", err)
 	}
-
-	storage, err := initURLStorage(sf)
+	storage, err := sf.MakeURLStorage()
 	if err != nil {
-		return fmt.Errorf("init url storage: %w", err)
+		return fmt.Errorf("make url storage: %w", err)
 	}
-	defer func() {
-		dErr := storage.Close()
-		if dErr != nil {
-			zl.Error("close storage", zap.Error(dErr))
-		}
-	}()
 
 	shortener, err := initShortener(storage, zl)
 	if err != nil {
 		return fmt.Errorf("init shortener: %w", err)
 	}
 
-	router, err := initRouter(cfg, shortener, sf, zl)
+	ao, err := audit.InitObservers(cfg.Audit, zl)
+	if err != nil {
+		return fmt.Errorf("init audit observers: %w", err)
+	}
+	em := audit.NewEventManager(ao, cfg.Audit, zl)
+
+	router, err := initRouter(cfg, shortener, sf, zl, em)
 	if err != nil {
 		return fmt.Errorf("init router: %w", err)
 	}
 
 	handler.Serve(ctx, cfg.Server, zl, router)
+
+	// shutdown
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), cfg.Server.ShutdownWaitSecsDuration)
+	defer cancelShutdown()
+	em.Close(shutdownCtx)
+
+	if err := storage.Close(); err != nil {
+		zl.Error("close storage", zap.Error(err))
+	}
+
+	//nolint:errcheck // there isn't any good strategy to log error
+	_ = zl.Sync()
+
 	return nil
 }
 
@@ -81,14 +90,6 @@ func initLogger(cfg *config.Config) (*zap.Logger, error) {
 	}
 	zl.Info("logger initialized")
 	return zl, nil
-}
-
-func initURLStorage(sf factory.StorageFactory) (repository.URLStorage, error) {
-	storage, err := sf.MakeURLStorage()
-	if err != nil {
-		return nil, fmt.Errorf("make storage: %w", err)
-	}
-	return storage, nil
 }
 
 func initShortener(s repository.URLStorage, zl *zap.Logger) (*service.Shortener, error) {
@@ -105,6 +106,7 @@ func initRouter(
 	sh service.PingableURLShortener,
 	sf factory.StorageFactory,
 	zl *zap.Logger,
+	ep handler.AuditEventPublisher,
 ) (http.Handler, error) {
 	us, err := sf.MakeUserStorage()
 	if err != nil {
@@ -131,5 +133,6 @@ func initRouter(
 		apiShortenProc,
 		apiShortenBatchProc,
 		apiUserURLsProc,
+		ep,
 	), nil
 }

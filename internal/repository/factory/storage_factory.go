@@ -6,6 +6,7 @@ import (
 
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/db"
+	"github.com/alex-storchak/shortener/internal/file"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"go.uber.org/zap"
 )
@@ -48,7 +49,7 @@ func initDBStorageFactory(cfg *config.Config, zl *zap.Logger) (*DBStorageFactory
 }
 
 func initFileStorageFactory(cfg *config.Config, zl *zap.Logger) (*FileStorageFactory, error) {
-	fm := repository.NewFileManager(cfg.Repo.FileStoragePath, config.DefFileStoragePath, zl)
+	fm := file.NewManager(cfg.Repo.FileStoragePath, config.DefFileStoragePath, zl)
 	frp := repository.URLFileRecordParser{}
 	fs := repository.NewFileScanner(zl, frp)
 	sf := NewFileStorageFactory(cfg, fm, fs, zl)

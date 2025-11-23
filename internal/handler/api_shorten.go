@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/alex-storchak/shortener/internal/codec"
 	"github.com/alex-storchak/shortener/internal/model"
@@ -12,10 +13,10 @@ import (
 )
 
 type APIShortenProcessor interface {
-	Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, error)
+	Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, string, error)
 }
 
-func handleAPIShorten(p APIShortenProcessor, l *zap.Logger) http.HandlerFunc {
+func handleAPIShorten(p APIShortenProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ct := r.Header.Get("Content-Type")
 		if err := validateContentType(ct, "application/json"); err != nil {
@@ -30,7 +31,7 @@ func handleAPIShorten(p APIShortenProcessor, l *zap.Logger) http.HandlerFunc {
 			return
 		}
 
-		resBody, err := p.Process(r.Context(), req)
+		resBody, userUUID, err := p.Process(r.Context(), req)
 		if errors.Is(err, service.ErrEmptyInputURL) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -51,5 +52,12 @@ func handleAPIShorten(p APIShortenProcessor, l *zap.Logger) http.HandlerFunc {
 			l.Error("created. encode json response", zap.Error(err))
 			return
 		}
+
+		ep.Publish(model.AuditEvent{
+			TS:      time.Now().Unix(),
+			Action:  model.AuditActionShorten,
+			UserID:  userUUID,
+			OrigURL: req.OrigURL,
+		})
 	}
 }

@@ -35,6 +35,9 @@ func parseFlags(cfg *Config) {
 
 	flag.StringVar(&cfg.Audit.File, "audit-file", DefAuditFile, "audit log file path")
 	flag.StringVar(&cfg.Audit.URL, "audit-url", DefAuditURL, "full URL of audit server")
+	flag.IntVar(&cfg.Audit.EventChanSize, "audit-event-chan-size", DefAuditEventChanSize, "audit event chan size")
+	flag.IntVar(&cfg.Audit.HTTPWorkersCount, "audit-http-workers-count", DefAuditHTTPWorkersCount, "audit http workers count")
+	flag.DurationVar(&cfg.Audit.HTTPTimeout, "audit-http-timeout", DefAuditHTTPTimeout, "audit http timeout")
 
 	flag.Parse()
 }

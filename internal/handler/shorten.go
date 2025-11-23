@@ -6,16 +6,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
 type ShortenProcessor interface {
-	Process(ctx context.Context, body []byte) (shortURL string, err error)
+	Process(ctx context.Context, body []byte) (shortURL, userUUID string, err error)
 }
 
-func handleShorten(p ShortenProcessor, l *zap.Logger) http.HandlerFunc {
+type AuditEventPublisher interface {
+	Publish(event model.AuditEvent)
+}
+
+func handleShorten(p ShortenProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := io.ReadAll(r.Body)
@@ -24,7 +30,7 @@ func handleShorten(p ShortenProcessor, l *zap.Logger) http.HandlerFunc {
 			return
 		}
 
-		shortURL, err := p.Process(r.Context(), body)
+		shortURL, userUUID, err := p.Process(r.Context(), body)
 		if errors.Is(err, service.ErrEmptyInputURL) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -41,7 +47,15 @@ func handleShorten(p ShortenProcessor, l *zap.Logger) http.HandlerFunc {
 
 		if err := writeResponse(w, http.StatusCreated, shortURL); err != nil {
 			l.Error("failed to write response (status created) for main page request", zap.Error(err))
+			return
 		}
+
+		ep.Publish(model.AuditEvent{
+			TS:      time.Now().Unix(),
+			Action:  model.AuditActionShorten,
+			UserID:  userUUID,
+			OrigURL: string(body),
+		})
 	}
 }
 

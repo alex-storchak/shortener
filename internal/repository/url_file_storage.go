@@ -3,23 +3,32 @@ package repository
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
 )
 
+type URLFileManager interface {
+	OpenForAppend(useDefault bool) (*os.File, error)
+	OpenForWrite(useDefault bool) (*os.File, error)
+	Close() error
+	WriteData(data []byte) error
+}
+
 type FileURLStorage struct {
-	logger   *zap.Logger
-	fileMgr  *FileManager
-	fileScnr *URLFileScanner
-	records  []*model.URLStorageRecord
-	mu       *sync.Mutex
+	logger    *zap.Logger
+	fileMgr   URLFileManager
+	fileScnr  *URLFileScanner
+	records   []*model.URLStorageRecord
+	mu        *sync.Mutex
+	closeOnce sync.Once
 }
 
 func NewFileURLStorage(
 	logger *zap.Logger,
-	fm *FileManager,
+	fm URLFileManager,
 	fs *URLFileScanner,
 ) (*FileURLStorage, error) {
 	storage := &FileURLStorage{
@@ -36,7 +45,7 @@ func NewFileURLStorage(
 }
 
 func (s *FileURLStorage) Close() error {
-	return s.fileMgr.close()
+	return s.fileMgr.Close()
 }
 
 func (s *FileURLStorage) Ping(_ context.Context) error {
@@ -106,11 +115,11 @@ func (s *FileURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
 }
 
 func (s *FileURLStorage) appendToFile(records []*model.URLStorageRecord) error {
-	_, err := s.fileMgr.openForAppend(false)
+	_, err := s.fileMgr.OpenForAppend(false)
 	if err != nil {
 		return fmt.Errorf("open file for append: %w", err)
 	}
-	defer s.fileMgr.close()
+	defer s.fileMgr.Close()
 
 	if err := s.writeRecords(records); err != nil {
 		return fmt.Errorf("write records to file: %w", err)
@@ -120,11 +129,11 @@ func (s *FileURLStorage) appendToFile(records []*model.URLStorageRecord) error {
 }
 
 func (s *FileURLStorage) saveToFile() error {
-	_, err := s.fileMgr.openForWrite(false)
+	_, err := s.fileMgr.OpenForWrite(false)
 	if err != nil {
 		return fmt.Errorf("open file for write: %w", err)
 	}
-	defer s.fileMgr.close()
+	defer s.fileMgr.Close()
 
 	if err = s.writeRecords(s.records); err != nil {
 		return fmt.Errorf("write records to file: %w", err)
@@ -139,7 +148,7 @@ func (s *FileURLStorage) writeRecords(records []*model.URLStorageRecord) error {
 			return fmt.Errorf("convert record to json for store: %w", err)
 		}
 
-		if err := s.fileMgr.writeData(data); err != nil {
+		if err := s.fileMgr.WriteData(data); err != nil {
 			return fmt.Errorf("mgr persist record to file: %w", err)
 		}
 	}
@@ -147,7 +156,7 @@ func (s *FileURLStorage) writeRecords(records []*model.URLStorageRecord) error {
 }
 
 func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
-	file, err := s.fileMgr.openForAppend(useDefault)
+	file, err := s.fileMgr.OpenForAppend(useDefault)
 	if err != nil && !useDefault {
 		s.logger.Warn("failed to restore from requested file, trying default: ", zap.Error(err))
 		if err := s.restoreFromFile(true); err != nil {
@@ -157,23 +166,23 @@ func (s *FileURLStorage) restoreFromFile(useDefault bool) error {
 	} else if err != nil {
 		return fmt.Errorf("open default file: %w", err)
 	}
-	defer s.fileMgr.close()
+	defer s.fileMgr.Close()
 
 	records, err := s.fileScnr.scan(file)
 	if err != nil && !useDefault {
 		s.logger.Warn("Can't scan data from requested file, trying default: ", zap.Error(err))
-		if err := s.fileMgr.close(); err != nil {
+		if err := s.fileMgr.Close(); err != nil {
 			return fmt.Errorf("close requested file: %w", err)
 		}
 		if err := s.restoreFromFile(true); err != nil {
-			if err := s.fileMgr.close(); err != nil {
+			if err := s.fileMgr.Close(); err != nil {
 				return fmt.Errorf("close requested file: %w", err)
 			}
 			return fmt.Errorf("restore from default file: %w", err)
 		}
 		return nil
 	} else if err != nil {
-		if cErr := s.fileMgr.close(); cErr != nil {
+		if cErr := s.fileMgr.Close(); cErr != nil {
 			return fmt.Errorf("close default file: %w", cErr)
 		}
 		return fmt.Errorf("scan data from default file: %w", err)

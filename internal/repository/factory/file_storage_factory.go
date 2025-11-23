@@ -4,20 +4,21 @@ import (
 	"fmt"
 
 	"github.com/alex-storchak/shortener/internal/config"
+	"github.com/alex-storchak/shortener/internal/file"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"go.uber.org/zap"
 )
 
 type FileStorageFactory struct {
 	cfg    *config.Config
-	fm     *repository.FileManager
+	fm     *file.Manager
 	ufs    *repository.URLFileScanner
 	logger *zap.Logger
 }
 
 func NewFileStorageFactory(
 	cfg *config.Config,
-	fm *repository.FileManager,
+	fm *file.Manager,
 	ufs *repository.URLFileScanner,
 	logger *zap.Logger,
 ) *FileStorageFactory {

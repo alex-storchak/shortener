@@ -1,8 +1,10 @@
 package processor
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
 )
@@ -19,10 +21,16 @@ func NewExpand(shortener service.URLShortener, logger *zap.Logger) *Expand {
 	}
 }
 
-func (s *Expand) Process(shortID string) (string, error) {
+func (s *Expand) Process(ctx context.Context, shortID string) (string, string, error) {
+	userUUID, err := auth.GetCtxUserUUID(ctx)
+	if err != nil {
+		s.logger.Debug("failed to get user uuid from context", zap.Error(err))
+		userUUID = ""
+	}
+
 	origURL, err := s.shortener.Extract(shortID)
 	if err != nil {
-		return "", fmt.Errorf("extract short url from storage: %w", err)
+		return "", userUUID, fmt.Errorf("extract short url from storage: %w", err)
 	}
-	return origURL, nil
+	return origURL, userUUID, nil
 }

@@ -20,6 +20,9 @@ const (
 	DefAuthRefreshThreshold = 7 * 24 * time.Hour
 	DefAuthSecretKey        = "secret"
 
-	DefAuditFile = ""
-	DefAuditURL  = ""
+	DefAuditFile             = ""
+	DefAuditURL              = ""
+	DefAuditEventChanSize    = 1000
+	DefAuditHTTPWorkersCount = 8
+	DefAuditHTTPTimeout      = 3 * time.Second
 )

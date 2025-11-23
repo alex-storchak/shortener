@@ -13,30 +13,32 @@ import (
 )
 
 func NewRouter(
-	logger *zap.Logger,
+	l *zap.Logger,
 	cfg *config.Config,
-	authMWService middleware.UserResolver,
+	userResolver middleware.UserResolver,
 	shortenProc ShortenProcessor,
 	shortURLProc ExpandProcessor,
 	pingProc PingProcessor,
 	apiShortenProc APIShortenProcessor,
 	apiShortenBatchProc APIShortenBatchProcessor,
 	apiUserURLsProc APIUserURLsProcessor,
+	eventPublisher AuditEventPublisher,
 ) http.Handler {
-	r := chi.NewRouter()
+	mux := chi.NewRouter()
 	addRoutes(
-		r,
-		logger,
+		mux,
+		l,
 		cfg,
-		authMWService,
+		userResolver,
 		shortenProc,
 		shortURLProc,
 		pingProc,
 		apiShortenProc,
 		apiShortenBatchProc,
 		apiUserURLsProc,
+		eventPublisher,
 	)
-	return r
+	return mux
 }
 
 func Serve(

@@ -1,23 +1,26 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
 type ExpandProcessor interface {
-	Process(shortID string) (origURL string, err error)
+	Process(ctx context.Context, shortID string) (origURL, userUUID string, err error)
 }
 
-func handleExpand(p ExpandProcessor, l *zap.Logger) http.HandlerFunc {
+func handleExpand(p ExpandProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortID := chi.URLParam(r, ShortIDParam)
 
-		origURL, err := p.Process(shortID)
+		origURL, userUUID, err := p.Process(r.Context(), shortID)
 		var nfErr *repository.DataNotFoundError
 		if errors.As(err, &nfErr) {
 			w.WriteHeader(http.StatusNotFound)
@@ -33,5 +36,12 @@ func handleExpand(p ExpandProcessor, l *zap.Logger) http.HandlerFunc {
 
 		w.Header().Set("Location", origURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
+
+		ep.Publish(model.AuditEvent{
+			TS:      time.Now().Unix(),
+			Action:  model.AuditActionFollow,
+			UserID:  userUUID,
+			OrigURL: origURL,
+		})
 	}
 }
