@@ -24,3 +24,6 @@ vendor/
 
 # binaries for autotest
 autotest/
+
+# node
+node_modules

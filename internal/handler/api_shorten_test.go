@@ -31,7 +31,7 @@ func (s *ShortenSrvStub) Process(_ context.Context, _ model.ShortenRequest) (*mo
 	}, "test", nil
 }
 
-func TestAPIShortenHandler_ServeHTTP(t *testing.T) {
+func TestAPIShorten(t *testing.T) {
 	type want struct {
 		code        int
 		body        model.ShortenResponse

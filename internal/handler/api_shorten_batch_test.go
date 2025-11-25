@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,22 +30,7 @@ func (s *ShortenBatchSrvStub) Process(_ context.Context, _ []model.BatchShortenR
 	}, nil
 }
 
-type JSONEncoderBatchStub struct {
-	encodeError error
-}
-
-func (e *JSONEncoderBatchStub) Encode(w io.Writer, _ any) error {
-	if e.encodeError != nil {
-		return e.encodeError
-	}
-	_, err := w.Write([]byte(`[{"correlation_id":"1","short_url":"https://example.com/a1"},{"correlation_id":"2","short_url":"https://example.com/b2"}]`))
-	if err != nil {
-		return fmt.Errorf("write response: %w", err)
-	}
-	return nil
-}
-
-func TestAPIShortenBatchHandler_ServeHTTP(t *testing.T) {
+func TestAPIShortenBatch(t *testing.T) {
 	type want struct {
 		code        int
 		body        []model.BatchShortenResponseItem
