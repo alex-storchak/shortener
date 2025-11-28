@@ -18,22 +18,22 @@ type stubShortener struct {
 	retErr     error
 }
 
-func (s *stubShortener) Shorten(_, _ string) (string, error) {
+func (s *stubShortener) Shorten(_ context.Context, _, _ string) (string, error) {
 	return s.retShortID, s.retErr
 }
 
-func (s *stubShortener) Extract(_ string) (string, error) {
+func (s *stubShortener) Extract(_ context.Context, _ string) (string, error) {
 	return "", nil
 }
-func (s *stubShortener) ShortenBatch(_ string, _ []string) ([]string, error) {
+func (s *stubShortener) ShortenBatch(_ context.Context, _ string, _ []string) ([]string, error) {
 	return nil, nil
 }
 
-func (s *stubShortener) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
+func (s *stubShortener) GetUserURLs(_ context.Context, _ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
-func (s *stubShortener) DeleteBatch(_ model.URLDeleteBatch) error {
+func (s *stubShortener) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
 	return nil
 }
 

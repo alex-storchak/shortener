@@ -59,7 +59,7 @@ func (d *urlStorageStub) Ping(_ context.Context) error {
 	return nil
 }
 
-func (d *urlStorageStub) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+func (d *urlStorageStub) Get(_ context.Context, url, searchByType string) (*model.URLStorageRecord, error) {
 	if searchByType == repo.OrigURLType && d.storage[0].OrigURL == url {
 		return &d.storage[0], nil
 	} else if searchByType == repo.ShortURLType && d.storage[0].ShortID == url {
@@ -68,25 +68,25 @@ func (d *urlStorageStub) Get(url, searchByType string) (*model.URLStorageRecord,
 	return nil, repo.NewDataNotFoundError(nil)
 }
 
-func (d *urlStorageStub) Set(_ *model.URLStorageRecord) error {
+func (d *urlStorageStub) Set(_ context.Context, _, _, _ string) error {
 	if d.setMethodShouldFail {
 		return errors.New("set method should fail")
 	}
 	return nil
 }
 
-func (d *urlStorageStub) BatchSet(_ []*model.URLStorageRecord) error {
+func (d *urlStorageStub) BatchSet(_ context.Context, _ []model.URLStorageRecord) error {
 	if d.setBatchMethodShouldFail {
 		return errors.New("set batch method should fail")
 	}
 	return nil
 }
 
-func (d *urlStorageStub) GetByUserUUID(_ string) ([]*model.URLStorageRecord, error) {
+func (d *urlStorageStub) GetByUserUUID(_ context.Context, _ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
-func (d *urlStorageStub) DeleteBatch(_ model.URLDeleteBatch) error {
+func (d *urlStorageStub) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
 	return nil
 }
 
@@ -150,7 +150,7 @@ func TestShortener_Shorten(t *testing.T) {
 				logger:     zap.NewNop(),
 			}
 
-			got, err := s.Shorten(userUUID, tt.args.url)
+			got, err := s.Shorten(t.Context(), userUUID, tt.args.url)
 
 			if !tt.wantErr {
 				require.NoError(t, err)
@@ -206,7 +206,7 @@ func TestShortener_Extract(t *testing.T) {
 				logger:     zap.NewNop(),
 			}
 
-			got, err := s.Extract(tt.args.shortID)
+			got, err := s.Extract(t.Context(), tt.args.shortID)
 
 			if !tt.wantErr {
 				require.NoError(t, err)
@@ -266,7 +266,7 @@ func TestShortener_ShortenBatch(t *testing.T) {
 				logger:     zap.NewNop(),
 			}
 
-			got, err := s.ShortenBatch(userUUID, tt.urls)
+			got, err := s.ShortenBatch(t.Context(), userUUID, tt.urls)
 
 			if !tt.wantErr {
 				require.NoError(t, err)

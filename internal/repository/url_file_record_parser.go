@@ -8,10 +8,10 @@ import (
 
 type URLFileRecordParser struct{}
 
-func (s *URLFileRecordParser) parse(data []byte) (*model.URLStorageRecord, error) {
+func (s *URLFileRecordParser) parse(data []byte) (model.URLStorageRecord, error) {
 	record := model.URLStorageRecord{}
 	if err := record.FromJSON(data); err != nil {
-		return nil, fmt.Errorf("parsing data `%s`: %w", string(data), err)
+		return model.URLStorageRecord{}, fmt.Errorf("parsing data `%s`: %w", string(data), err)
 	}
-	return &record, nil
+	return record, nil
 }

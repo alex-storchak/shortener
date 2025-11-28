@@ -21,7 +21,7 @@ type FileURLStorage struct {
 	logger    *zap.Logger
 	fileMgr   URLFileManager
 	fileScnr  *URLFileScanner
-	records   []*model.URLStorageRecord
+	records   []model.URLStorageRecord
 	mu        *sync.Mutex
 	closeOnce sync.Once
 }
@@ -52,28 +52,34 @@ func (s *FileURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *FileURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+func (s *FileURLStorage) Get(_ context.Context, url, searchByType string) (*model.URLStorageRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	for _, r := range s.records {
 		if searchByType == OrigURLType && r.OrigURL == url && !r.IsDeleted {
-			return r, nil
+			return &r, nil
 		} else if searchByType == ShortURLType && r.ShortID == url {
 			if r.IsDeleted {
 				return nil, ErrDataDeleted
 			}
-			return r, nil
+			return &r, nil
 		}
 	}
 	return nil, NewDataNotFoundError(nil)
 }
 
-func (s *FileURLStorage) Set(r *model.URLStorageRecord) error {
-	return s.BatchSet([]*model.URLStorageRecord{r})
+func (s *FileURLStorage) Set(ctx context.Context, OrigURL, ShortID, UserUUID string) error {
+	return s.BatchSet(ctx, []model.URLStorageRecord{
+		{
+			OrigURL:  OrigURL,
+			ShortID:  ShortID,
+			UserUUID: UserUUID,
+		},
+	})
 }
 
-func (s *FileURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
+func (s *FileURLStorage) BatchSet(_ context.Context, binds []model.URLStorageRecord) error {
 	if len(binds) == 0 {
 		return nil
 	}
@@ -90,20 +96,20 @@ func (s *FileURLStorage) BatchSet(binds []*model.URLStorageRecord) error {
 	return nil
 }
 
-func (s *FileURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
+func (s *FileURLStorage) GetByUserUUID(_ context.Context, userUUID string) ([]*model.URLStorageRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var records []*model.URLStorageRecord
+	records := make([]*model.URLStorageRecord, 0, 100)
 	for _, r := range s.records {
 		if r.UserUUID == userUUID && !r.IsDeleted {
-			records = append(records, r)
+			records = append(records, &r)
 		}
 	}
 	return records, nil
 }
 
-func (s *FileURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
+func (s *FileURLStorage) DeleteBatch(_ context.Context, urls model.URLDeleteBatch) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -114,7 +120,7 @@ func (s *FileURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
 	return nil
 }
 
-func (s *FileURLStorage) appendToFile(records []*model.URLStorageRecord) error {
+func (s *FileURLStorage) appendToFile(records []model.URLStorageRecord) error {
 	_, err := s.fileMgr.OpenForAppend(false)
 	if err != nil {
 		return fmt.Errorf("open file for append: %w", err)
@@ -141,7 +147,7 @@ func (s *FileURLStorage) saveToFile() error {
 	return nil
 }
 
-func (s *FileURLStorage) writeRecords(records []*model.URLStorageRecord) error {
+func (s *FileURLStorage) writeRecords(records []model.URLStorageRecord) error {
 	for _, r := range records {
 		data, err := r.ToJSON()
 		if err != nil {

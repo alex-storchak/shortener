@@ -32,7 +32,7 @@ func (s *APIShorten) Process(ctx context.Context, req model.ShortenRequest) (*mo
 		return nil, "", fmt.Errorf("get user uuid from context: %w", err)
 	}
 
-	shortID, err := s.shortener.Shorten(userUUID, req.OrigURL)
+	shortID, err := s.shortener.Shorten(ctx, userUUID, req.OrigURL)
 	if errors.Is(err, service.ErrURLAlreadyExists) {
 		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
 		if jpErr != nil {

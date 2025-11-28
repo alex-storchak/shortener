@@ -22,22 +22,22 @@ func (s *stubShortenerBatch) IsReady() error {
 	return nil
 }
 
-func (s *stubShortenerBatch) Shorten(_ string, _ string) (string, error) {
+func (s *stubShortenerBatch) Shorten(_ context.Context, _ string, _ string) (string, error) {
 	return "", nil
 }
 
-func (s *stubShortenerBatch) Extract(_ string) (string, error) {
+func (s *stubShortenerBatch) Extract(_ context.Context, _ string) (string, error) {
 	return "", nil
 }
-func (s *stubShortenerBatch) ShortenBatch(_ string, _ []string) ([]string, error) {
+func (s *stubShortenerBatch) ShortenBatch(_ context.Context, _ string, _ []string) ([]string, error) {
 	return s.retIDs, s.retErr
 }
 
-func (s *stubShortenerBatch) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
+func (s *stubShortenerBatch) GetUserURLs(_ context.Context, _ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
-func (s *stubShortenerBatch) DeleteBatch(_ model.URLDeleteBatch) error {
+func (s *stubShortenerBatch) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
 	return nil
 }
 

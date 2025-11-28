@@ -28,7 +28,7 @@ func (s *Expand) Process(ctx context.Context, shortID string) (string, string, e
 		userUUID = ""
 	}
 
-	origURL, err := s.shortener.Extract(shortID)
+	origURL, err := s.shortener.Extract(ctx, shortID)
 	if err != nil {
 		return "", userUUID, fmt.Errorf("extract short url from storage: %w", err)
 	}

@@ -32,7 +32,7 @@ func (s *APIShortenBatch) Process(ctx context.Context, items []model.BatchShorte
 	}
 
 	origURLs := s.buildURLList(items)
-	shortIDs, err := s.shortener.ShortenBatch(userUUID, origURLs)
+	shortIDs, err := s.shortener.ShortenBatch(ctx, userUUID, origURLs)
 	if err != nil {
 		return nil, fmt.Errorf("shorten batch: %w", err)
 	}

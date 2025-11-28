@@ -31,7 +31,7 @@ func (s *Shorten) Process(ctx context.Context, body []byte) (string, string, err
 	if err != nil {
 		return "", "", fmt.Errorf("get user uuid from context: %w", err)
 	}
-	shortID, err := s.shortener.Shorten(userUUID, origURL)
+	shortID, err := s.shortener.Shorten(ctx, userUUID, origURL)
 	if errors.Is(err, service.ErrURLAlreadyExists) {
 		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
 		if jpErr != nil {

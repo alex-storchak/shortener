@@ -21,21 +21,21 @@ func (s *stubExpandShortener) IsReady() error {
 	return nil
 }
 
-func (s *stubExpandShortener) Shorten(_, _ string) (string, error) {
+func (s *stubExpandShortener) Shorten(_ context.Context, _, _ string) (string, error) {
 	return "", nil
 }
-func (s *stubExpandShortener) Extract(_ string) (string, error) {
+func (s *stubExpandShortener) Extract(_ context.Context, _ string) (string, error) {
 	return s.retURL, s.retErr
 }
-func (s *stubExpandShortener) ShortenBatch(_ string, _ []string) ([]string, error) {
+func (s *stubExpandShortener) ShortenBatch(_ context.Context, _ string, _ []string) ([]string, error) {
 	return nil, nil
 }
 
-func (s *stubExpandShortener) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
+func (s *stubExpandShortener) GetUserURLs(_ context.Context, _ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
-func (s *stubExpandShortener) DeleteBatch(_ model.URLDeleteBatch) error {
+func (s *stubExpandShortener) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
 	return nil
 }
 

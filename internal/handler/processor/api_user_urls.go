@@ -37,7 +37,7 @@ func (s *APIUserURLs) ProcessGet(ctx context.Context) ([]model.UserURLsResponseI
 	if err != nil {
 		return nil, fmt.Errorf("get user uuid from context: %w", err)
 	}
-	urls, err := s.shortener.GetUserURLs(userUUID)
+	urls, err := s.shortener.GetUserURLs(ctx, userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("get user urls from storage: %w", err)
 	}
@@ -95,7 +95,7 @@ func (s *APIUserURLs) processDeletion(
 
 	batchChannels := s.fanOut(ctx, inputCh)
 	batchesCh := s.fanIn(ctx, batchChannels...)
-	s.deleteBatch(batchesCh)
+	s.deleteBatch(ctx, batchesCh)
 }
 
 func (s *APIUserURLs) fanOut(ctx context.Context, inputCh chan model.URLToDelete) []chan model.URLDeleteBatch {
@@ -187,9 +187,9 @@ func (s *APIUserURLs) fanIn(ctx context.Context, channels ...chan model.URLDelet
 	return finalCh
 }
 
-func (s *APIUserURLs) deleteBatch(batchesCh chan model.URLDeleteBatch) {
+func (s *APIUserURLs) deleteBatch(ctx context.Context, batchesCh chan model.URLDeleteBatch) {
 	for batch := range batchesCh {
-		if err := s.shortener.DeleteBatch(batch); err != nil {
+		if err := s.shortener.DeleteBatch(ctx, batch); err != nil {
 			s.logger.Error("error deleting batch", zap.Error(err))
 			return
 		}

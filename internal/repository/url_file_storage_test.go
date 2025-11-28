@@ -81,7 +81,7 @@ func TestFileURLStorage(t *testing.T) {
 
 			assertStorageDoesNotHaveURL(t, tt, storage)
 
-			err = storage.Set(&model.URLStorageRecord{OrigURL: tt.wantOrigURL, ShortID: tt.wantShortURL, UserUUID: userUUID})
+			err = storage.Set(t.Context(), tt.wantOrigURL, tt.wantShortURL, userUUID)
 			require.NoError(t, err)
 
 			assertStorageHasURL(t, tt, storage)
@@ -95,20 +95,20 @@ func TestFileURLStorage(t *testing.T) {
 }
 
 func assertStorageHasURL(t *testing.T, tt testCaseData, storage URLStorage) {
-	ou, err := storage.Get(tt.wantShortURL, ShortURLType)
+	ou, err := storage.Get(t.Context(), tt.wantShortURL, ShortURLType)
 	require.NoError(t, err)
 	assert.Equal(t, tt.wantOrigURL, ou.OrigURL)
 
-	su, err := storage.Get(tt.wantOrigURL, OrigURLType)
+	su, err := storage.Get(t.Context(), tt.wantOrigURL, OrigURLType)
 	require.NoError(t, err)
 	assert.Equal(t, tt.wantShortURL, su.ShortID)
 }
 
 func assertStorageDoesNotHaveURL(t *testing.T, tt testCaseData, storage URLStorage) {
-	_, err := storage.Get(tt.wantShortURL, ShortURLType)
+	_, err := storage.Get(t.Context(), tt.wantShortURL, ShortURLType)
 	var nfErrShort, nfErrOrig *DataNotFoundError
 	require.ErrorAs(t, err, &nfErrShort)
-	_, err = storage.Get(tt.wantOrigURL, OrigURLType)
+	_, err = storage.Get(t.Context(), tt.wantOrigURL, OrigURLType)
 	require.ErrorAs(t, err, &nfErrOrig)
 }
 

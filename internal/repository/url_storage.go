@@ -14,13 +14,13 @@ const (
 )
 
 type URLStorage interface {
-	Get(url, searchByType string) (*model.URLStorageRecord, error)
-	Set(record *model.URLStorageRecord) error
-	BatchSet(records []*model.URLStorageRecord) error
+	Get(ctx context.Context, url, searchByType string) (*model.URLStorageRecord, error)
+	Set(ctx context.Context, origURL, shortID, userUUID string) error
+	BatchSet(ctx context.Context, records []model.URLStorageRecord) error
 	Ping(ctx context.Context) error
 	Close() error
-	GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error)
-	DeleteBatch(urls model.URLDeleteBatch) error
+	GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error)
+	DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error
 }
 
 type DataNotFoundError struct {

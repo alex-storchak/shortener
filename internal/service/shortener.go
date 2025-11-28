@@ -19,11 +19,11 @@ type Pinger interface {
 }
 
 type URLShortener interface {
-	Shorten(userUUID string, url string) (shortID string, err error)
-	Extract(shortID string) (OrigURL string, err error)
-	ShortenBatch(userUUID string, urls []string) ([]string, error)
-	GetUserURLs(userUUID string) ([]*model.URLStorageRecord, error)
-	DeleteBatch(urls model.URLDeleteBatch) error
+	Shorten(ctx context.Context, userUUID string, url string) (shortID string, err error)
+	Extract(ctx context.Context, shortID string) (OrigURL string, err error)
+	ShortenBatch(ctx context.Context, userUUID string, urls []string) ([]string, error)
+	GetUserURLs(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error)
+	DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error
 }
 
 type PingableURLShortener interface {
@@ -49,7 +49,7 @@ func NewShortener(
 	}
 }
 
-func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
+func (s *Shortener) Shorten(ctx context.Context, userUUID string, url string) (string, error) {
 	if len(url) == 0 {
 		return "", ErrEmptyInputURL
 	}
@@ -58,7 +58,7 @@ func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
 		r   *model.URLStorageRecord
 		err error
 	)
-	r, err = s.urlStorage.Get(url, repo.OrigURLType)
+	r, err = s.urlStorage.Get(ctx, url, repo.OrigURLType)
 	if err == nil {
 		return r.ShortID, ErrURLAlreadyExists
 	}
@@ -71,48 +71,47 @@ func (s *Shortener) Shorten(userUUID string, url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("generate short id: %w", err)
 	}
-	r = &model.URLStorageRecord{OrigURL: url, ShortID: shortID, UserUUID: userUUID}
-	if err := s.urlStorage.Set(r); err != nil {
+	if err := s.urlStorage.Set(ctx, url, shortID, userUUID); err != nil {
 		return "", fmt.Errorf("set url binding in storage: %w", err)
 	}
 	return shortID, nil
 }
 
-func (s *Shortener) Extract(shortID string) (string, error) {
-	r, err := s.urlStorage.Get(shortID, repo.ShortURLType)
+func (s *Shortener) Extract(ctx context.Context, shortID string) (string, error) {
+	r, err := s.urlStorage.Get(ctx, shortID, repo.ShortURLType)
 	if err != nil {
 		return "", fmt.Errorf("retrieve short url from storage: %w", err)
 	}
 	return r.OrigURL, nil
 }
 
-func (s *Shortener) ShortenBatch(userUUID string, urls []string) ([]string, error) {
+func (s *Shortener) ShortenBatch(ctx context.Context, userUUID string, urls []string) ([]string, error) {
 	if len(urls) == 0 {
 		return nil, ErrEmptyInputBatch
 	}
 
-	res, toPersist, err := s.segregateBatch(userUUID, urls)
+	res, toPersist, err := s.segregateBatch(ctx, userUUID, urls)
 	if err != nil {
 		return nil, fmt.Errorf("segregate batch: %w", err)
 	}
 	if len(toPersist) > 0 {
-		if err := s.urlStorage.BatchSet(toPersist); err != nil {
+		if err := s.urlStorage.BatchSet(ctx, toPersist); err != nil {
 			return nil, fmt.Errorf("set url bindings batch in storage: %w", err)
 		}
 	}
 	return res, nil
 }
 
-func (s *Shortener) segregateBatch(userUUID string, urls []string) ([]string, []*model.URLStorageRecord, error) {
+func (s *Shortener) segregateBatch(ctx context.Context, userUUID string, urls []string) ([]string, []model.URLStorageRecord, error) {
 	res := make([]string, len(urls))
-	toPersist := make([]*model.URLStorageRecord, 0)
+	toPersist := make([]model.URLStorageRecord, 0)
 
 	for i, u := range urls {
 		if u == "" {
 			return nil, nil, ErrEmptyInputURL
 		}
 
-		r, err := s.urlStorage.Get(u, repo.OrigURLType)
+		r, err := s.urlStorage.Get(ctx, u, repo.OrigURLType)
 		if err == nil {
 			res[i] = r.ShortID
 			continue
@@ -126,7 +125,7 @@ func (s *Shortener) segregateBatch(userUUID string, urls []string) ([]string, []
 		if err != nil {
 			return nil, nil, fmt.Errorf("prepare url bind to persist item: %w", err)
 		}
-		toPersist = append(toPersist, &urlBindItem)
+		toPersist = append(toPersist, urlBindItem)
 		res[i] = urlBindItem.ShortID
 	}
 	return res, toPersist, nil
@@ -144,12 +143,12 @@ func (s *Shortener) IsReady(ctx context.Context) error {
 	return s.urlStorage.Ping(ctx)
 }
 
-func (s *Shortener) GetUserURLs(userUUID string) ([]*model.URLStorageRecord, error) {
-	return s.urlStorage.GetByUserUUID(userUUID)
+func (s *Shortener) GetUserURLs(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error) {
+	return s.urlStorage.GetByUserUUID(ctx, userUUID)
 }
 
-func (s *Shortener) DeleteBatch(urls model.URLDeleteBatch) error {
-	return s.urlStorage.DeleteBatch(urls)
+func (s *Shortener) DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error {
+	return s.urlStorage.DeleteBatch(ctx, urls)
 }
 
 var (
