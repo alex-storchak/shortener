@@ -57,7 +57,6 @@ func createTestApp() http.Handler {
 	}
 	shortener := service.NewShortener(generator, storage, zl)
 
-	// Создаем роутер
 	ub := service.NewURLBuilder(cfg.Handler.BaseURL)
 	shortenProc := processor.NewShorten(shortener, zl, ub)
 	expandProc := processor.NewExpand(shortener, zl)
@@ -66,7 +65,6 @@ func createTestApp() http.Handler {
 	apiShortenBatchProc := processor.NewAPIShortenBatch(shortener, zl, ub)
 	apiUserURLsProc := processor.NewAPIUserURLs(shortener, zl, ub)
 
-	// Mock auth и audit
 	userStorage := repository.NewMemoryUserStorage(zl)
 	authService := service.NewAuthService(zl, userStorage, &cfg.Auth)
 	userManager := repository.NewUserManager(zl, userStorage)
@@ -259,7 +257,6 @@ func BenchmarkApiUserURLsDelete(b *testing.B) {
 	}
 }
 
-// Вспомогательные функции остаются без изменений
 func getUserCookie(handlerToTest http.Handler) *http.Cookie {
 	for i := 0; i < len(testURLs); i++ {
 		url := testURLs[i]
