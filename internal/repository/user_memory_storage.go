@@ -17,7 +17,7 @@ type MemoryUserStorage struct {
 func NewMemoryUserStorage(logger *zap.Logger) *MemoryUserStorage {
 	return &MemoryUserStorage{
 		logger: logger,
-		users:  make(map[string]struct{}),
+		users:  make(map[string]struct{}, 250000),
 		mu:     &sync.Mutex{},
 	}
 }
