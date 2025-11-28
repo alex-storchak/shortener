@@ -50,7 +50,6 @@ func createTestApp() http.Handler {
 		log.Fatalf("failed to init logger: %v", err)
 	}
 
-	// Каждый тест получает СВОЙ storage
 	storage := repository.NewMemoryURLStorage(zl)
 	generator, err := shortid.New(1, shortid.DefaultABC, 1)
 	if err != nil {
@@ -59,12 +58,13 @@ func createTestApp() http.Handler {
 	shortener := service.NewShortener(generator, storage, zl)
 
 	// Создаем роутер
-	shortenProc := processor.NewShorten(cfg.Handler.BaseURL, shortener, zl)
+	ub := service.NewURLBuilder(cfg.Handler.BaseURL)
+	shortenProc := processor.NewShorten(shortener, zl, ub)
 	expandProc := processor.NewExpand(shortener, zl)
 	pingProc := processor.NewPing(shortener, zl)
-	apiShortenProc := processor.NewAPIShorten(cfg.Handler.BaseURL, shortener, zl)
-	apiShortenBatchProc := processor.NewAPIShortenBatch(cfg.Handler.BaseURL, shortener, zl)
-	apiUserURLsProc := processor.NewAPIUserURLs(cfg.Handler.BaseURL, shortener, zl)
+	apiShortenProc := processor.NewAPIShorten(shortener, zl, ub)
+	apiShortenBatchProc := processor.NewAPIShortenBatch(shortener, zl, ub)
+	apiUserURLsProc := processor.NewAPIUserURLs(shortener, zl, ub)
 
 	// Mock auth и audit
 	userStorage := repository.NewMemoryUserStorage(zl)

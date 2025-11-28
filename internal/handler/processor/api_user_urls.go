@@ -3,7 +3,6 @@ package processor
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"runtime"
 	"sync"
 	"time"
@@ -15,20 +14,20 @@ import (
 )
 
 type APIUserURLs struct {
-	baseURL   string
 	shortener service.URLShortener
 	logger    *zap.Logger
+	ub        ShortURLBuilder
 }
 
 func NewAPIUserURLs(
-	baseURL string,
 	shortener service.URLShortener,
 	logger *zap.Logger,
+	ub ShortURLBuilder,
 ) *APIUserURLs {
 	return &APIUserURLs{
-		baseURL:   baseURL,
 		shortener: shortener,
 		logger:    logger,
+		ub:        ub,
 	}
 }
 
@@ -53,10 +52,7 @@ func (s *APIUserURLs) ProcessGet(ctx context.Context) ([]model.UserURLsResponseI
 func (s *APIUserURLs) buildResponse(urls []*model.URLStorageRecord) ([]model.UserURLsResponseItem, error) {
 	resp := make([]model.UserURLsResponseItem, len(urls))
 	for i, u := range urls {
-		shortURL, err := url.JoinPath(s.baseURL, u.ShortID)
-		if err != nil {
-			return nil, fmt.Errorf("build full short url for new url: %w", err)
-		}
+		shortURL := s.ub.Build(u.ShortID)
 		resp[i] = model.UserURLsResponseItem{
 			OrigURL:  u.OrigURL,
 			ShortURL: shortURL,

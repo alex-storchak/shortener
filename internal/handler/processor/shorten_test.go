@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/handler/processor/mocks"
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
@@ -81,7 +82,15 @@ func TestMainPageService_Shorten(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			core := &stubShortener{tt.stubShortID, tt.stubErr}
-			srv := NewShorten("https://short.host", core, zap.NewNop())
+			ub := mocks.NewMockShortURLBuilder(t)
+			if !tt.wantErr || errors.Is(tt.stubErr, service.ErrURLAlreadyExists) {
+				ub.EXPECT().
+					Build(tt.stubShortID).
+					Return("https://short.host/" + tt.stubShortID).
+					Once()
+			}
+
+			srv := NewShorten(core, zap.NewNop(), ub)
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			gotURL, _, gotErr := srv.Process(ctx, tt.body)

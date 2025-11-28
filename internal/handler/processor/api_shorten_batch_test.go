@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/handler/processor/mocks"
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
@@ -108,7 +109,17 @@ func TestShortenBatchService_ShortenBatch(t *testing.T) {
 			if baseURL == "" {
 				baseURL = "http://any"
 			}
-			srv := NewAPIShortenBatch(baseURL, shortener, zap.NewNop())
+			ub := mocks.NewMockShortURLBuilder(t)
+			if !tt.wantErr {
+				for _, s := range tt.stubShortIDs {
+					ub.EXPECT().
+						Build(s).
+						Return(baseURL + "/" + s).
+						Once()
+				}
+			}
+
+			srv := NewAPIShortenBatch(shortener, zap.NewNop(), ub)
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			resp, err := srv.Process(ctx, tt.decReq)

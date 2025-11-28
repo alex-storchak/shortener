@@ -3,7 +3,6 @@ package processor
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
@@ -12,16 +11,16 @@ import (
 )
 
 type APIShortenBatch struct {
-	baseURL   string
 	shortener service.URLShortener
 	logger    *zap.Logger
+	ub        ShortURLBuilder
 }
 
-func NewAPIShortenBatch(baseURL string, s service.URLShortener, l *zap.Logger) *APIShortenBatch {
+func NewAPIShortenBatch(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *APIShortenBatch {
 	return &APIShortenBatch{
-		baseURL:   baseURL,
 		shortener: s,
 		logger:    l,
+		ub:        ub,
 	}
 }
 
@@ -59,10 +58,7 @@ func (s *APIShortenBatch) buildResponse(
 ) ([]model.BatchShortenResponseItem, error) {
 	resp := make([]model.BatchShortenResponseItem, len(reqItems))
 	for i, item := range reqItems {
-		shortURL, err := url.JoinPath(s.baseURL, shortIDs[i])
-		if err != nil {
-			return nil, fmt.Errorf("build full short url for new url: %w", err)
-		}
+		shortURL := s.ub.Build(shortIDs[i])
 		resp[i] = model.BatchShortenResponseItem{
 			CorrelationID: item.CorrelationID,
 			ShortURL:      shortURL,

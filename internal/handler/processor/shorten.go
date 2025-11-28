@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/service"
@@ -12,16 +11,16 @@ import (
 )
 
 type Shorten struct {
-	baseURL   string
 	shortener service.URLShortener
 	logger    *zap.Logger
+	ub        ShortURLBuilder
 }
 
-func NewShorten(bu string, s service.URLShortener, l *zap.Logger) *Shorten {
+func NewShorten(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *Shorten {
 	return &Shorten{
-		baseURL:   bu,
 		shortener: s,
 		logger:    l,
+		ub:        ub,
 	}
 }
 
@@ -33,19 +32,13 @@ func (s *Shorten) Process(ctx context.Context, body []byte) (string, string, err
 	}
 	shortID, err := s.shortener.Shorten(ctx, userUUID, origURL)
 	if errors.Is(err, service.ErrURLAlreadyExists) {
-		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
-		if jpErr != nil {
-			return "", userUUID, fmt.Errorf("build full short url path for existing url: %w", jpErr)
-		}
+		shortURL := s.ub.Build(shortID)
 		return shortURL, userUUID, fmt.Errorf("tried to shorten existing url: %w", err)
 	} else if err != nil {
 		return "", userUUID, fmt.Errorf("shorten url: %w", err)
 	}
 
 	// new url
-	shortURL, err := url.JoinPath(s.baseURL, shortID)
-	if err != nil {
-		return "", userUUID, fmt.Errorf("build full short url path for new url: %w", err)
-	}
+	shortURL := s.ub.Build(shortID)
 	return shortURL, userUUID, nil
 }

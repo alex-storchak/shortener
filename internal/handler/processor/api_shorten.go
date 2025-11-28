@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
@@ -12,17 +11,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type APIShorten struct {
-	baseURL   string
-	shortener service.URLShortener
-	logger    *zap.Logger
+type ShortURLBuilder interface {
+	Build(shortID string) string
 }
 
-func NewAPIShorten(bu string, s service.URLShortener, l *zap.Logger) *APIShorten {
+type APIShorten struct {
+	shortener service.URLShortener
+	logger    *zap.Logger
+	ub        ShortURLBuilder
+}
+
+func NewAPIShorten(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *APIShorten {
 	return &APIShorten{
-		baseURL:   bu,
 		shortener: s,
 		logger:    l,
+		ub:        ub,
 	}
 }
 
@@ -34,10 +37,7 @@ func (s *APIShorten) Process(ctx context.Context, req model.ShortenRequest) (*mo
 
 	shortID, err := s.shortener.Shorten(ctx, userUUID, req.OrigURL)
 	if errors.Is(err, service.ErrURLAlreadyExists) {
-		shortURL, jpErr := url.JoinPath(s.baseURL, shortID)
-		if jpErr != nil {
-			return nil, userUUID, fmt.Errorf("build full short url path for existing url: %w", jpErr)
-		}
+		shortURL := s.ub.Build(shortID)
 		resp := &model.ShortenResponse{ShortURL: shortURL}
 		return resp, userUUID, fmt.Errorf("tried to shorten existing url: %w", err)
 	} else if err != nil {
@@ -45,9 +45,6 @@ func (s *APIShorten) Process(ctx context.Context, req model.ShortenRequest) (*mo
 	}
 
 	// new url
-	shortURL, err := url.JoinPath(s.baseURL, shortID)
-	if err != nil {
-		return nil, userUUID, fmt.Errorf("build full short url path for new url: %w", err)
-	}
+	shortURL := s.ub.Build(shortID)
 	return &model.ShortenResponse{ShortURL: shortURL}, userUUID, nil
 }
