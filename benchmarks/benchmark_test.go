@@ -276,6 +276,9 @@ func getUserCookie(handlerToTest http.Handler) *http.Cookie {
 		resp := rr.Result()
 		for _, cookie := range resp.Cookies() {
 			if cookie.Name == config.DefAuthCookieName {
+				if err := resp.Body.Close(); err != nil {
+					return nil
+				}
 				return cookie
 			}
 		}
