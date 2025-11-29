@@ -20,7 +20,7 @@ type ShortenBatchSrvStub struct {
 	shortenError error
 }
 
-func (s *ShortenBatchSrvStub) Process(_ context.Context, _ []model.BatchShortenRequestItem) ([]model.BatchShortenResponseItem, error) {
+func (s *ShortenBatchSrvStub) Process(_ context.Context, _ model.BatchShortenRequest) (model.BatchShortenResponse, error) {
 	if s.shortenError != nil {
 		return nil, s.shortenError
 	}

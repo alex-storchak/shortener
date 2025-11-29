@@ -24,8 +24,8 @@ func handleAPIShorten(p APIShortenProcessor, l *zap.Logger, ep AuditEventPublish
 			return
 		}
 
-		req, err := codec.Decode[model.ShortenRequest](r)
-		if err != nil {
+		var req model.ShortenRequest
+		if err := codec.EasyJSONDecode(r, &req); err != nil {
 			l.Debug("decode json request", zap.Error(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -36,8 +36,7 @@ func handleAPIShorten(p APIShortenProcessor, l *zap.Logger, ep AuditEventPublish
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		} else if errors.Is(err, service.ErrURLAlreadyExists) {
-			err = codec.Encode(w, http.StatusConflict, resBody)
-			if err != nil {
+			if err = codec.EasyJSONEncode(w, http.StatusConflict, resBody); err != nil {
 				l.Error("conflict. encode json response", zap.Error(err))
 			}
 			return
@@ -47,8 +46,7 @@ func handleAPIShorten(p APIShortenProcessor, l *zap.Logger, ep AuditEventPublish
 			return
 		}
 
-		err = codec.Encode(w, http.StatusCreated, resBody)
-		if err != nil {
+		if err = codec.EasyJSONEncode(w, http.StatusCreated, resBody); err != nil {
 			l.Error("created. encode json response", zap.Error(err))
 			return
 		}

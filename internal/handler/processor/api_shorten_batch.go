@@ -24,7 +24,7 @@ func NewAPIShortenBatch(s service.URLShortener, l *zap.Logger, ub ShortURLBuilde
 	}
 }
 
-func (s *APIShortenBatch) Process(ctx context.Context, items []model.BatchShortenRequestItem) ([]model.BatchShortenResponseItem, error) {
+func (s *APIShortenBatch) Process(ctx context.Context, items model.BatchShortenRequest) (model.BatchShortenResponse, error) {
 	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get user uuid from context: %w", err)

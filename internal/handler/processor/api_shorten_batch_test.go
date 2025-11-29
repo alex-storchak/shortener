@@ -45,12 +45,12 @@ func (s *stubShortenerBatch) DeleteBatch(_ context.Context, _ model.URLDeleteBat
 func TestShortenBatchService_ShortenBatch(t *testing.T) {
 	tests := []struct {
 		name         string
-		decReq       []model.BatchShortenRequestItem
+		decReq       model.BatchShortenRequest
 		decErr       error
 		stubShortIDs []string
 		stubErr      error
 		baseURL      string
-		wantResp     []model.BatchShortenResponseItem
+		wantResp     model.BatchShortenResponse
 		wantErr      bool
 		wantErrIs    error
 	}{

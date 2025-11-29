@@ -12,7 +12,7 @@ import (
 )
 
 type APIShortenBatchProcessor interface {
-	Process(ctx context.Context, items []model.BatchShortenRequestItem) ([]model.BatchShortenResponseItem, error)
+	Process(ctx context.Context, items model.BatchShortenRequest) (model.BatchShortenResponse, error)
 }
 
 func handleAPIShortenBatch(p APIShortenBatchProcessor, l *zap.Logger) http.HandlerFunc {
@@ -23,14 +23,14 @@ func handleAPIShortenBatch(p APIShortenBatchProcessor, l *zap.Logger) http.Handl
 			return
 		}
 
-		reqItems, err := codec.Decode[[]model.BatchShortenRequestItem](r)
-		if err != nil {
+		var req model.BatchShortenRequest
+		if err := codec.EasyJSONDecode(r, &req); err != nil {
 			l.Debug("decode json request", zap.Error(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		respItems, err := p.Process(r.Context(), reqItems)
+		respItems, err := p.Process(r.Context(), req)
 		if errors.Is(err, service.ErrEmptyInputURL) || errors.Is(err, service.ErrEmptyInputBatch) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -40,8 +40,7 @@ func handleAPIShortenBatch(p APIShortenBatchProcessor, l *zap.Logger) http.Handl
 			return
 		}
 
-		err = codec.Encode(w, http.StatusCreated, respItems)
-		if err != nil {
+		if err = codec.EasyJSONEncode(w, http.StatusCreated, respItems); err != nil {
 			l.Error("encode json response", zap.Error(err))
 			return
 		}
