@@ -11,6 +11,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/teris-io/shortid"
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/audit"
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/handler"
@@ -20,9 +24,6 @@ import (
 	"github.com/alex-storchak/shortener/internal/random"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/service"
-	"github.com/go-chi/chi/v5"
-	"github.com/teris-io/shortid"
-	"go.uber.org/zap"
 )
 
 const (

@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
-	"go.uber.org/zap"
 )
 
 type APIShortenBatch struct {

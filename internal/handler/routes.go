@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"github.com/alex-storchak/shortener/internal/config"
-	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/config"
+	"github.com/alex-storchak/shortener/internal/middleware"
 )
 
 const ShortIDParam = "id"

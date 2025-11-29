@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/alex-storchak/shortener/internal/config"
-	"github.com/alex-storchak/shortener/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/config"
+	"github.com/alex-storchak/shortener/internal/middleware"
 )
 
 func NewRouter(

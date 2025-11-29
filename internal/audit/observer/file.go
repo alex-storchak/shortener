@@ -6,9 +6,10 @@ import (
 	"os"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/file"
 	"github.com/alex-storchak/shortener/internal/model"
-	"go.uber.org/zap"
 )
 
 type File struct {

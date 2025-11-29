@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/model"
 	repo "github.com/alex-storchak/shortener/internal/repository"
-	"go.uber.org/zap"
 )
 
 type IDGenerator interface {

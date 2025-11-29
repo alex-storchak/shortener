@@ -3,10 +3,11 @@ package audit
 import (
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/audit/observer"
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/file"
-	"go.uber.org/zap"
 )
 
 func InitObservers(cfg config.Audit, l *zap.Logger) ([]Observer, error) {

@@ -3,9 +3,10 @@ package repository
 import (
 	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/model"
 )
 
 type UserManager struct {

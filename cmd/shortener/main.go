@@ -8,6 +8,9 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/teris-io/shortid"
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/audit"
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/handler"
@@ -16,8 +19,6 @@ import (
 	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/alex-storchak/shortener/internal/repository/factory"
 	"github.com/alex-storchak/shortener/internal/service"
-	"github.com/teris-io/shortid"
-	"go.uber.org/zap"
 )
 
 func main() {

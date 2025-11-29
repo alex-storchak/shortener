@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/repository"
-	"github.com/golang-jwt/jwt/v4"
-	"go.uber.org/zap"
 )
 
 type Claims struct {

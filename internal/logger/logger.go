@@ -3,9 +3,10 @@ package logger
 import (
 	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/alex-storchak/shortener/internal/config"
 )
 
 func New(cfg *config.Logger) (*zap.Logger, error) {

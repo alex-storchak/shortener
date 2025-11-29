@@ -3,10 +3,11 @@ package factory
 import (
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/file"
 	"github.com/alex-storchak/shortener/internal/repository"
-	"go.uber.org/zap"
 )
 
 type FileStorageFactory struct {

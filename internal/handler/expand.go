@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alex-storchak/shortener/internal/model"
-	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/repository"
 )
 
 type ExpandProcessor interface {

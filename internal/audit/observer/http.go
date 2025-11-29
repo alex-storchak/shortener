@@ -4,10 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/alex-storchak/shortener/internal/config"
-	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/config"
+	"github.com/alex-storchak/shortener/internal/model"
 )
 
 type HTTP struct {
