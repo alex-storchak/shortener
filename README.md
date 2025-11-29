@@ -21,25 +21,30 @@
 ## Результат сравнения профилей до и после:
 
 ```shell
- % go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof 
+% go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof                
 File: shortener
 Type: inuse_space
-Time: 2025-11-29 01:10:04 MSK
-Duration: 150s, Total samples = 35262.66kB 
-Showing nodes accounting for -12839.45kB, 36.41% of 35262.66kB total
-Dropped 14 nodes (cum <= 176.31kB)
+Time: 2025-11-29 13:20:23 MSK
+Duration: 150s, Total samples = 27087.48kB 
+Showing nodes accounting for -6598.84kB, 24.36% of 27087.48kB total
       flat  flat%   sum%        cum   cum%
--5766.29kB 16.35% 16.35% -5766.29kB 16.35%  github.com/alex-storchak/shortener/internal/repository.(*MemoryUserStorage).Set
--5120.31kB 14.52% 30.87% -5536.61kB 15.70%  github.com/alex-storchak/shortener/internal/service.(*Shortener).Shorten
--1024.05kB  2.90% 33.78% -1024.05kB  2.90%  encoding/json.(*decodeState).literalStore
--1024.05kB  2.90% 36.68% -1024.05kB  2.90%  github.com/google/uuid.UUID.String (inline)
- -928.34kB  2.63% 39.31%  -416.29kB  1.18%  github.com/alex-storchak/shortener/internal/repository.(*MemoryURLStorage).Set
-    -513kB  1.45% 40.77%     -513kB  1.45%  sync.(*Pool).pinSlow
-  512.50kB  1.45% 39.32%   512.50kB  1.45%  go.uber.org/zap/internal/bufferpool.init.NewPool.func1
-  512.17kB  1.45% 37.86%   512.17kB  1.45%  net/textproto.MIMEHeader.Add (inline)
- -512.16kB  1.45% 39.32%  -512.16kB  1.45%  net/http.(*Request).WithContext (inline)
-  512.06kB  1.45% 37.86%   512.06kB  1.45%  internal/profile.(*Profile).postDecode
- -512.05kB  1.45% 39.31%  -512.05kB  1.45%  internal/profile.init.func5
-  512.05kB  1.45% 37.86%   512.05kB  1.45%  internal/sync.runtime_SemacquireMutex
-  512.01kB  1.45% 36.41%   512.01kB  1.45%  github.com/teris-io/shortid.(*Abc).Encode
+-9216.42kB 34.02% 34.02% -9216.42kB 34.02%  encoding/json.(*decodeState).literalStore
+ 7680.35kB 28.35%  5.67%  7680.35kB 28.35%  github.com/mailru/easyjson/jlexer.(*Lexer).String
+-5120.31kB 18.90% 24.57% -5483.70kB 20.24%  github.com/alex-storchak/shortener/internal/service.(*Shortener).Shorten
+   -3678kB 13.58% 38.15%    -3678kB 13.58%  github.com/alex-storchak/shortener/internal/repository.(*MemoryUserStorage).Set
+ 2560.12kB  9.45% 28.70%  2560.12kB  9.45%  github.com/google/uuid.UUID.String (inline)
+-1899.41kB  7.01% 35.71% -1899.41kB  7.01%  github.com/alex-storchak/shortener/internal/repository.(*MemoryURLStorage).Set
+ 1024.02kB  3.78% 31.93%  1536.02kB  5.67%  github.com/teris-io/shortid.(*Shortid).GenerateInternal
+  516.01kB  1.90% 30.03%   516.01kB  1.90%  io.init.func1
+    -513kB  1.89% 31.92%     -513kB  1.89%  bufio.NewWriterSize (inline)
+    -513kB  1.89% 33.82%     -513kB  1.89%  sync.(*Pool).pinSlow
+  512.50kB  1.89% 31.92%   512.50kB  1.89%  go.uber.org/zap/internal/bufferpool.init.NewPool.func1
+  512.14kB  1.89% 30.03%   512.14kB  1.89%  strings.(*Builder).grow
+  512.12kB  1.89% 28.14%   512.12kB  1.89%  github.com/go-chi/chi/v5.NewRouteContext
+  512.05kB  1.89% 26.25%   512.05kB  1.89%  sync.runtime_notifyListWait
+  512.01kB  1.89% 24.36%   512.01kB  1.89%  github.com/teris-io/shortid.(*Abc).Encode
 ```
+
+## Вывод
+
+Общее снижение потребления памяти снизилось на 6.5 MB при общем сэмпле в 27 MB, что составляет 24%. 
