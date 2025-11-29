@@ -9,8 +9,29 @@ import (
 	"github.com/alex-storchak/shortener/internal/middleware"
 )
 
+// ShortIDParam defines the URL parameter name for short URL identifiers.
+// Used in routes like '/{id}' where 'id' is the short URL identifier.
 const ShortIDParam = "id"
 
+// addRoutes configures all HTTP routes and middleware for the application.
+// It sets up the complete routing hierarchy including:
+// - Global middleware (logging, compression, recovery)
+// - Debug endpoints for profiling
+// - Application routes with authentication
+// - API endpoints for URL operations
+//
+// Parameters:
+//   - mux: Chi router instance to configure
+//   - l: Structured logger for logging operations
+//   - cfg: Application configuration
+//   - userResolver: Service for user authentication resolution
+//   - shorten: Processor for plain text URL shortening
+//   - expand: Processor for URL expansion
+//   - ping: Processor for health checks
+//   - apiShorten: Processor for JSON API shortening
+//   - apiShortenBatch: Processor for batch URL shortening
+//   - apiUserURLs: Processor for user URL management
+//   - eventPublisher: Publisher for audit events
 func addRoutes(
 	mux *chi.Mux,
 	l *zap.Logger,

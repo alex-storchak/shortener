@@ -12,6 +12,8 @@ import (
 	"github.com/alex-storchak/shortener/internal/model"
 )
 
+// File is an observer that writes audit events to a local file.
+// It ensures thread-safe file operations with proper locking and append semantics.
 type File struct {
 	fm     *file.Manager
 	mu     *sync.Mutex
@@ -19,6 +21,15 @@ type File struct {
 	f      *os.File
 }
 
+// NewFile creates a new File observer with the specified file manager.
+//
+// Parameters:
+//   - fm: File manager for handling file operations
+//   - l: Structured logger for logging operations
+//
+// Returns:
+//   - *File: Initialized file observer
+//   - error: nil on success, or error if file operations fail
 func NewFile(fm *file.Manager, l *zap.Logger) (*File, error) {
 	return &File{
 		fm:     fm,
@@ -27,10 +38,17 @@ func NewFile(fm *file.Manager, l *zap.Logger) (*File, error) {
 	}, nil
 }
 
+// Name returns human-readable identifier for the observer.
 func (o *File) Name() string {
 	return "audit_file"
 }
 
+// Notify writes an audit event to the file in JSON format.
+// It handles file opening, writing, and closing for each event with proper error handling.
+//
+// Parameters:
+//   - ctx: Context (currently unused but part of interface)
+//   - e: AuditEvent to write to the file
 func (o *File) Notify(_ context.Context, e model.AuditEvent) {
 	o.logger.Debug("event received", zap.Any("event", e))
 	b, err := e.ToJSON()
@@ -58,6 +76,13 @@ func (o *File) Notify(_ context.Context, e model.AuditEvent) {
 	}
 }
 
+// Close releases file resources and ensures all data is flushed.
+//
+// Parameters:
+//   - ctx: Context (currently unused but part of interface)
+//
+// Returns:
+//   - error: nil on success, or error if file closing fails
 func (o *File) Close(_ context.Context) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()

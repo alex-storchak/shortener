@@ -10,11 +10,29 @@ import (
 	"github.com/alex-storchak/shortener/internal/model"
 )
 
+// APIUserURLsProcessor defines the interface for processing user URL management operations.
+// It provides methods for retrieving user's URLs and batch deletion of URLs.
 type APIUserURLsProcessor interface {
 	ProcessGet(ctx context.Context) (model.UserURLsGetResponse, error)
 	ProcessDelete(ctx context.Context, shortIDs model.UserURLsDelRequest) error
 }
 
+// handleGetUserURLs creates an HTTP handler for retrieving all URLs shortened by the authenticated user.
+// It handles GET requests to '/api/user/urls' endpoint.
+//
+// The handler:
+//   - Retrieves all URLs belonging to the authenticated user
+//   - Returns appropriate HTTP status codes:
+//   - 200 OK with model.UserURLsGetResponse when URLs are found
+//   - 204 No Content when user has no URLs
+//   - 500 Internal Server Error for processing failures
+//
+// Parameters:
+//   - p: Processor implementing the user URLs retrieval logic
+//   - l: Logger for logging operations
+//
+// Returns:
+//   - HTTP handler function for the get user URLs endpoint
 func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		respItems, err := p.ProcessGet(r.Context())
@@ -34,6 +52,26 @@ func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 	}
 }
 
+// handleDeleteUserURLs creates an HTTP handler for batch deletion of user's URLs.
+// It handles DELETE requests to '/api/user/urls' endpoint
+// with JSON body containing short IDs to delete.
+//
+// The handler:
+//   - Processes the batch deletion request asynchronously
+//   - Returns appropriate HTTP status codes:
+//   - 202 Accepted for successful request acceptance
+//   - 400 Bad Request for malformed JSON
+//   - 500 Internal Server Error for processing failures
+//
+// Note: Deletion is processed asynchronously,
+// the handler returns immediately after accepting the request.
+//
+// Parameters:
+//   - p: Processor implementing the batch deletion logic
+//   - l: Logger for logging operations
+//
+// Returns:
+//   - HTTP handler function for the delete user URLs endpoint
 func handleDeleteUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var shortIDs model.UserURLsDelRequest

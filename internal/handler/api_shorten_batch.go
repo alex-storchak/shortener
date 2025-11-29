@@ -12,10 +12,30 @@ import (
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
+// APIShortenBatchProcessor defines the interface for processing batch URL shortening requests.
+// Implementations handle the business logic of converting multiple original URLs to short URLs
+// in a single operation while maintaining correlation between requests and responses.
 type APIShortenBatchProcessor interface {
 	Process(ctx context.Context, items model.BatchShortenRequest) (model.BatchShortenResponse, error)
 }
 
+// handleAPIShortenBatch creates an HTTP handler for the batch URL shortening API endpoint.
+// It handles POST requests to '/api/shorten/batch' with JSON content containing multiple URLs.
+//
+// The handler:
+//   - Validates that Content-Type is 'application/json'
+//   - Processes the batch shortening request
+//   - Returns appropriate HTTP status codes:
+//   - 400 Bad Request for invalid content type, malformed JSON, or empty input
+//   - 201 Created with BatchShortenResponse for successful processing
+//   - 500 Internal Server Error for internal processing failures
+//
+// Parameters:
+//   - p: Processor implementing the batch shortening business logic
+//   - l: Logger for error logging and debugging
+//
+// Returns:
+//   - HTTP handler function for the batch shorten endpoint
 func handleAPIShortenBatch(p APIShortenBatchProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ct := r.Header.Get("Content-Type")

@@ -10,12 +10,21 @@ import (
 	"github.com/alex-storchak/shortener/internal/model"
 )
 
+// Observer defines the interface for audit event destinations.
+// Implementations handle receiving, processing, and storing audit events.
 type Observer interface {
+	// Notify sends an audit event to the observer for processing.
 	Notify(ctx context.Context, e model.AuditEvent)
+
+	// Close gracefully shuts down the observer and releases resources.
 	Close(ctx context.Context) error
+
+	// Name returns the identifier of the observer for logging purposes.
 	Name() string
 }
 
+// EventManager is the central dispatcher for audit events.
+// It receives events from publishers and distributes them to all registered observers.
 type EventManager struct {
 	observers []Observer
 	ch        chan model.AuditEvent
@@ -25,6 +34,15 @@ type EventManager struct {
 	logger    *zap.Logger
 }
 
+// NewEventManager creates a new EventManager with the specified observers and configuration.
+// It starts the internal dispatch goroutine immediately.
+//
+// Parameters:
+//   - observers: List of observers to receive events
+//   - cfg: Audit configuration for channel sizing
+//   - l: Structured logger for logging operations
+//
+// Returns: Initialized EventManager ready to receive events
 func NewEventManager(observers []Observer, cfg config.Audit, l *zap.Logger) *EventManager {
 	em := &EventManager{
 		observers: observers,
@@ -37,6 +55,10 @@ func NewEventManager(observers []Observer, cfg config.Audit, l *zap.Logger) *Eve
 	return em
 }
 
+// dispatch runs in a separate goroutine
+// and handles the distribution of audit events to observers.
+// It processes events from the internal channel and forwards them to each observer.
+// If the channel is closed, it gracefully shuts down all observers and exits.
 func (m *EventManager) dispatch() {
 	defer m.wg.Done()
 	for {
@@ -56,6 +78,12 @@ func (m *EventManager) dispatch() {
 	}
 }
 
+// Publish sends an audit event to all registered observers.
+// If no observers are registered, it returns immediately (no-op).
+// If the event channel is full, the event is dropped with a warning.
+//
+// Parameters:
+//   - e: AuditEvent to publish to all observers
 func (m *EventManager) Publish(e model.AuditEvent) {
 	if len(m.observers) == 0 {
 		return // no-op
@@ -67,6 +95,11 @@ func (m *EventManager) Publish(e model.AuditEvent) {
 	}
 }
 
+// Close gracefully shuts down the EventManager and all observers.
+// It ensures all in-flight events are processed before closing.
+//
+// Parameters:
+//   - ctx: Context for controlling shutdown timeout
 func (m *EventManager) Close(ctx context.Context) {
 	m.logger.Info("closing audit EM")
 	m.once.Do(func() {

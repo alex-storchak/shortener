@@ -7,6 +7,13 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
+// Load initializes and loads the application configuration from all available sources.
+// It parses command-line flags first, then environment variables, with environment
+// variables taking precedence over flag values.
+//
+// Returns:
+//   - *Config: Fully populated configuration structure
+//   - error: nil on success, or error if environment parsing fails
 func Load() (*Config, error) {
 	cfg := &Config{}
 	parseFlags(cfg)
@@ -17,6 +24,11 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+// parseFlags parses command-line flags and sets configuration values.
+// Flags provide the base configuration that can be overridden by environment variables.
+//
+// Parameters:
+//   - cfg: Pointer to Config structure to populate with flag values
 func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.Server.ServerAddr, "a", DefServerAddr, "address of HTTP server")
 	flag.DurationVar(&cfg.Server.ShutdownWaitSecsDuration, "shutdown-wait-secs-duration", DefShutdownWaitSecsDuration, "server shutdown wait seconds duration")
@@ -42,6 +54,14 @@ func parseFlags(cfg *Config) {
 	flag.Parse()
 }
 
+// parseEnv parses environment variables and overrides any previously set flag values.
+// Environment variables have the highest precedence in the configuration hierarchy.
+//
+// Parameters:
+//   - cfg: Pointer to Config structure to populate with environment values
+//
+// Returns:
+//   - error: nil on success, or error if environment parsing fails
 func parseEnv(cfg *Config) error {
 	err := env.Parse(cfg)
 	if err != nil {

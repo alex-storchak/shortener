@@ -5,7 +5,16 @@ import (
 	"strings"
 )
 
-// URL returns random valid HTTP URL in a form of url.URL
+// URL generates a random valid HTTP URL with realistic structure.
+// The URL includes a scheme, domain, and optional path segments.
+//
+// Returns:
+//   - *url.URL: pointer to a parsed URL structure with random components
+//
+// Example:
+//
+//	randomURL := URL()
+//	// Result: "http://example.com/path/segment", "http://test.net/abc", etc.
 func URL() *url.URL {
 	var res url.URL
 
@@ -19,7 +28,21 @@ func URL() *url.URL {
 	return &res
 }
 
-// Domain returns random valid domain
+// Domain generates a random valid domain name with configurable parameters.
+// The domain consists of a hostname and a TLD (top-level domain).
+//
+// Parameters:
+//   - minLen: minimum length for the hostname part
+//   - maxLen: maximum length for the hostname part
+//   - zones: optional list of TLDs to choose from (default: com, ru, net, biz, yandex)
+//
+// Returns:
+//   - string: random domain name in format "hostname.tld"
+//
+// Example:
+//
+//	domain := Domain(5, 10, "com", "net")
+//	// Result: "example.com", "test.net", etc.
 func Domain(minLen, maxLen int, zones ...string) string {
 	if minLen == 0 {
 		minLen = 5

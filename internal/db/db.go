@@ -1,3 +1,16 @@
+// Package db provides database connectivity and migration utilities for the URL shortener service.
+// It handles PostgreSQL database connection management and schema migrations using the migrate tool.
+//
+// The package supports:
+//   - Database connection pooling and configuration
+//   - Automatic schema migrations on application startup
+//   - PostgreSQL-specific optimizations using pgx driver
+//   - Migration versioning and rollback capabilities
+//
+// Key Features:
+//   - Connection management with proper error handling
+//   - Idempotent migration application (safe for multiple runs)
+//   - Structured logging for migration events
 package db
 
 import (
@@ -14,6 +27,18 @@ import (
 	"github.com/alex-storchak/shortener/internal/config"
 )
 
+// NewDB creates a new PostgreSQL database connection and applies pending migrations.
+// It initializes the database connection pool using the pgx driver and ensures
+// the database schema is up-to-date by running all pending migrations.
+//
+// Parameters:
+//   - cfg: Database configuration containing connection DSN and settings
+//   - migrationsPath: File system path to directory containing migration files
+//   - l: Structured logger for logging operations
+//
+// Returns:
+//   - *sql.DB: Configured database connection pool
+//   - error: nil on success, or error if connection or migrations fail
 func NewDB(cfg *config.DB, migrationsPath string, l *zap.Logger) (*sql.DB, error) {
 	db, err := sql.Open("pgx", cfg.DSN)
 	if err != nil {
@@ -27,6 +52,22 @@ func NewDB(cfg *config.DB, migrationsPath string, l *zap.Logger) (*sql.DB, error
 	return db, nil
 }
 
+// applyMigrations applies all pending database migrations
+// to bring the schema to the latest version.
+// It uses the golang-migrate library to handle migration execution and version tracking.
+//
+// Parameters:
+//   - dsn: Data Source Name for database connection
+//   - migrationsPath: File system path to migration files (e.g., "file://migrations")
+//   - l: Structured logger for logging operations
+//
+// Returns:
+//   - error: nil on success, migrate.ErrNoChange if no migrations needed, or error if migrations fail
+//
+// Behavior:
+//   - Logs informational message when no migrations are needed
+//   - Applies migrations in transactional manner where supported
+//   - Handles forward (up) migrations only
 func applyMigrations(dsn string, migrationsPath string, l *zap.Logger) error {
 	mg, err := migrate.New(migrationsPath, dsn)
 	if err != nil {

@@ -7,7 +7,9 @@ import (
 	mathrand "math/rand"
 )
 
-// rnd generates new random generator with new source for each binary call
+// rnd is a cryptographically secure random number generator instance.
+// It is initialized once per binary execution with a true random seed
+// from crypto/rand to ensure proper randomness for all generated values.
 var rnd = func() *mathrand.Rand {
 	buf := make([]byte, 8)
 	_, err := io.ReadFull(rand.Reader, buf)

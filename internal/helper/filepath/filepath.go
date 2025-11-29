@@ -1,3 +1,5 @@
+// Package filepath provides extended file path utilities beyond the
+// standard library's filepath package, including relative path resolution.
 package filepath
 
 import (
@@ -6,6 +8,11 @@ import (
 	"runtime"
 )
 
+// GetAbsPath converts a relative path to an absolute path relative to
+// the calling source file.
+// If the input path is already absolute, it is returned unchanged.
+// This is useful for resolving paths in development environments
+// where relative paths might be used.
 func GetAbsPath(path string) (string, error) {
 	if filepath.IsAbs(path) {
 		return path, nil
