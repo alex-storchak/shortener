@@ -47,7 +47,7 @@ help:
 	@echo "Targets:"
 	@echo "  build              Build shortener binary"
 	@echo ""
-	@echo "  generate           Go generate (all)"
+	@echo "  generate           Go generate"
 	@echo ""
 	@echo "  generate-mocks     Generate mocks for interfaces"
 	@echo ""
