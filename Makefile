@@ -4,11 +4,20 @@
 .PHONY: generate
 .PHONY: clean clean-bin clean-mocks clean-easyjson
 .PHONY: format
+.PHONY: doc
 
 BUILD_VCS ?= true
+GODOC_PORT ?= 8081
 
 format:
-	goimports -local "github.com/alex-storchak/shortener" -w .
+	find . -type f -name '*.go' \
+		-not -name '*_easyjson.go' \
+		-not -path '*/mocks/*' \
+		-exec goimports -local "github.com/alex-storchak/shortener" -w {} \;
+
+
+doc:
+	godoc -http=":$(GODOC_PORT)"
 
 build: generate generate-mocks
 	cd cmd/shortener && go build -buildvcs=$(BUILD_VCS) -o shortener
@@ -54,6 +63,10 @@ help:
 	@echo "  make test-shortener"
 	@echo ""
 	@echo "Targets:"
+	@echo "  doc                Run godoc server. Default port: $(GODOC_PORT)"
+	@echo ""
+	@echo "  format             Format code with goimports. Excluded files: mockery mocks, easyjson"
+	@echo ""
 	@echo "  build              Build shortener binary"
 	@echo ""
 	@echo "  generate           Go generate"
