@@ -18,14 +18,9 @@ type mockShortenProcessor struct {
 	shortURL string
 	userID   string
 	err      error
-
-	lastCtx  context.Context
-	lastBody []byte
 }
 
-func (m *mockShortenProcessor) Process(ctx context.Context, body []byte) (string, string, error) {
-	m.lastCtx = ctx
-	m.lastBody = body
+func (m *mockShortenProcessor) Process(_ context.Context, _ []byte) (string, string, error) {
 	return m.shortURL, m.userID, m.err
 }
 

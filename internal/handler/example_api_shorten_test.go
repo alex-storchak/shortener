@@ -16,17 +16,15 @@ import (
 
 // mockAPIShortenProcessor is a stub for APIShortenProcessor.
 type mockAPIShortenProcessor struct {
-	resp    *model.ShortenResponse
-	userID  string
-	err     error
-	lastReq model.ShortenRequest
+	resp   *model.ShortenResponse
+	userID string
+	err    error
 }
 
 func (m *mockAPIShortenProcessor) Process(
 	_ context.Context,
-	req model.ShortenRequest,
+	_ model.ShortenRequest,
 ) (*model.ShortenResponse, string, error) {
-	m.lastReq = req
 	return m.resp, m.userID, m.err
 }
 
