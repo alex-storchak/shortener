@@ -98,7 +98,7 @@ func TestShorten(t *testing.T) {
 			mockPublisher := mocks.NewMockAuditEventPublisher(t)
 			tt.setupMock(mockPublisher)
 
-			h := handleShorten(srv, zap.NewNop(), mockPublisher)
+			h := HandleShorten(srv, zap.NewNop(), mockPublisher)
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader("https://existing.com"))
 			w := httptest.NewRecorder()

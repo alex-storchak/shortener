@@ -104,7 +104,7 @@ func TestAPIShortenBatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			srv := &ShortenBatchSrvStub{tt.shortenError}
-			h := handleAPIShortenBatch(srv, zap.NewNop())
+			h := HandleAPIShortenBatch(srv, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, "/api/shorten/batch", strings.NewReader(`[{"correlation_id":"1","original_url":"https://existing.com/1"}]`))
 			if tt.contentType != "" {

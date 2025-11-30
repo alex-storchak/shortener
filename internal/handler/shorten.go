@@ -26,7 +26,7 @@ type AuditEventPublisher interface {
 	Publish(event model.AuditEvent)
 }
 
-// handleShorten creates an HTTP handler for the plain text URL shortening endpoint.
+// HandleShorten creates an HTTP handler for the plain text URL shortening endpoint.
 // It handles POST requests with text/plain content type containing the URL to shorten.
 //
 // The handler:
@@ -46,7 +46,7 @@ type AuditEventPublisher interface {
 //
 // Returns:
 //   - HTTP handler function for the shorten endpoint
-func handleShorten(p ShortenProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
+func HandleShorten(p ShortenProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := io.ReadAll(r.Body)

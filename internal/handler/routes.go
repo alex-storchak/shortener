@@ -58,19 +58,19 @@ func addRoutes(
 	mux.Route("/", func(mux chi.Router) {
 		mux.Use(middleware.NewAuth(l, userResolver, cfg.Auth))
 
-		mux.Post("/", handleShorten(shorten, l, eventPublisher))
-		mux.Get("/{id:[a-zA-Z0-9_-]+}", handleExpand(expand, l, eventPublisher))
-		mux.Get("/ping", handlePing(ping, l))
+		mux.Post("/", HandleShorten(shorten, l, eventPublisher))
+		mux.Get("/{id:[a-zA-Z0-9_-]+}", HandleExpand(expand, l, eventPublisher))
+		mux.Get("/ping", HandlePing(ping, l))
 
 		mux.Route("/api", func(mux chi.Router) {
 			mux.Route("/shorten", func(mux chi.Router) {
-				mux.Post("/", handleAPIShorten(apiShorten, l, eventPublisher))
-				mux.Post("/batch", handleAPIShortenBatch(apiShortenBatch, l))
+				mux.Post("/", HandleAPIShorten(apiShorten, l, eventPublisher))
+				mux.Post("/batch", HandleAPIShortenBatch(apiShortenBatch, l))
 			})
 
 			mux.Route("/user/urls", func(mux chi.Router) {
-				mux.Get("/", handleGetUserURLs(apiUserURLs, l))
-				mux.Delete("/", handleDeleteUserURLs(apiUserURLs, l))
+				mux.Get("/", HandleGetUserURLs(apiUserURLs, l))
+				mux.Delete("/", HandleDeleteUserURLs(apiUserURLs, l))
 			})
 		})
 	})

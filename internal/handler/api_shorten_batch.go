@@ -19,7 +19,7 @@ type APIShortenBatchProcessor interface {
 	Process(ctx context.Context, items model.BatchShortenRequest) (model.BatchShortenResponse, error)
 }
 
-// handleAPIShortenBatch creates an HTTP handler for the batch URL shortening API endpoint.
+// HandleAPIShortenBatch creates an HTTP handler for the batch URL shortening API endpoint.
 // It handles POST requests to '/api/shorten/batch' with JSON content containing multiple URLs.
 //
 // The handler:
@@ -36,7 +36,7 @@ type APIShortenBatchProcessor interface {
 //
 // Returns:
 //   - HTTP handler function for the batch shorten endpoint
-func handleAPIShortenBatch(p APIShortenBatchProcessor, l *zap.Logger) http.HandlerFunc {
+func HandleAPIShortenBatch(p APIShortenBatchProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ct := r.Header.Get("Content-Type")
 		if err := validateContentType(ct, "application/json"); err != nil {

@@ -9,13 +9,13 @@
 //   - Graceful server shutdown and lifecycle management
 //
 // Endpoints:
-//   - POST /              - Shorten URL (text/plain)
-//   - GET  /{id}          - Expand short URL to original
-//   - GET  /ping          - Health check
-//   - POST /api/shorten   - Shorten URL (JSON API)
+//   - POST /                  - Shorten URL (text/plain)
+//   - GET  /{id}              - Expand short URL to original
+//   - GET  /ping              - Health check
+//   - POST /api/shorten       - Shorten URL (JSON API)
 //   - POST /api/shorten/batch - Batch URL shortening
-//   - GET  /api/user/urls - Get user's URLs
-//   - DELETE /api/user/urls - Delete user's URLs
+//   - GET  /api/user/urls     - Get user's URLs
+//   - DELETE /api/user/urls   - Delete user's URLs
 //
 // Middleware:
 //   - Request logging with structured logging

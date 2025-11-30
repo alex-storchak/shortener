@@ -85,7 +85,7 @@ func TestExpand(t *testing.T) {
 			mockPublisher := mocks.NewMockAuditEventPublisher(t)
 			tt.setupMock(mockPublisher)
 
-			h := handleExpand(srv, zap.NewNop(), mockPublisher)
+			h := HandleExpand(srv, zap.NewNop(), mockPublisher)
 
 			request := httptest.NewRequest(tt.method, tt.path, nil)
 			w := httptest.NewRecorder()

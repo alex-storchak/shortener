@@ -12,7 +12,7 @@ type PingProcessor interface {
 	Process() error
 }
 
-// handlePing creates an HTTP handler for service health checks.
+// HandlePing creates an HTTP handler for service health checks.
 // It handles GET requests to '/ping' endpoint to verify service availability.
 //
 // The handler:
@@ -27,7 +27,7 @@ type PingProcessor interface {
 //
 // Returns:
 //   - HTTP handler function for the ping endpoint
-func handlePing(p PingProcessor, l *zap.Logger) http.HandlerFunc {
+func HandlePing(p PingProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		err := p.Process()
 		if err != nil {

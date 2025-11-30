@@ -17,7 +17,7 @@ type APIUserURLsProcessor interface {
 	ProcessDelete(ctx context.Context, shortIDs model.UserURLsDelRequest) error
 }
 
-// handleGetUserURLs creates an HTTP handler for retrieving all URLs shortened by the authenticated user.
+// HandleGetUserURLs creates an HTTP handler for retrieving all URLs shortened by the authenticated user.
 // It handles GET requests to '/api/user/urls' endpoint.
 //
 // The handler:
@@ -33,7 +33,7 @@ type APIUserURLsProcessor interface {
 //
 // Returns:
 //   - HTTP handler function for the get user URLs endpoint
-func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
+func HandleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		respItems, err := p.ProcessGet(r.Context())
 		if err != nil {
@@ -52,7 +52,7 @@ func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 	}
 }
 
-// handleDeleteUserURLs creates an HTTP handler for batch deletion of user's URLs.
+// HandleDeleteUserURLs creates an HTTP handler for batch deletion of user's URLs.
 // It handles DELETE requests to '/api/user/urls' endpoint
 // with JSON body containing short IDs to delete.
 //
@@ -72,7 +72,7 @@ func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 //
 // Returns:
 //   - HTTP handler function for the delete user URLs endpoint
-func handleDeleteUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
+func HandleDeleteUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var shortIDs model.UserURLsDelRequest
 		if err := codec.EasyJSONDecode(r, &shortIDs); err != nil {

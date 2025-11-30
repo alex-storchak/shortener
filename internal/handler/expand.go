@@ -19,7 +19,7 @@ type ExpandProcessor interface {
 	Process(ctx context.Context, shortID string) (origURL, userUUID string, err error)
 }
 
-// handleExpand creates an HTTP handler for expanding short URLs to their original URLs.
+// HandleExpand creates an HTTP handler for expanding short URLs to their original URLs.
 // It handles GET requests to '/{shortID}' endpoint where shortID is the URL parameter.
 //
 // The handler:
@@ -38,7 +38,7 @@ type ExpandProcessor interface {
 //
 // Returns:
 //   - HTTP handler function for the expand endpoint
-func handleExpand(p ExpandProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
+func HandleExpand(p ExpandProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortID := chi.URLParam(r, ShortIDParam)
 

@@ -113,7 +113,7 @@ func TestAPIShorten(t *testing.T) {
 			mockProc := mocks.NewMockAPIShortenProcessor(t)
 			tt.setupMockProc(mockProc)
 
-			h := handleAPIShorten(mockProc, zap.NewNop(), mockPub)
+			h := HandleAPIShorten(mockProc, zap.NewNop(), mockPub)
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader(`{"url":"https://existing.com"}`))
 			request.Header.Set("Content-Type", "application/json")
