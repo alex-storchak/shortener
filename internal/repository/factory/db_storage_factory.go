@@ -23,8 +23,7 @@ func NewDBStorageFactory(cfg *config.Config, db *sql.DB, logger *zap.Logger) *DB
 }
 
 func (f *DBStorageFactory) MakeURLStorage() (repository.URLStorage, error) {
-	dbMgr := repository.NewPgURLDBManager(f.logger, f.db)
-	storage := repository.NewDBURLStorage(f.logger, dbMgr)
+	storage := repository.NewDBURLStorage(f.logger, f.db)
 	f.logger.Info("db url storage initialized")
 	return storage, nil
 }

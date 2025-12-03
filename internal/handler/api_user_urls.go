@@ -10,8 +10,8 @@ import (
 )
 
 type APIUserURLsProcessor interface {
-	ProcessGet(ctx context.Context) ([]model.UserURLsResponseItem, error)
-	ProcessDelete(ctx context.Context, shortIDs []string) error
+	ProcessGet(ctx context.Context) (model.UserURLsGetResponse, error)
+	ProcessDelete(ctx context.Context, shortIDs model.UserURLsDelRequest) error
 }
 
 func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
@@ -26,8 +26,7 @@ func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 			return
 		}
 
-		err = codec.Encode(w, http.StatusOK, respItems)
-		if err != nil {
+		if err = codec.EasyJSONEncode(w, http.StatusOK, &respItems); err != nil {
 			l.Error("encode json response", zap.Error(err))
 			return
 		}
@@ -36,8 +35,8 @@ func handleGetUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 
 func handleDeleteUserURLs(p APIUserURLsProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		shortIDs, err := codec.Decode[[]string](r)
-		if err != nil {
+		var shortIDs model.UserURLsDelRequest
+		if err := codec.EasyJSONDecode(r, &shortIDs); err != nil {
 			l.Debug("decode json request", zap.Error(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return

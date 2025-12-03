@@ -20,7 +20,7 @@ type Claims struct {
 type AuthService struct {
 	logger *zap.Logger
 	us     repository.UserStorage
-	secret string
+	secret []byte
 	ttl    time.Duration
 }
 
@@ -28,7 +28,7 @@ func NewAuthService(logger *zap.Logger, us repository.UserStorage, cfg *config.A
 	return &AuthService{
 		logger: logger,
 		us:     us,
-		secret: cfg.SecretKey,
+		secret: []byte(cfg.SecretKey),
 		ttl:    cfg.TokenMaxAge,
 	}
 }
@@ -39,7 +39,7 @@ func (a *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-		return []byte(a.secret), nil
+		return a.secret, nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("parse auth token: %w", err)
@@ -71,7 +71,7 @@ func (a *AuthService) CreateToken(user *model.User) (string, error) {
 		UserUUID: user.UUID,
 	})
 
-	tokenString, err := token.SignedString([]byte(a.secret))
+	tokenString, err := token.SignedString(a.secret)
 	if err != nil {
 		return "", fmt.Errorf("sign token: %w", err)
 	}

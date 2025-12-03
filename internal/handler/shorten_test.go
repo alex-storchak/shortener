@@ -28,7 +28,7 @@ func (s *MainPageSrvStub) Process(_ context.Context, _ []byte) (shortURL, userUU
 	return "https://example.com/abcde", "test", nil
 }
 
-func TestMainPageHandler_ServeHTTP(t *testing.T) {
+func TestShorten(t *testing.T) {
 	type want struct {
 		code        int
 		body        string

@@ -25,7 +25,7 @@ func (s *ShortURLSrvStub) Process(_ context.Context, _ string) (origURL, userUUI
 	return "https://existing.com", "userUUID", nil
 }
 
-func TestShortURLHandler_ServeHTTP(t *testing.T) {
+func TestExpand(t *testing.T) {
 	type want struct {
 		code     int
 		Location string

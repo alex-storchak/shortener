@@ -10,14 +10,14 @@ import (
 
 type MemoryURLStorage struct {
 	logger  *zap.Logger
-	records []*model.URLStorageRecord
+	records []model.URLStorageRecord
 	mu      *sync.Mutex
 }
 
 func NewMemoryURLStorage(logger *zap.Logger) *MemoryURLStorage {
 	return &MemoryURLStorage{
 		logger:  logger,
-		records: make([]*model.URLStorageRecord, 0),
+		records: make([]model.URLStorageRecord, 0, 250000),
 		mu:      &sync.Mutex{},
 	}
 }
@@ -30,7 +30,7 @@ func (s *MemoryURLStorage) Ping(_ context.Context) error {
 	return nil
 }
 
-func (s *MemoryURLStorage) Get(url, searchByType string) (*model.URLStorageRecord, error) {
+func (s *MemoryURLStorage) Get(_ context.Context, url, searchByType string) (*model.URLStorageRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -38,7 +38,7 @@ func (s *MemoryURLStorage) Get(url, searchByType string) (*model.URLStorageRecor
 	case OrigURLType:
 		for _, r := range s.records {
 			if r.OrigURL == url && !r.IsDeleted {
-				return r, nil
+				return &r, nil
 			}
 		}
 	case ShortURLType:
@@ -47,22 +47,26 @@ func (s *MemoryURLStorage) Get(url, searchByType string) (*model.URLStorageRecor
 				if r.IsDeleted {
 					return nil, ErrDataDeleted
 				}
-				return r, nil
+				return &r, nil
 			}
 		}
 	}
 	return nil, NewDataNotFoundError(nil)
 }
 
-func (s *MemoryURLStorage) Set(r *model.URLStorageRecord) error {
+func (s *MemoryURLStorage) Set(_ context.Context, origURL, shortID, userUUID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.records = append(s.records, r)
+	s.records = append(s.records, model.URLStorageRecord{
+		OrigURL:  origURL,
+		ShortID:  shortID,
+		UserUUID: userUUID,
+	})
 	return nil
 }
 
-func (s *MemoryURLStorage) BatchSet(records []*model.URLStorageRecord) error {
+func (s *MemoryURLStorage) BatchSet(_ context.Context, records []model.URLStorageRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -70,12 +74,13 @@ func (s *MemoryURLStorage) BatchSet(records []*model.URLStorageRecord) error {
 	return nil
 }
 
-func (s *MemoryURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRecord, error) {
+func (s *MemoryURLStorage) GetByUserUUID(_ context.Context, userUUID string) ([]*model.URLStorageRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var records []*model.URLStorageRecord
-	for _, r := range s.records {
+	records := make([]*model.URLStorageRecord, 0, 50)
+	for i := range s.records {
+		r := &s.records[i]
 		if r.UserUUID == userUUID && !r.IsDeleted {
 			records = append(records, r)
 		}
@@ -83,7 +88,7 @@ func (s *MemoryURLStorage) GetByUserUUID(userUUID string) ([]*model.URLStorageRe
 	return records, nil
 }
 
-func (s *MemoryURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
+func (s *MemoryURLStorage) DeleteBatch(_ context.Context, urls model.URLDeleteBatch) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -91,7 +96,7 @@ func (s *MemoryURLStorage) DeleteBatch(urls model.URLDeleteBatch) error {
 	return nil
 }
 
-func ProcessMemDeleteBatch(records []*model.URLStorageRecord, urls model.URLDeleteBatch) {
+func ProcessMemDeleteBatch(records []model.URLStorageRecord, urls model.URLDeleteBatch) {
 	if len(urls) == 0 {
 		return
 	}
@@ -104,7 +109,8 @@ func ProcessMemDeleteBatch(records []*model.URLStorageRecord, urls model.URLDele
 		deleteMap[u.ShortID][u.UserUUID] = true
 	}
 
-	for _, r := range records {
+	for i := range records {
+		r := &records[i]
 		if userMap, exists := deleteMap[r.ShortID]; exists {
 			if userMap[r.UserUUID] {
 				r.IsDeleted = true

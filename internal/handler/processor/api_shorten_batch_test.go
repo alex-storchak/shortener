@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/handler/processor/mocks"
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
@@ -22,34 +23,34 @@ func (s *stubShortenerBatch) IsReady() error {
 	return nil
 }
 
-func (s *stubShortenerBatch) Shorten(_ string, _ string) (string, error) {
+func (s *stubShortenerBatch) Shorten(_ context.Context, _ string, _ string) (string, error) {
 	return "", nil
 }
 
-func (s *stubShortenerBatch) Extract(_ string) (string, error) {
+func (s *stubShortenerBatch) Extract(_ context.Context, _ string) (string, error) {
 	return "", nil
 }
-func (s *stubShortenerBatch) ShortenBatch(_ string, _ []string) ([]string, error) {
+func (s *stubShortenerBatch) ShortenBatch(_ context.Context, _ string, _ []string) ([]string, error) {
 	return s.retIDs, s.retErr
 }
 
-func (s *stubShortenerBatch) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
+func (s *stubShortenerBatch) GetUserURLs(_ context.Context, _ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
-func (s *stubShortenerBatch) DeleteBatch(_ model.URLDeleteBatch) error {
+func (s *stubShortenerBatch) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
 	return nil
 }
 
 func TestShortenBatchService_ShortenBatch(t *testing.T) {
 	tests := []struct {
 		name         string
-		decReq       []model.BatchShortenRequestItem
+		decReq       model.BatchShortenRequest
 		decErr       error
 		stubShortIDs []string
 		stubErr      error
 		baseURL      string
-		wantResp     []model.BatchShortenResponseItem
+		wantResp     model.BatchShortenResponse
 		wantErr      bool
 		wantErrIs    error
 	}{
@@ -108,7 +109,17 @@ func TestShortenBatchService_ShortenBatch(t *testing.T) {
 			if baseURL == "" {
 				baseURL = "http://any"
 			}
-			srv := NewAPIShortenBatch(baseURL, shortener, zap.NewNop())
+			ub := mocks.NewMockShortURLBuilder(t)
+			if !tt.wantErr {
+				for _, s := range tt.stubShortIDs {
+					ub.EXPECT().
+						Build(s).
+						Return(baseURL + "/" + s).
+						Once()
+				}
+			}
+
+			srv := NewAPIShortenBatch(shortener, zap.NewNop(), ub)
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			resp, err := srv.Process(ctx, tt.decReq)

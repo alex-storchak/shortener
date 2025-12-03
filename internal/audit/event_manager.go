@@ -56,6 +56,9 @@ func (m *EventManager) dispatch() {
 }
 
 func (m *EventManager) Publish(e model.AuditEvent) {
+	if len(m.observers) == 0 {
+		return // no-op
+	}
 	select {
 	case m.ch <- e:
 	default:

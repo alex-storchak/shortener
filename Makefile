@@ -1,15 +1,19 @@
 .PHONY: help
 .PHONY: generate-mocks test test-static
 .PHONY: build
+.PHONY: generate
 .PHONY: clean clean-bin clean-mocks
 
 BUILD_VCS ?= true
 
-build: generate-mocks
+build: generate generate-mocks
 	cd cmd/shortener && go build -buildvcs=$(BUILD_VCS) -o shortener
 
 generate-mocks:
 	mockery
+
+generate: generate-mocks
+	go generate ./...
 
 clean-mocks:
 	@echo "Removing generated mocks..."
@@ -42,6 +46,8 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  build              Build shortener binary"
+	@echo ""
+	@echo "  generate           Go generate"
 	@echo ""
 	@echo "  generate-mocks     Generate mocks for interfaces"
 	@echo ""

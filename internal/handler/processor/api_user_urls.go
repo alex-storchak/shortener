@@ -3,8 +3,6 @@ package processor
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"runtime"
 	"sync"
 	"time"
 
@@ -15,29 +13,29 @@ import (
 )
 
 type APIUserURLs struct {
-	baseURL   string
 	shortener service.URLShortener
 	logger    *zap.Logger
+	ub        ShortURLBuilder
 }
 
 func NewAPIUserURLs(
-	baseURL string,
 	shortener service.URLShortener,
 	logger *zap.Logger,
+	ub ShortURLBuilder,
 ) *APIUserURLs {
 	return &APIUserURLs{
-		baseURL:   baseURL,
 		shortener: shortener,
 		logger:    logger,
+		ub:        ub,
 	}
 }
 
-func (s *APIUserURLs) ProcessGet(ctx context.Context) ([]model.UserURLsResponseItem, error) {
+func (s *APIUserURLs) ProcessGet(ctx context.Context) (model.UserURLsGetResponse, error) {
 	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get user uuid from context: %w", err)
 	}
-	urls, err := s.shortener.GetUserURLs(userUUID)
+	urls, err := s.shortener.GetUserURLs(ctx, userUUID)
 	if err != nil {
 		return nil, fmt.Errorf("get user urls from storage: %w", err)
 	}
@@ -50,14 +48,11 @@ func (s *APIUserURLs) ProcessGet(ctx context.Context) ([]model.UserURLsResponseI
 	return resp, nil
 }
 
-func (s *APIUserURLs) buildResponse(urls []*model.URLStorageRecord) ([]model.UserURLsResponseItem, error) {
-	resp := make([]model.UserURLsResponseItem, len(urls))
+func (s *APIUserURLs) buildResponse(urls []*model.URLStorageRecord) (model.UserURLsGetResponse, error) {
+	resp := make(model.UserURLsGetResponse, len(urls))
 	for i, u := range urls {
-		shortURL, err := url.JoinPath(s.baseURL, u.ShortID)
-		if err != nil {
-			return nil, fmt.Errorf("build full short url for new url: %w", err)
-		}
-		resp[i] = model.UserURLsResponseItem{
+		shortURL := s.ub.Build(u.ShortID)
+		resp[i] = model.UserURLsGetResponseItem{
 			OrigURL:  u.OrigURL,
 			ShortURL: shortURL,
 		}
@@ -65,7 +60,7 @@ func (s *APIUserURLs) buildResponse(urls []*model.URLStorageRecord) ([]model.Use
 	return resp, nil
 }
 
-func (s *APIUserURLs) ProcessDelete(ctx context.Context, shortIDs []string) error {
+func (s *APIUserURLs) ProcessDelete(ctx context.Context, shortIDs model.UserURLsDelRequest) error {
 	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return fmt.Errorf("get user uuid from context: %w", err)
@@ -95,11 +90,11 @@ func (s *APIUserURLs) processDeletion(
 
 	batchChannels := s.fanOut(ctx, inputCh)
 	batchesCh := s.fanIn(ctx, batchChannels...)
-	s.deleteBatch(batchesCh)
+	s.deleteBatch(ctx, batchesCh)
 }
 
 func (s *APIUserURLs) fanOut(ctx context.Context, inputCh chan model.URLToDelete) []chan model.URLDeleteBatch {
-	numWorkers := runtime.NumCPU()
+	const numWorkers = 4
 	channels := make([]chan model.URLDeleteBatch, numWorkers)
 	batchSize := 50
 	for i := 0; i < numWorkers; i++ {
@@ -187,9 +182,9 @@ func (s *APIUserURLs) fanIn(ctx context.Context, channels ...chan model.URLDelet
 	return finalCh
 }
 
-func (s *APIUserURLs) deleteBatch(batchesCh chan model.URLDeleteBatch) {
+func (s *APIUserURLs) deleteBatch(ctx context.Context, batchesCh chan model.URLDeleteBatch) {
 	for batch := range batchesCh {
-		if err := s.shortener.DeleteBatch(batch); err != nil {
+		if err := s.shortener.DeleteBatch(ctx, batch); err != nil {
 			s.logger.Error("error deleting batch", zap.Error(err))
 			return
 		}

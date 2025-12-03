@@ -21,9 +21,9 @@ func NewFileScanner(logger *zap.Logger, parser URLFileRecordParser) *URLFileScan
 	}
 }
 
-func (s *URLFileScanner) scan(file *os.File) ([]*model.URLStorageRecord, error) {
+func (s *URLFileScanner) scan(file *os.File) ([]model.URLStorageRecord, error) {
 	scanner := bufio.NewScanner(file)
-	var records []*model.URLStorageRecord
+	var records []model.URLStorageRecord
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -35,7 +35,9 @@ func (s *URLFileScanner) scan(file *os.File) ([]*model.URLStorageRecord, error) 
 		if err != nil {
 			return nil, fmt.Errorf("parse line as record: %w", err)
 		}
-		records = append(records, record)
+		if record.OrigURL != "" {
+			records = append(records, record)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {

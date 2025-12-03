@@ -116,12 +116,13 @@ func initRouter(
 	um := repository.NewUserManager(zl, us)
 	authMWService := service.NewAuthUserResolver(as, um, &cfg.Auth)
 
-	shortenProc := processor.NewShorten(cfg.Handler.BaseURL, sh, zl)
+	ub := service.NewURLBuilder(cfg.Handler.BaseURL)
+	shortenProc := processor.NewShorten(sh, zl, ub)
 	shortURLProc := processor.NewExpand(sh, zl)
 	pingProc := processor.NewPing(sh, zl)
-	apiShortenProc := processor.NewAPIShorten(cfg.Handler.BaseURL, sh, zl)
-	apiShortenBatchProc := processor.NewAPIShortenBatch(cfg.Handler.BaseURL, sh, zl)
-	apiUserURLsProc := processor.NewAPIUserURLs(cfg.Handler.BaseURL, sh, zl)
+	apiShortenProc := processor.NewAPIShorten(sh, zl, ub)
+	apiShortenBatchProc := processor.NewAPIShortenBatch(sh, zl, ub)
+	apiUserURLsProc := processor.NewAPIUserURLs(sh, zl, ub)
 
 	return handler.NewRouter(
 		zl,

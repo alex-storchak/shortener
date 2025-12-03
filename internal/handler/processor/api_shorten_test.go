@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/handler/processor/mocks"
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
@@ -18,23 +19,23 @@ type stubShortenerAPI struct {
 	retErr     error
 }
 
-func (s *stubShortenerAPI) Shorten(_, _ string) (string, error) {
+func (s *stubShortenerAPI) Shorten(_ context.Context, _, _ string) (string, error) {
 	return s.retShortID, s.retErr
 }
 
-func (s *stubShortenerAPI) Extract(_ string) (string, error) {
+func (s *stubShortenerAPI) Extract(_ context.Context, _ string) (string, error) {
 	return "", nil
 }
 
-func (s *stubShortenerAPI) ShortenBatch(_ string, _ []string) ([]string, error) {
+func (s *stubShortenerAPI) ShortenBatch(_ context.Context, _ string, _ []string) ([]string, error) {
 	return nil, nil
 }
 
-func (s *stubShortenerAPI) GetUserURLs(_ string) ([]*model.URLStorageRecord, error) {
+func (s *stubShortenerAPI) GetUserURLs(_ context.Context, _ string) ([]*model.URLStorageRecord, error) {
 	return nil, nil
 }
 
-func (s *stubShortenerAPI) DeleteBatch(_ model.URLDeleteBatch) error {
+func (s *stubShortenerAPI) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
 	return nil
 }
 
@@ -89,7 +90,12 @@ func TestShortenService_Shorten(t *testing.T) {
 			if baseURL == "" {
 				baseURL = "http://any"
 			}
-			srv := NewAPIShorten(baseURL, shortener, zap.NewNop())
+			ub := mocks.NewMockShortURLBuilder(t)
+			if !tt.wantErr || errors.Is(tt.shortenErr, service.ErrURLAlreadyExists) {
+				ub.EXPECT().Build(tt.shortID).Return(baseURL + "/" + tt.shortID)
+			}
+
+			srv := NewAPIShorten(shortener, zap.NewNop(), ub)
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			resp, _, err := srv.Process(ctx, tt.decReq)

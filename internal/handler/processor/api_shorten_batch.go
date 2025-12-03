@@ -3,7 +3,6 @@ package processor
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
@@ -12,27 +11,27 @@ import (
 )
 
 type APIShortenBatch struct {
-	baseURL   string
 	shortener service.URLShortener
 	logger    *zap.Logger
+	ub        ShortURLBuilder
 }
 
-func NewAPIShortenBatch(baseURL string, s service.URLShortener, l *zap.Logger) *APIShortenBatch {
+func NewAPIShortenBatch(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *APIShortenBatch {
 	return &APIShortenBatch{
-		baseURL:   baseURL,
 		shortener: s,
 		logger:    l,
+		ub:        ub,
 	}
 }
 
-func (s *APIShortenBatch) Process(ctx context.Context, items []model.BatchShortenRequestItem) ([]model.BatchShortenResponseItem, error) {
+func (s *APIShortenBatch) Process(ctx context.Context, items model.BatchShortenRequest) (model.BatchShortenResponse, error) {
 	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get user uuid from context: %w", err)
 	}
 
 	origURLs := s.buildURLList(items)
-	shortIDs, err := s.shortener.ShortenBatch(userUUID, origURLs)
+	shortIDs, err := s.shortener.ShortenBatch(ctx, userUUID, origURLs)
 	if err != nil {
 		return nil, fmt.Errorf("shorten batch: %w", err)
 	}
@@ -59,10 +58,7 @@ func (s *APIShortenBatch) buildResponse(
 ) ([]model.BatchShortenResponseItem, error) {
 	resp := make([]model.BatchShortenResponseItem, len(reqItems))
 	for i, item := range reqItems {
-		shortURL, err := url.JoinPath(s.baseURL, shortIDs[i])
-		if err != nil {
-			return nil, fmt.Errorf("build full short url for new url: %w", err)
-		}
+		shortURL := s.ub.Build(shortIDs[i])
 		resp[i] = model.BatchShortenResponseItem{
 			CorrelationID: item.CorrelationID,
 			ShortURL:      shortURL,
