@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/model"
 )
 
 var (

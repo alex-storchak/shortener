@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alex-storchak/shortener/internal/helper/filepath"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/helper/filepath"
 )
 
 type Manager struct {

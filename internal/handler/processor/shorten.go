@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/service"
-	"go.uber.org/zap"
 )
 
 type Shorten struct {

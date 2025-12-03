@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/config"
 )
 
 func NewDB(cfg *config.DB, migrationsPath string, l *zap.Logger) (*sql.DB, error) {

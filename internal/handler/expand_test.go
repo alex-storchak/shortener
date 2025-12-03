@@ -7,11 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/handler/mocks"
-	repo "github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/handler/mocks"
+	repo "github.com/alex-storchak/shortener/internal/repository"
 )
 
 type ShortURLSrvStub struct {

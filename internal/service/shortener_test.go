@@ -5,11 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/model"
-	repo "github.com/alex-storchak/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/model"
+	repo "github.com/alex-storchak/shortener/internal/repository"
 )
 
 type idGeneratorStub struct {

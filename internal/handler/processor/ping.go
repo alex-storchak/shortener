@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alex-storchak/shortener/internal/service"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/service"
 )
 
 type Ping struct {

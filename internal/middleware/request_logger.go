@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alex-storchak/shortener/internal/helper/datetime"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/helper/datetime"
 )
 
 type responseData struct {

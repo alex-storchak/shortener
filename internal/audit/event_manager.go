@@ -4,9 +4,10 @@ import (
 	"context"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/model"
-	"go.uber.org/zap"
 )
 
 type Observer interface {

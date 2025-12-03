@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alex-storchak/shortener/internal/model"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/model"
 )
 
 type UserDBManager interface {

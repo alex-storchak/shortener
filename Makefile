@@ -2,9 +2,13 @@
 .PHONY: generate-mocks test test-static
 .PHONY: build
 .PHONY: generate
-.PHONY: clean clean-bin clean-mocks
+.PHONY: clean clean-bin clean-mocks clean-easyjson
+.PHONY: format
 
 BUILD_VCS ?= true
+
+format:
+	goimports -local "github.com/alex-storchak/shortener" -w .
 
 build: generate generate-mocks
 	cd cmd/shortener && go build -buildvcs=$(BUILD_VCS) -o shortener
@@ -25,10 +29,15 @@ clean-mocks:
 		done' sh {} +
 	@echo "Done."
 
+clean-easyjson:
+	@echo "Removing generated easyjson files..."
+	@find . -type f -name "*_easyjson.go" -print -delete
+	@echo "Done."
+
 clean-bin:
 	rm -f cmd/shortener/shortener
 
-clean: clean-mocks clean-bin
+clean: clean-mocks clean-easyjson clean-bin
 
 test: generate-mocks
 	go test ./...
@@ -53,6 +62,8 @@ help:
 	@echo ""
 	@echo "  clean              Clean up mocks and binary"
 	@echo "  clean-mocks        Clean up mocks"
+	@echo "  clean-easyjson     Clean up easyjson files"
+	@echo ""
 	@echo "  clean-bin          Clean up binary"
 	@echo ""
 	@echo "  test               Run all tests"

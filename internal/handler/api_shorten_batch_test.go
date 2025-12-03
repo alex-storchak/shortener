@@ -9,11 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alex-storchak/shortener/internal/model"
-	"github.com/alex-storchak/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/alex-storchak/shortener/internal/model"
+	"github.com/alex-storchak/shortener/internal/service"
 )
 
 type ShortenBatchSrvStub struct {
