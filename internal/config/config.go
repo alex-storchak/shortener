@@ -30,7 +30,8 @@ type Repo struct {
 
 // DB contains configuration for database settings.
 type DB struct {
-	DSN string `env:"DATABASE_DSN"` // PostgreSQL connection string
+	DSN            string `env:"DATABASE_DSN"`             // PostgreSQL connection string
+	MigrationsPath string `env:"DATABASE_MIGRATIONS_PATH"` // Path to database migrations
 }
 
 // Auth contains configuration for authentication settings.

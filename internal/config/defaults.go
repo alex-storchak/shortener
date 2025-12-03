@@ -34,8 +34,8 @@ const (
 const (
 	// DefDatabaseDSN - Default database DSN (empty = no database)
 	DefDatabaseDSN = ""
-	// MigrationsPath - Path to database migration files
-	MigrationsPath = "file://migrations"
+	// DefMigrationsPath - Path to database migration files
+	DefMigrationsPath = "file://migrations"
 )
 
 // Authentication defaults

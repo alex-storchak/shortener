@@ -11,7 +11,7 @@
 //   - Server settings (address, shutdown timeout)
 //   - Handler settings (base URL for short links)
 //   - Logging configuration
-//   - Storage options (file path, database DSN)
+//   - Storage/DB options (file path, database DSN)
 //   - Authentication (JWT, cookies)
 //   - Audit system (file logging, remote server)
 //

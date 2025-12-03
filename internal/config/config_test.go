@@ -94,7 +94,8 @@ func (s *ConfigTestSuite) TestParseConfig() {
 		FileStoragePath: DefFileStoragePath,
 	}
 	defDBCfg := DB{
-		DSN: DefDatabaseDSN,
+		DSN:            DefDatabaseDSN,
+		MigrationsPath: DefMigrationsPath,
 	}
 	defAuthCfg := Auth{
 		CookieName:       DefAuthCookieName,
@@ -151,7 +152,10 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Repo: Repo{
 					FileStoragePath: "./data/some_file.json",
 				},
-				DB:    DB{DSN: "postgres:flagsDSN"},
+				DB: DB{
+					DSN:            "postgres:flagsDSN",
+					MigrationsPath: DefMigrationsPath,
+				},
 				Auth:  defAuthCfg,
 				Audit: defAuditCfg,
 			},
@@ -418,9 +422,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo:    defRepoCfg,
-				DB:      DB{DSN: "postgres:envDSN"},
-				Auth:    defAuthCfg,
-				Audit:   defAuditCfg,
+				DB: DB{
+					DSN:            "postgres:envDSN",
+					MigrationsPath: DefMigrationsPath,
+				},
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -434,9 +441,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo:    defRepoCfg,
-				DB:      DB{DSN: "postgres:envDSN"},
-				Auth:    defAuthCfg,
-				Audit:   defAuditCfg,
+				DB: DB{
+					DSN:            "postgres:envDSN",
+					MigrationsPath: DefMigrationsPath,
+				},
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -450,9 +460,12 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				Handler: defHandlerCfg,
 				Logger:  defLoggerCfg,
 				Repo:    defRepoCfg,
-				DB:      DB{DSN: "postgres:flagsDSN"},
-				Auth:    defAuthCfg,
-				Audit:   defAuditCfg,
+				DB: DB{
+					DSN:            "postgres:flagsDSN",
+					MigrationsPath: DefMigrationsPath,
+				},
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 	}

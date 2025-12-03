@@ -77,7 +77,7 @@ func NewStorageFactory(cfg *config.Config, zl *zap.Logger) (StorageFactory, erro
 
 // initDBStorageFactory initializes a database storage factory with database connection.
 func initDBStorageFactory(cfg *config.Config, zl *zap.Logger) (*DBStorageFactory, error) {
-	d, err := db.NewDB(&cfg.DB, config.MigrationsPath, zl)
+	d, err := db.NewDB(&cfg.DB, zl)
 	if err != nil {
 		return nil, fmt.Errorf("initialize DB: %w", err)
 	}

@@ -38,7 +38,9 @@ func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.Logger.LogLevel, "l", DefLogLevel, "log level")
 
 	flag.StringVar(&cfg.Repo.FileStoragePath, "f", DefFileStoragePath, "db storage file path")
+
 	flag.StringVar(&cfg.DB.DSN, "d", DefDatabaseDSN, "postgres database DSN")
+	flag.StringVar(&cfg.DB.MigrationsPath, "m", DefMigrationsPath, "postgres database migrations path")
 
 	flag.StringVar(&cfg.Auth.CookieName, "auth-cookie-name", DefAuthCookieName, "auth cookie name")
 	flag.DurationVar(&cfg.Auth.TokenMaxAge, "auth-token-max-age", DefAuthTokenMaxAge, "auth token max age in hours")

@@ -33,19 +33,18 @@ import (
 //
 // Parameters:
 //   - cfg: Database configuration containing connection DSN and settings
-//   - migrationsPath: File system path to directory containing migration files
 //   - l: Structured logger for logging operations
 //
 // Returns:
 //   - *sql.DB: Configured database connection pool
 //   - error: nil on success, or error if connection or migrations fail
-func NewDB(cfg *config.DB, migrationsPath string, l *zap.Logger) (*sql.DB, error) {
+func NewDB(cfg *config.DB, l *zap.Logger) (*sql.DB, error) {
 	db, err := sql.Open("pgx", cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 
-	if err := applyMigrations(cfg.DSN, migrationsPath, l); err != nil {
+	if err := applyMigrations(cfg.DSN, cfg.MigrationsPath, l); err != nil {
 		return nil, err
 	}
 
