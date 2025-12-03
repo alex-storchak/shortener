@@ -8,10 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type UserCreator interface {
-	NewUser() (*model.User, error)
-}
-
 type UserManager struct {
 	logger *zap.Logger
 	us     UserStorage
@@ -29,7 +25,7 @@ func (um *UserManager) NewUser() (*model.User, error) {
 		UUID: uuid.NewString(),
 	}
 	if err := um.us.Set(&user); err != nil {
-		return nil, fmt.Errorf("failed to create new user: %w", err)
+		return nil, fmt.Errorf("create new user: %w", err)
 	}
 	return &user, nil
 }

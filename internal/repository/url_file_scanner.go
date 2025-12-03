@@ -33,13 +33,13 @@ func (s *URLFileScanner) scan(file *os.File) ([]*model.URLStorageRecord, error) 
 
 		record, err := s.parser.parse(line)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse line as record: %w", err)
+			return nil, fmt.Errorf("parse line as record: %w", err)
 		}
 		records = append(records, record)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("failed to scan file: %w", err)
+		return nil, fmt.Errorf("scan file: %w", err)
 	}
 	return records, nil
 }

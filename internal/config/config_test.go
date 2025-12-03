@@ -5,11 +5,6 @@ import (
 	"os"
 	"testing"
 
-	dbCfg "github.com/alex-storchak/shortener/internal/db/config"
-	handlerCfg "github.com/alex-storchak/shortener/internal/handler/config"
-	loggerCfg "github.com/alex-storchak/shortener/internal/logger/config"
-	mwcfg "github.com/alex-storchak/shortener/internal/middleware/config"
-	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,6 +14,8 @@ const (
 	envNameLogLevel      = "LOG_LEVEL"
 	envFileStoragePath   = "FILE_STORAGE_PATH"
 	envDatabaseDSN       = "DATABASE_DSN"
+	envAuditFile         = "AUDIT_FILE"
+	envAuditURL          = "AUDIT_URL"
 )
 
 type ConfigTestSuite struct {
@@ -30,7 +27,15 @@ type ConfigTestSuite struct {
 }
 
 func (s *ConfigTestSuite) SetupSuite() {
-	s.envVarsNames = []string{envNameServerAddress, envNameBaseURL, envNameLogLevel, envFileStoragePath, envDatabaseDSN}
+	s.envVarsNames = []string{
+		envNameServerAddress,
+		envNameBaseURL,
+		envNameLogLevel,
+		envFileStoragePath,
+		envDatabaseDSN,
+		envAuditFile,
+		envAuditURL,
+	}
 }
 
 func (s *ConfigTestSuite) setEnvs(envs map[string]string) {
@@ -75,26 +80,34 @@ func (s *ConfigTestSuite) TearDownSubTest() {
 }
 
 func (s *ConfigTestSuite) TestParseConfig() {
-	dfltHandlerCfg := handlerCfg.Config{
-		ServerAddr: handlerCfg.DefaultServerAddr,
-		BaseURL:    handlerCfg.DefaultBaseURL,
+	defServerCfg := Server{
+		ServerAddr:               DefServerAddr,
+		ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 	}
-	dfltLoggerCfg := loggerCfg.Config{
-		LogLevel: loggerCfg.DefaultLogLevel,
+	defHandlerCfg := Handler{
+		BaseURL: DefBaseURL,
 	}
-	dfltRepoCfg := repoCfg.Config{
-		FileStorage: repoCfg.FileStorage{
-			Path: repoCfg.DefaultFileStoragePath,
-		},
+	defLoggerCfg := Logger{
+		LogLevel: DefLogLevel,
 	}
-	dfltDBCfg := dbCfg.Config{
-		DSN: dbCfg.DefaultDatabaseDSN,
+	defRepoCfg := Repo{
+		FileStoragePath: DefFileStoragePath,
 	}
-	dfltMWCfg := mwcfg.Config{
-		AuthCookieName:       mwcfg.DefaultAuthCookieName,
-		AuthTokenMaxAge:      mwcfg.DefaultAuthTokenMaxAge,
-		AuthRefreshThreshold: mwcfg.DefaultAuthRefreshThreshold,
-		SecretKey:            mwcfg.DefaultAuthSecretKey,
+	defDBCfg := DB{
+		DSN: DefDatabaseDSN,
+	}
+	defAuthCfg := Auth{
+		CookieName:       DefAuthCookieName,
+		TokenMaxAge:      DefAuthTokenMaxAge,
+		RefreshThreshold: DefAuthRefreshThreshold,
+		SecretKey:        DefAuthSecretKey,
+	}
+	defAuditCfg := Audit{
+		File:             DefAuditFile,
+		URL:              DefAuditURL,
+		EventChanSize:    DefAuditEventChanSize,
+		HTTPWorkersCount: DefAuditHTTPWorkersCount,
+		HTTPTimeout:      DefAuditHTTPTimeout,
 	}
 
 	tests := []struct {
@@ -108,11 +121,13 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			flags: []string{},
 			envs:  map[string]string{},
 			want: &Config{
-				Handler:    dfltHandlerCfg,
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo:    defRepoCfg,
+				DB:      defDBCfg,
+				Auth:    defAuthCfg,
+				Audit:   defAuditCfg,
 			},
 		},
 		{
@@ -125,18 +140,20 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: "example.com:1111",
-					BaseURL:    "http://example.com:1111",
+				Server: Server{
+					ServerAddr:               "example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
-				Logger: dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStorage: repoCfg.FileStorage{
-						Path: "./data/some_file.json",
-					},
+				Handler: Handler{
+					BaseURL: "http://example.com:1111",
 				},
-				DB:         dbCfg.Config{DSN: "postgres:flagsDSN"},
-				Middleware: dfltMWCfg,
+				Logger: defLoggerCfg,
+				Repo: Repo{
+					FileStoragePath: "./data/some_file.json",
+				},
+				DB:    DB{DSN: "postgres:flagsDSN"},
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -146,14 +163,16 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: "example.com:1111",
-					BaseURL:    handlerCfg.DefaultBaseURL,
+				Server: Server{
+					ServerAddr:               "example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo:    defRepoCfg,
+				DB:      defDBCfg,
+				Auth:    defAuthCfg,
+				Audit:   defAuditCfg,
 			},
 		},
 		{
@@ -163,14 +182,15 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: handlerCfg.DefaultServerAddr,
-					BaseURL:    "http://example.com:1111",
+				Server: defServerCfg,
+				Handler: Handler{
+					BaseURL: "http://example.com:1111",
 				},
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Logger: defLoggerCfg,
+				Repo:   defRepoCfg,
+				DB:     defDBCfg,
+				Auth:   defAuthCfg,
+				Audit:  defAuditCfg,
 			},
 		},
 		{
@@ -182,18 +202,20 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath:   "./data/some_file.json",
 			},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    "http://env-example.com:1111",
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
-				Logger: dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStorage: repoCfg.FileStorage{
-						Path: "./data/some_file.json",
-					},
+				Handler: Handler{
+					BaseURL: "http://env-example.com:1111",
 				},
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Logger: defLoggerCfg,
+				Repo: Repo{
+					FileStoragePath: "./data/some_file.json",
+				},
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -209,18 +231,20 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath:   "./data/some_another_file.json",
 			},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    "http://env-example.com:1111",
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
-				Logger: dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStorage: repoCfg.FileStorage{
-						Path: "./data/some_another_file.json",
-					},
+				Handler: Handler{
+					BaseURL: "http://env-example.com:1111",
 				},
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Logger: defLoggerCfg,
+				Repo: Repo{
+					FileStoragePath: "./data/some_another_file.json",
+				},
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -232,14 +256,18 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameServerAddress: "env-example.com:1111",
 			},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    "http://flags-example.com:1111",
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Handler: Handler{
+					BaseURL: "http://flags-example.com:1111",
+				},
+				Logger: defLoggerCfg,
+				Repo:   defRepoCfg,
+				DB:     defDBCfg,
+				Auth:   defAuthCfg,
+				Audit:  defAuditCfg,
 			},
 		},
 		{
@@ -251,14 +279,18 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameServerAddress: "env-example.com:1111",
 			},
 			want: &Config{
-				Handler: handlerCfg.Config{
-					ServerAddr: "env-example.com:1111",
-					BaseURL:    handlerCfg.DefaultBaseURL,
+				Server: Server{
+					ServerAddr:               "env-example.com:1111",
+					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Handler: Handler{
+					BaseURL: DefBaseURL,
+				},
+				Logger: defLoggerCfg,
+				Repo:   defRepoCfg,
+				DB:     defDBCfg,
+				Auth:   defAuthCfg,
+				Audit:  defAuditCfg,
 			},
 		},
 		{
@@ -270,13 +302,15 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameLogLevel: "debug",
 			},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger: loggerCfg.Config{
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger: Logger{
 					LogLevel: "debug",
 				},
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Repo:  defRepoCfg,
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -286,13 +320,15 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envNameLogLevel: "debug",
 			},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger: loggerCfg.Config{
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger: Logger{
 					LogLevel: "debug",
 				},
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Repo:  defRepoCfg,
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -302,13 +338,15 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger: loggerCfg.Config{
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger: Logger{
 					LogLevel: "error",
 				},
-				Repository: dfltRepoCfg,
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				Repo:  defRepoCfg,
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -320,15 +358,15 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath: "./data/env_file.json",
 			},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger:  dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStorage: repoCfg.FileStorage{
-						Path: "./data/env_file.json",
-					},
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo: Repo{
+					FileStoragePath: "./data/env_file.json",
 				},
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -338,15 +376,15 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envFileStoragePath: "./data/env_file.json",
 			},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger:  dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStorage: repoCfg.FileStorage{
-						Path: "./data/env_file.json",
-					},
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo: Repo{
+					FileStoragePath: "./data/env_file.json",
 				},
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -356,15 +394,15 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler: dfltHandlerCfg,
-				Logger:  dfltLoggerCfg,
-				Repository: repoCfg.Config{
-					FileStorage: repoCfg.FileStorage{
-						Path: "./data/flags_file.json",
-					},
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo: Repo{
+					FileStoragePath: "./data/flags_file.json",
 				},
-				DB:         dfltDBCfg,
-				Middleware: dfltMWCfg,
+				DB:    defDBCfg,
+				Auth:  defAuthCfg,
+				Audit: defAuditCfg,
 			},
 		},
 		{
@@ -376,11 +414,13 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envDatabaseDSN: "postgres:envDSN",
 			},
 			want: &Config{
-				Handler:    dfltHandlerCfg,
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dbCfg.Config{DSN: "postgres:envDSN"},
-				Middleware: dfltMWCfg,
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo:    defRepoCfg,
+				DB:      DB{DSN: "postgres:envDSN"},
+				Auth:    defAuthCfg,
+				Audit:   defAuditCfg,
 			},
 		},
 		{
@@ -390,11 +430,13 @@ func (s *ConfigTestSuite) TestParseConfig() {
 				envDatabaseDSN: "postgres:envDSN",
 			},
 			want: &Config{
-				Handler:    dfltHandlerCfg,
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dbCfg.Config{DSN: "postgres:envDSN"},
-				Middleware: dfltMWCfg,
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo:    defRepoCfg,
+				DB:      DB{DSN: "postgres:envDSN"},
+				Auth:    defAuthCfg,
+				Audit:   defAuditCfg,
 			},
 		},
 		{
@@ -404,11 +446,13 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			},
 			envs: map[string]string{},
 			want: &Config{
-				Handler:    dfltHandlerCfg,
-				Logger:     dfltLoggerCfg,
-				Repository: dfltRepoCfg,
-				DB:         dbCfg.Config{DSN: "postgres:flagsDSN"},
-				Middleware: dfltMWCfg,
+				Server:  defServerCfg,
+				Handler: defHandlerCfg,
+				Logger:  defLoggerCfg,
+				Repo:    defRepoCfg,
+				DB:      DB{DSN: "postgres:flagsDSN"},
+				Auth:    defAuthCfg,
+				Audit:   defAuditCfg,
 			},
 		},
 	}
@@ -419,7 +463,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			testArgs := append([]string{"test"}, tt.flags...)
 			os.Args = testArgs
 
-			got, err := ParseConfig()
+			got, err := Load()
 
 			s.Require().NoError(err)
 			s.Assert().Equal(tt.want, got)

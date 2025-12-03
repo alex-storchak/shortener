@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/alex-storchak/shortener/internal/file"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,7 +68,7 @@ func TestFileURLStorage(t *testing.T) {
 			fillBadStorageFile(t, badTestDBFile)
 
 			lgr := zap.NewNop()
-			fm := NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
+			fm := file.NewManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
 			frp := URLFileRecordParser{}
 			fs := NewFileScanner(lgr, frp)
 			storage, err := NewFileURLStorage(lgr, fm, fs)
@@ -85,7 +86,7 @@ func TestFileURLStorage(t *testing.T) {
 
 			assertStorageHasURL(t, tt, storage)
 
-			fm = NewFileManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
+			fm = file.NewManager(tt.fileStoragePath, tt.dfltStoragePath, lgr)
 			newStorage, err := NewFileURLStorage(lgr, fm, fs)
 			require.NoError(t, err)
 			assertStorageHasURL(t, tt, newStorage)

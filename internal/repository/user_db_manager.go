@@ -35,7 +35,7 @@ func (m *PgUserDBManager) HasByUUID(ctx context.Context, uuid string) (bool, err
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	} else if err != nil {
-		return false, fmt.Errorf("failed to scan user query result row: %w", err)
+		return false, fmt.Errorf("scan user query result row: %w", err)
 	}
 	return true, nil
 }
@@ -44,7 +44,7 @@ func (m *PgUserDBManager) Persist(ctx context.Context, user *model.User) error {
 	q := "INSERT INTO auth_user (user_uuid) VALUES ($1)"
 	_, err := m.db.ExecContext(ctx, q, user.UUID)
 	if err != nil {
-		return fmt.Errorf("failed to persist user (%s) to db: %w", user.UUID, err)
+		return fmt.Errorf("persist user (%s) to db: %w", user.UUID, err)
 	}
 	return nil
 }

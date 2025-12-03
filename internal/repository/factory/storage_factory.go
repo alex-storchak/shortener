@@ -5,10 +5,9 @@ import (
 	"strings"
 
 	"github.com/alex-storchak/shortener/internal/config"
-	pkgDB "github.com/alex-storchak/shortener/internal/db"
-	dbCfg "github.com/alex-storchak/shortener/internal/db/config"
+	"github.com/alex-storchak/shortener/internal/db"
+	"github.com/alex-storchak/shortener/internal/file"
 	"github.com/alex-storchak/shortener/internal/repository"
-	repoCfg "github.com/alex-storchak/shortener/internal/repository/config"
 	"go.uber.org/zap"
 )
 
@@ -26,12 +25,12 @@ func NewStorageFactory(cfg *config.Config, zl *zap.Logger) (StorageFactory, erro
 	case strings.TrimSpace(cfg.DB.DSN) != "":
 		sf, err = initDBStorageFactory(cfg, zl)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize db storage factory: %w", err)
+			return nil, fmt.Errorf("initialize db storage factory: %w", err)
 		}
-	case strings.TrimSpace(cfg.Repository.FileStorage.Path) != "":
+	case strings.TrimSpace(cfg.Repo.FileStoragePath) != "":
 		sf, err = initFileStorageFactory(cfg, zl)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize file storage factory: %w", err)
+			return nil, fmt.Errorf("initialize file storage factory: %w", err)
 		}
 	default:
 		sf = initMemoryStorageFactory(cfg, zl)
@@ -40,17 +39,17 @@ func NewStorageFactory(cfg *config.Config, zl *zap.Logger) (StorageFactory, erro
 }
 
 func initDBStorageFactory(cfg *config.Config, zl *zap.Logger) (*DBStorageFactory, error) {
-	db, err := pkgDB.NewDB(&cfg.DB, dbCfg.MigrationsPath, zl)
+	d, err := db.NewDB(&cfg.DB, config.MigrationsPath, zl)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize db: %w", err)
+		return nil, fmt.Errorf("initialize DB: %w", err)
 	}
-	sf := NewDBStorageFactory(cfg, db, zl)
+	sf := NewDBStorageFactory(cfg, d, zl)
 	zl.Info("db storage factory initialized")
 	return sf, nil
 }
 
 func initFileStorageFactory(cfg *config.Config, zl *zap.Logger) (*FileStorageFactory, error) {
-	fm := repository.NewFileManager(cfg.Repository.FileStorage.Path, repoCfg.DefaultFileStoragePath, zl)
+	fm := file.NewManager(cfg.Repo.FileStoragePath, config.DefFileStoragePath, zl)
 	frp := repository.URLFileRecordParser{}
 	fs := repository.NewFileScanner(zl, frp)
 	sf := NewFileStorageFactory(cfg, fm, fs, zl)

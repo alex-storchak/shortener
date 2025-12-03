@@ -1,0 +1,21 @@
+package filepath
+
+import (
+	"fmt"
+	"path/filepath"
+	"runtime"
+)
+
+func GetAbsPath(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("get caller info")
+	}
+	baseDir := filepath.Dir(filename)
+	absolutePath := filepath.Join(baseDir, path)
+	return absolutePath, nil
+}

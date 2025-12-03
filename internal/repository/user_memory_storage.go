@@ -43,7 +43,7 @@ func (s *MemoryUserStorage) Set(user *model.User) error {
 
 	has, err := s.hasByUUIDUnsafe(user.UUID)
 	if err != nil {
-		return fmt.Errorf("failed to check if user exists before setting: %w", err)
+		return fmt.Errorf("check if user exists before setting: %w", err)
 	}
 	if has {
 		return fmt.Errorf("user with uuid %s already exists", user.UUID)

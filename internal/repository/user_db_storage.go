@@ -33,14 +33,14 @@ func (s *DBUserStorage) Close() error {
 func (s *DBUserStorage) HasByUUID(uuid string) (bool, error) {
 	has, err := s.dbMgr.HasByUUID(context.Background(), uuid)
 	if err != nil {
-		return false, fmt.Errorf("failed to check if user exists: %w", err)
+		return false, fmt.Errorf("check if user exists: %w", err)
 	}
 	return has, nil
 }
 
 func (s *DBUserStorage) Set(user *model.User) error {
 	if err := s.dbMgr.Persist(context.Background(), user); err != nil {
-		return fmt.Errorf("failed to persist user: %w", err)
+		return fmt.Errorf("persist user: %w", err)
 	}
 	return nil
 }

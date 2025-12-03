@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	mwCfg "github.com/alex-storchak/shortener/internal/middleware/config"
+	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/repository"
 	"github.com/golang-jwt/jwt/v4"
@@ -24,12 +24,12 @@ type AuthService struct {
 	ttl    time.Duration
 }
 
-func NewAuthService(logger *zap.Logger, us repository.UserStorage, cfg *mwCfg.Config) *AuthService {
+func NewAuthService(logger *zap.Logger, us repository.UserStorage, cfg *config.Auth) *AuthService {
 	return &AuthService{
 		logger: logger,
 		us:     us,
 		secret: cfg.SecretKey,
-		ttl:    cfg.AuthTokenMaxAge,
+		ttl:    cfg.TokenMaxAge,
 	}
 }
 
@@ -42,7 +42,7 @@ func (a *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 		return []byte(a.secret), nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse auth token: %w", err)
+		return nil, fmt.Errorf("parse auth token: %w", err)
 	}
 
 	if !token.Valid {
@@ -58,7 +58,7 @@ func (a *AuthService) ValidateUserUUID(uuid string) (bool, error) {
 	}
 	has, err := a.us.HasByUUID(uuid)
 	if err != nil {
-		return false, fmt.Errorf("failed to check if user exists: %w", err)
+		return false, fmt.Errorf("check if user exists: %w", err)
 	}
 	return has, nil
 }
@@ -73,7 +73,7 @@ func (a *AuthService) CreateToken(user *model.User) (string, error) {
 
 	tokenString, err := token.SignedString([]byte(a.secret))
 	if err != nil {
-		return "", fmt.Errorf("failed to sign token: %w", err)
+		return "", fmt.Errorf("sign token: %w", err)
 	}
 
 	return tokenString, nil
