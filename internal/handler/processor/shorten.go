@@ -11,12 +11,22 @@ import (
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
+// Shorten provides URL shortening functionality for plain text requests.
+// It handles the business logic for the main '/' endpoint with text/plain content.
 type Shorten struct {
 	shortener service.URLShortener
 	logger    *zap.Logger
 	ub        ShortURLBuilder
 }
 
+// NewShorten creates a new Shorten processor instance.
+//
+// Parameters:
+//   - s: URL shortener service for core shortening operations
+//   - l: Structured logger for logging operations
+//   - ub: URL builder for constructing complete short URLs
+//
+// Returns: configured Shorten processor
 func NewShorten(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *Shorten {
 	return &Shorten{
 		shortener: s,
@@ -25,6 +35,21 @@ func NewShorten(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *Shor
 	}
 }
 
+// Process handles the URL shortening request for plain text endpoint.
+// It reads the URL from the request body and returns the shortened version.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - body: request body bytes containing the original URL
+//
+// Returns:
+//   - string: generated short URL
+//   - string: user UUID for audit purposes
+//   - error: nil on success, or service error if operation fails
+//
+// Behavior:
+//   - Returns existing short URL with ErrURLAlreadyExists if URL already exists
+//   - Creates new short URL for new URLs
 func (s *Shorten) Process(ctx context.Context, body []byte) (string, string, error) {
 	origURL := string(body)
 	userUUID, err := auth.GetCtxUserUUID(ctx)

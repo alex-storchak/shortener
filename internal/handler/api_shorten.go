@@ -13,11 +13,22 @@ import (
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
+// APIShortenProcessor defines the interface for processing API shorten requests.
 type APIShortenProcessor interface {
 	Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, string, error)
 }
 
-func handleAPIShorten(p APIShortenProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
+// HandleAPIShorten creates an HTTP handler for the API URL shortening endpoint.
+// It validates content type, decodes JSON request, processes the shortening operation,
+// and publishes audit events for successful shortenings.
+//
+// Returns:
+// - 400 Bad Request for invalid content type or malformed JSON
+// - 400 Bad Request for empty input URL
+// - 409 Conflict when URL already exists (returns existing short URL)
+// - 201 Created for successful shortening
+// - 500 Internal Server Error for processing failures
+func HandleAPIShorten(p APIShortenProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ct := r.Header.Get("Content-Type")
 		if err := validateContentType(ct, "application/json"); err != nil {

@@ -11,15 +11,28 @@ import (
 	"github.com/alex-storchak/shortener/internal/model"
 )
 
+// Common database errors
 var (
+	// ErrDataNotFoundInDB is returned when no data is found for a query in the database.
 	ErrDataNotFoundInDB = errors.New("data not found in db")
 )
 
+// DBURLStorage provides a PostgreSQL implementation of URLStorage.
+// It stores URL mappings in a relational database with proper transaction support,
+// concurrent access handling, and persistence between restarts.
 type DBURLStorage struct {
 	logger *zap.Logger
 	db     *sql.DB
 }
 
+// NewDBURLStorage creates a new database URL storage instance.
+//
+// Parameters:
+//   - logger: structured logger for logging operations
+//   - db: database connection
+//
+// Returns:
+//   - *DBURLStorage: configured database URL storage
 func NewDBURLStorage(logger *zap.Logger, db *sql.DB) *DBURLStorage {
 	return &DBURLStorage{
 		logger: logger,
@@ -27,10 +40,21 @@ func NewDBURLStorage(logger *zap.Logger, db *sql.DB) *DBURLStorage {
 	}
 }
 
+// Close closes the database connection.
+//
+// Returns:
+//   - error: nil on success, or error if connection closure fails
 func (s *DBURLStorage) Close() error {
 	return s.db.Close()
 }
 
+// Ping checks if the database connection is alive and responsive.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//
+// Returns:
+//   - error: nil if database is accessible, or error if connection fails
 func (s *DBURLStorage) Ping(ctx context.Context) error {
 	if err := s.db.PingContext(ctx); err != nil {
 		return fmt.Errorf("ping db: %w", err)
@@ -38,6 +62,7 @@ func (s *DBURLStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
+// getByOriginalURL retrieves a URL record by original URL from the database.
 func (s *DBURLStorage) getByOriginalURL(ctx context.Context, origURL string) (*model.URLStorageRecord, error) {
 	q := `
 		SELECT us.original_url, us.short_id, au.user_uuid, us.is_deleted 
@@ -49,6 +74,7 @@ func (s *DBURLStorage) getByOriginalURL(ctx context.Context, origURL string) (*m
 	return s.getByQuery(ctx, q, origURL)
 }
 
+// getByShortID retrieves a URL record by short ID from the database.
 func (s *DBURLStorage) getByShortID(ctx context.Context, shortID string) (*model.URLStorageRecord, error) {
 	q := `
 		SELECT us.original_url, us.short_id, au.user_uuid, us.is_deleted 
@@ -59,6 +85,7 @@ func (s *DBURLStorage) getByShortID(ctx context.Context, shortID string) (*model
 	return s.getByQuery(ctx, q, shortID)
 }
 
+// getByQuery executes a database get URL query and scans the result into a URLStorageRecord.
 func (s *DBURLStorage) getByQuery(ctx context.Context, q string, args ...any) (*model.URLStorageRecord, error) {
 	row := s.db.QueryRowContext(ctx, q, args...)
 
@@ -72,6 +99,16 @@ func (s *DBURLStorage) getByQuery(ctx context.Context, q string, args ...any) (*
 	return &r, nil
 }
 
+// Get retrieves a URL record from the database based on search type.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - url: URL to search for
+//   - searchByType: type of search (ShortURLType or OrigURLType)
+//
+// Returns:
+//   - *model.URLStorageRecord: found record or nil if not found
+//   - error: nil on success, or error if query fails or URL is deleted
 func (s *DBURLStorage) Get(ctx context.Context, url, searchByType string) (*model.URLStorageRecord, error) {
 	var (
 		r   *model.URLStorageRecord
@@ -93,6 +130,16 @@ func (s *DBURLStorage) Get(ctx context.Context, url, searchByType string) (*mode
 	return r, nil
 }
 
+// Set stores a single URL mapping in the database.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - origURL: original URL to be shortened
+//   - shortID: generated short identifier
+//   - userUUID: UUID of the user who created the mapping
+//
+// Returns:
+//   - error: nil on success, or error if insertion fails
 func (s *DBURLStorage) Set(ctx context.Context, origURL, shortID, userUUID string) error {
 	q := `
 		INSERT INTO url_storage (original_url, short_id, user_id) 
@@ -107,6 +154,15 @@ func (s *DBURLStorage) Set(ctx context.Context, origURL, shortID, userUUID strin
 	return nil
 }
 
+// BatchSet stores multiple URL mappings in the database within a single transaction.
+// This ensures atomicity - either all records are inserted or none are.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - records: slice of URL storage records to persist
+//
+// Returns:
+//   - error: nil on success, or error if transaction fails
 func (s *DBURLStorage) BatchSet(ctx context.Context, records []model.URLStorageRecord) error {
 	insertSQL := `
 		INSERT INTO url_storage (original_url, short_id, user_id) 
@@ -150,6 +206,15 @@ func (s *DBURLStorage) BatchSet(ctx context.Context, records []model.URLStorageR
 	return nil
 }
 
+// GetByUserUUID retrieves all non-deleted URL records for a specific user.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - userUUID: UUID of the user to retrieve URLs for
+//
+// Returns:
+//   - []*model.URLStorageRecord: slice of URL records belonging to the user
+//   - error: nil on success, or error if a query fails
 func (s *DBURLStorage) GetByUserUUID(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error) {
 	urls := make([]*model.URLStorageRecord, 0)
 
@@ -183,6 +248,15 @@ func (s *DBURLStorage) GetByUserUUID(ctx context.Context, userUUID string) ([]*m
 	return urls, nil
 }
 
+// DeleteBatch marks multiple URLs as deleted in the database within a transaction.
+// Only URLs belonging to the specified users are deleted.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - urls: batch of URLs to delete with user identifiers
+//
+// Returns:
+//   - error: nil on success, or error if transaction fails
 func (s *DBURLStorage) DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error {
 	if len(urls) == 0 {
 		return nil
@@ -222,6 +296,8 @@ func (s *DBURLStorage) DeleteBatch(ctx context.Context, urls model.URLDeleteBatc
 	return nil
 }
 
+// segregateBatch separates URL delete batch into separate slices for short IDs and user UUIDs.
+// This is used to prepare parameters for the batch delete SQL query.
 func (s *DBURLStorage) segregateBatch(urls model.URLDeleteBatch) (shortIds, userUUIDs []string) {
 	shortIds = make([]string, len(urls))
 	userUUIDs = make([]string, len(urls))

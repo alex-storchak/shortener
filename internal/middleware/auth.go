@@ -12,10 +12,28 @@ import (
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
+// UserResolver defines the interface for resolving users from authentication tokens.
+// Implementations should handle token validation, user creation, and token refresh.
 type UserResolver interface {
 	ResolveUser(tokenFromCookie string) (user *model.User, newCookie *service.AuthCookieOpts, err error)
 }
 
+// NewAuth creates authentication middleware that resolves users from JWT tokens in cookies.
+// The middleware handles three scenarios:
+//   - No token: creates new user and sets auth cookie
+//   - Invalid token: creates new user and replaces invalid token
+//   - Valid token: attaches user to request context, refreshes token if near expiration
+//
+// Parameters:
+//   - logger: structured logger for logging operations
+//   - srv: user resolver service for token validation and user creation
+//   - cfg: authentication configuration including cookie name and settings
+//
+// Returns:
+//   - func(http.Handler) http.Handler: authentication middleware function
+//
+// The middleware ensures that every request has a valid user in context.
+// New cookies are set with HttpOnly flag for security.
 func NewAuth(logger *zap.Logger, srv UserResolver, cfg config.Auth) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
