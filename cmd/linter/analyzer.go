@@ -76,7 +76,6 @@ func isAllowed(pos token.Pos, f *ast.File, pass *analysis.Pass) bool {
 	return true
 }
 
-// isMainPackage определяет, является ли текущий пакет пакетом main.
 func isMainPackage(pass *analysis.Pass) bool {
 	if pass.Pkg != nil && pass.Pkg.Name() == "main" {
 		return true
