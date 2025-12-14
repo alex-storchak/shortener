@@ -9,6 +9,12 @@
 BUILD_VCS ?= true
 GODOC_PORT ?= 8081
 
+COMMIT := $(shell git rev-parse HEAD)
+DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+VERSION := $(shell git describe --tags --exact-match 2>/dev/null || echo dev)
+
+ldflags = -X main.buildVersion=$(VERSION) -X main.buildDate=$(DATE) -X main.buildCommit=$(COMMIT)
+
 format:
 	find . -type f -name '*.go' \
 		-not -name '*_easyjson.go' \
@@ -20,7 +26,7 @@ doc:
 	godoc -http=":$(GODOC_PORT)"
 
 build: generate generate-mocks
-	cd cmd/shortener && go build -buildvcs=$(BUILD_VCS) -o shortener
+	cd cmd/shortener && go build -ldflags "$(ldflags)" -buildvcs=$(BUILD_VCS) -o shortener
 
 generate-mocks:
 	mockery

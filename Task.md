@@ -492,3 +492,17 @@ func (rs *ResetableStruct) Reset() {
 - Функцию-конструктор `New`, которая создаёт и возвращает указатель на структуру `Pool`;
 - Метод `Get()` структуры `Pool`, который возвращает объект из пула;
 - Метод `Put()` структуры `Pool`, который помещает объект в пул.
+
+# Инкремент 23
+
+Добавьте в пакет `cmd/shortener` глобальные переменные:
+- `var buildVersion string`,
+- `var buildDate string`,
+- `var buildCommit string`.
+- 
+При старте приложения выводите в stdout сообщение в следующем формате:
+```text
+Build version: <buildVersion> (или "N/A" при отсутствии значения)
+Build date: <buildDate> (или "N/A" при отсутствии значения)
+Build commit: <buildCommit> (или "N/A" при отсутствии значения)
+```

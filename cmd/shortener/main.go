@@ -21,7 +21,13 @@ import (
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 func main() {
+	printBuildInfo()
+
 	ctx := context.Background()
 	if err := run(ctx); err != nil {
 		log.Fatalf("failed to run application: %v", err)
@@ -137,4 +143,16 @@ func initRouter(
 		apiUserURLsProc,
 		ep,
 	), nil
+}
+
+func printBuildInfo() {
+	valueOrNA := func(s string) string {
+		if s == "" {
+			return "N/A"
+		}
+		return s
+	}
+	fmt.Printf("Build version: %s\n", valueOrNA(buildVersion))
+	fmt.Printf("Build date: %s\n", valueOrNA(buildDate))
+	fmt.Printf("Build commit: %s\n", valueOrNA(buildCommit))
 }
