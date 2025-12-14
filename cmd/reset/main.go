@@ -1,0 +1,440 @@
+package main
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"go/ast"
+	"go/format"
+	"go/token"
+	"go/types"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"golang.org/x/tools/go/packages"
+)
+
+const (
+	marker     = "generate:reset"
+	outputFile = "reset.gen.go"
+)
+
+type annotatedStruct struct {
+	Name     string
+	Receiver string
+	Struct   *ast.StructType
+	TypeSpec *ast.TypeSpec
+	File     *ast.File
+}
+
+type genStruct struct {
+	Name     string
+	Receiver string
+	Body     string
+}
+
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("failed to run generate reset methods: %v\n", err)
+	}
+}
+
+func run() error {
+	pkgs, err := loadPackages("./...")
+	if err != nil {
+		return fmt.Errorf("load packages: %w", err)
+	}
+
+	byDir, err := organizePackagesByDir(pkgs)
+	if err != nil {
+		return fmt.Errorf("organize packages by dir: %w", err)
+	}
+
+	return processPackages(byDir)
+}
+
+func loadPackages(patterns ...string) ([]*packages.Package, error) {
+	cfg := createConfig()
+	pkgs, err := packages.Load(cfg, patterns...)
+	if err != nil {
+		return nil, fmt.Errorf("load packages: %w", err)
+	}
+	if packages.PrintErrors(pkgs) > 0 {
+		return nil, errors.New("packages contain errors")
+	}
+	return pkgs, nil
+}
+
+func createConfig() *packages.Config {
+	fset := token.NewFileSet()
+	return &packages.Config{
+		Fset: fset,
+		Mode: packages.NeedName |
+			packages.NeedFiles |
+			packages.NeedCompiledGoFiles |
+			packages.NeedSyntax |
+			packages.NeedTypes |
+			packages.NeedTypesInfo |
+			packages.NeedDeps |
+			packages.NeedModule,
+		Tests: false,
+	}
+}
+
+type pkgWork struct {
+	pkg *packages.Package
+	dir string
+}
+
+func organizePackagesByDir(pkgs []*packages.Package) (map[string]*pkgWork, error) {
+	byDir := make(map[string]*pkgWork)
+
+	for _, pkg := range pkgs {
+		if err := validatePackage(pkg); err != nil {
+			return nil, fmt.Errorf("validate package: %w", err)
+		}
+
+		dir := getPackageDir(pkg)
+		if dir == "" {
+			continue
+		}
+
+		if byDir[dir] == nil {
+			byDir[dir] = &pkgWork{pkg: pkg, dir: dir}
+		}
+	}
+
+	return byDir, nil
+}
+
+func validatePackage(pkg *packages.Package) error {
+	if pkg == nil {
+		return fmt.Errorf("nil package encountered")
+	}
+
+	if len(pkg.CompiledGoFiles) == 0 {
+		return nil
+	}
+
+	if len(pkg.Errors) > 0 {
+		return fmt.Errorf("package %q has load/type errors", pkg.PkgPath)
+	}
+
+	if pkg.Types == nil || pkg.TypesInfo == nil {
+		return fmt.Errorf("package %q has no types info", pkg.PkgPath)
+	}
+
+	return nil
+}
+
+func getPackageDir(pkg *packages.Package) string {
+	if pkg == nil || len(pkg.CompiledGoFiles) == 0 {
+		return ""
+	}
+	return filepath.Dir(pkg.CompiledGoFiles[0])
+}
+
+func processPackages(byDir map[string]*pkgWork) error {
+	for _, w := range byDir {
+		if err := processPackage(w); err != nil {
+			return fmt.Errorf("process package: %w", err)
+		}
+	}
+	return nil
+}
+
+func processPackage(w *pkgWork) error {
+	pkg := w.pkg
+
+	structs := findAnnotatedStructs(pkg.Syntax)
+	if len(structs) == 0 {
+		return nil
+	}
+
+	filteredStructs := filterGenericStructs(structs)
+	if len(filteredStructs) == 0 {
+		return nil
+	}
+
+	gens, err := generateStructs(pkg, filteredStructs)
+	if err != nil {
+		return fmt.Errorf("generate structs: %w", err)
+	}
+
+	outPath := filepath.Join(w.dir, outputFile)
+	return writeGeneratedFile(pkg.Name, gens, outPath)
+}
+
+func filterGenericStructs(structs []annotatedStruct) []annotatedStruct {
+	var filtered []annotatedStruct
+	for _, s := range structs {
+		if !isGenericStruct(s) {
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
+}
+
+func isGenericStruct(s annotatedStruct) bool {
+	return s.TypeSpec != nil &&
+		s.TypeSpec.TypeParams != nil &&
+		len(s.TypeSpec.TypeParams.List) > 0
+}
+
+func generateStructs(pkg *packages.Package, structs []annotatedStruct) ([]genStruct, error) {
+	var gens []genStruct
+
+	for _, s := range structs {
+		bodyLines, err := genStructBody(pkg, s)
+		if err != nil {
+			return nil, fmt.Errorf("%s: generate for %s: %w",
+				pkg.PkgPath, s.Name, err)
+		}
+
+		gens = append(gens, genStruct{
+			Name:     s.Name,
+			Receiver: s.Receiver,
+			Body:     strings.Join(bodyLines, "\n"),
+		})
+	}
+
+	return gens, nil
+}
+
+func writeGeneratedFile(pkgName string, gens []genStruct, outPath string) error {
+	src, err := renderFile(pkgName, gens)
+	if err != nil {
+		return fmt.Errorf("render to file %s: %w", outPath, err)
+	}
+
+	formatted, err := formatSource(src, outPath)
+	if err != nil {
+		return fmt.Errorf("format source %s: %w", outPath, err)
+	}
+
+	return writeFile(outPath, formatted)
+}
+
+func formatSource(src []byte, outPath string) ([]byte, error) {
+	formatted, err := format.Source(src)
+	if err != nil {
+		return nil, fmt.Errorf("format %s: %w\n----\n%s", outPath, err, string(src))
+	}
+	return formatted, nil
+}
+
+func writeFile(outPath string, content []byte) error {
+	if err := os.WriteFile(outPath, content, 0644); err != nil {
+		return fmt.Errorf("write %s: %w", outPath, err)
+	}
+	return nil
+}
+
+func renderFile(pkgName string, structs []genStruct) ([]byte, error) {
+	var b bytes.Buffer
+
+	b.WriteString("// Code generated by cmd/reset; DO NOT EDIT.\n")
+	b.WriteString("package " + pkgName + "\n\n")
+
+	for _, st := range structs {
+		if _, err := fmt.Fprintf(&b, "func (%s *%s) Reset() {\n", st.Receiver, st.Name); err != nil {
+			return nil, fmt.Errorf("fprintf func spec: %w", err)
+		}
+		if _, err := fmt.Fprintf(&b, "    if %s == nil { return }\n", st.Receiver); err != nil {
+			return nil, fmt.Errorf("fprintf if receiver is nil: %w", err)
+		}
+		if st.Body != "" {
+			b.WriteString(st.Body)
+			if !strings.HasSuffix(st.Body, "\n") {
+				b.WriteString("\n")
+			}
+		}
+		b.WriteString("}\n\n")
+	}
+
+	return b.Bytes(), nil
+}
+
+func findAnnotatedStructs(files []*ast.File) []annotatedStruct {
+	var res []annotatedStruct
+	for _, f := range files {
+		for _, d := range f.Decls {
+			gd, ok := d.(*ast.GenDecl)
+			if !ok || gd.Tok != token.TYPE {
+				continue
+			}
+			for _, sp := range gd.Specs {
+				ts, ok := sp.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				st, ok := ts.Type.(*ast.StructType)
+				if !ok {
+					continue
+				}
+				if !hasMarker(gd.Doc, ts.Doc) {
+					continue
+				}
+				n := ts.Name.Name
+				r := defaultReceiver(n)
+				res = append(res, annotatedStruct{
+					Name:     n,
+					Receiver: r,
+					Struct:   st,
+					TypeSpec: ts,
+					File:     f,
+				})
+			}
+		}
+	}
+	return res
+}
+
+func hasMarker(groups ...*ast.CommentGroup) bool {
+	for _, g := range groups {
+		if g == nil {
+			continue
+		}
+		for _, c := range g.List {
+			if strings.Contains(c.Text, marker) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func defaultReceiver(typeName string) string {
+	if typeName == "" {
+		return "s"
+	}
+	r := strings.ToLower(typeName[:1])
+	if r == "" {
+		return "s"
+	}
+	return r
+}
+
+func genStructBody(pkg *packages.Package, s annotatedStruct) ([]string, error) {
+	var out []string
+	if s.Struct.Fields == nil {
+		return out, nil
+	}
+
+	for _, fld := range s.Struct.Fields.List {
+		if len(fld.Names) == 0 {
+			continue
+		}
+
+		t := pkg.TypesInfo.TypeOf(fld.Type)
+		if t == nil {
+			return nil, fmt.Errorf("no type info for field type in %s", s.Name)
+		}
+
+		for _, nm := range fld.Names {
+			lines := genResetForField(s.Receiver, nm.Name, t)
+			out = append(out, lines...)
+		}
+	}
+	return out, nil
+}
+
+func genResetForField(recv, field string, t types.Type) []string {
+	access := recv + "." + field
+	return genResetForExpr(access, t)
+}
+
+func genResetForExpr(expr string, t types.Type) []string {
+	// primitives
+	if z, ok := zeroForBasic(t); ok {
+		return []string{expr + " = " + z}
+	}
+
+	under := t.Underlying()
+
+	// slices
+	if _, ok := under.(*types.Slice); ok {
+		return []string{
+			"if " + expr + " != nil {",
+			"    " + expr + " = " + expr + "[:0]",
+			"}",
+		}
+	}
+
+	// maps
+	if _, ok := under.(*types.Map); ok {
+		return []string{"clear(" + expr + ")"}
+	}
+
+	// pointers
+	if p, ok := under.(*types.Pointer); ok {
+		elem := p.Elem()
+		elemUnder := elem.Underlying()
+
+		// pointer to struct
+		if _, ok := elemUnder.(*types.Struct); ok {
+			return []string{
+				"if " + expr + " != nil {",
+				"    if resetter, ok := any(" + expr + ").(interface{ Reset() }); ok {",
+				"        resetter.Reset()",
+				"    }",
+				"}",
+			}
+		}
+
+		// pointer to other type
+		inner := genResetForExpr("*"+expr, elem)
+		inner = compactNonEmpty(inner)
+		if len(inner) == 0 {
+			return nil
+		}
+		lines := []string{"if " + expr + " != nil {"}
+		lines = append(lines, inner...)
+		lines = append(lines, "}")
+		return lines
+	}
+
+	// interface
+	if _, ok := under.(*types.Interface); ok {
+		return []string{
+			"if resetter, ok := " + expr + ".(interface{ Reset() }); ok {",
+			"    resetter.Reset()",
+			"}",
+		}
+	}
+
+	return nil
+}
+
+func compactNonEmpty(lines []string) []string {
+	out := make([]string, 0, len(lines))
+	for _, l := range lines {
+		if strings.TrimSpace(l) == "" {
+			continue
+		}
+		out = append(out, l)
+	}
+	return out
+}
+
+func zeroForBasic(t types.Type) (string, bool) {
+	b, ok := t.Underlying().(*types.Basic)
+	if !ok {
+		return "", false
+	}
+	switch b.Kind() {
+	case types.Bool:
+		return "false", true
+	case types.String:
+		return `""`, true
+	case types.Int, types.Int8, types.Int16, types.Int32, types.Int64,
+		types.Uint, types.Uint8, types.Uint16, types.Uint32, types.Uint64, types.Uintptr,
+		types.Float32, types.Float64,
+		types.Complex64, types.Complex128:
+		return "0", true
+	default:
+		return "", false
+	}
+}
