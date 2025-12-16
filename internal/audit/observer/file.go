@@ -3,7 +3,6 @@ package observer
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 
 	"go.uber.org/zap"
@@ -18,7 +17,6 @@ type File struct {
 	fm     *file.Manager
 	mu     *sync.Mutex
 	logger *zap.Logger
-	f      *os.File
 }
 
 // NewFile creates a new File observer with the specified file manager.

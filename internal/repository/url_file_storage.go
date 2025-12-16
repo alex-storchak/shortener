@@ -27,12 +27,11 @@ type URLFileManager interface {
 // This implementation provides crash recovery by restoring from the storage file
 // and supports fallback to a default file if the primary file is unavailable.
 type FileURLStorage struct {
-	logger    *zap.Logger
-	fileMgr   URLFileManager
-	fileScnr  *URLFileScanner
-	records   []model.URLStorageRecord
-	mu        *sync.Mutex
-	closeOnce sync.Once
+	logger   *zap.Logger
+	fileMgr  URLFileManager
+	fileScnr *URLFileScanner
+	records  []model.URLStorageRecord
+	mu       *sync.Mutex
 }
 
 // NewFileURLStorage creates a new file-based URL storage instance.

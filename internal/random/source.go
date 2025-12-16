@@ -14,7 +14,7 @@ var rnd = func() *mathrand.Rand {
 	buf := make([]byte, 8)
 	_, err := io.ReadFull(rand.Reader, buf)
 	if err != nil {
-		panic(err)
+		panic(err) // ok to panic here because this is a helper package for benchmark tests
 	}
 	src := mathrand.NewSource(int64(binary.LittleEndian.Uint64(buf)))
 	return mathrand.New(src)
