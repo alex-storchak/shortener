@@ -3,9 +3,7 @@ package handler
 import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"go.uber.org/zap"
 
-	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/middleware"
 )
 
@@ -22,31 +20,13 @@ const ShortIDParam = "id"
 //
 // Parameters:
 //   - mux: Chi router instance to configure
-//   - l: Structured logger for logging operations
-//   - cfg: Application configuration
-//   - userResolver: Service for user authentication resolution
-//   - shorten: Processor for plain text URL shortening
-//   - expand: Processor for URL expansion
-//   - ping: Processor for health checks
-//   - apiShorten: Processor for JSON API shortening
-//   - apiShortenBatch: Processor for batch URL shortening
-//   - apiUserURLs: Processor for user URL management
-//   - eventPublisher: Publisher for audit events
+//   - h: HTTPDeps containing all dependencies required for HTTP server initialization
 func addRoutes(
 	mux *chi.Mux,
-	l *zap.Logger,
-	cfg *config.Config,
-	userResolver middleware.UserResolver,
-	shorten ShortenProcessor,
-	expand ExpandProcessor,
-	ping PingProcessor,
-	apiShorten APIShortenProcessor,
-	apiShortenBatch APIShortenBatchProcessor,
-	apiUserURLs APIUserURLsProcessor,
-	eventPublisher AuditEventPublisher,
+	h HTTPDeps,
 ) {
-	mux.Use(middleware.NewRequestLogger(l))
-	mux.Use(middleware.NewGzip(l))
+	mux.Use(middleware.NewRequestLogger(h.Logger))
+	mux.Use(middleware.NewGzip(h.Logger))
 	mux.Use(chimw.Recoverer)
 
 	// pprof endpoints
@@ -56,21 +36,21 @@ func addRoutes(
 
 	// app endpoints
 	mux.Route("/", func(mux chi.Router) {
-		mux.Use(middleware.NewAuth(l, userResolver, cfg.Auth))
+		mux.Use(middleware.NewAuth(h.Logger, h.UserResolver, h.Config.Auth))
 
-		mux.Post("/", HandleShorten(shorten, l, eventPublisher))
-		mux.Get("/{id:[a-zA-Z0-9_-]+}", HandleExpand(expand, l, eventPublisher))
-		mux.Get("/ping", HandlePing(ping, l))
+		mux.Post("/", HandleShorten(h.ShortenProc, h.Logger, h.EventPublisher))
+		mux.Get("/{id:[a-zA-Z0-9_-]+}", HandleExpand(h.ExpandProc, h.Logger, h.EventPublisher))
+		mux.Get("/ping", HandlePing(h.PingProc, h.Logger))
 
 		mux.Route("/api", func(mux chi.Router) {
 			mux.Route("/shorten", func(mux chi.Router) {
-				mux.Post("/", HandleAPIShorten(apiShorten, l, eventPublisher))
-				mux.Post("/batch", HandleAPIShortenBatch(apiShortenBatch, l))
+				mux.Post("/", HandleAPIShorten(h.APIShortenProc, h.Logger, h.EventPublisher))
+				mux.Post("/batch", HandleAPIShortenBatch(h.APIShortenBatchProc, h.Logger))
 			})
 
 			mux.Route("/user/urls", func(mux chi.Router) {
-				mux.Get("/", HandleGetUserURLs(apiUserURLs, l))
-				mux.Delete("/", HandleDeleteUserURLs(apiUserURLs, l))
+				mux.Get("/", HandleGetUserURLs(h.APIUserURLsProc, h.Logger))
+				mux.Delete("/", HandleDeleteUserURLs(h.APIUserURLsProc, h.Logger))
 			})
 		})
 	})

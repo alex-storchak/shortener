@@ -13,50 +13,32 @@ import (
 	"github.com/alex-storchak/shortener/internal/middleware"
 )
 
+// HTTPDeps contains dependencies required for HTTP server initialization.
+type HTTPDeps struct {
+	Logger              *zap.Logger              // Structured logger for logging operations
+	Config              *config.Config           // Application configuration containing server settings and auth configuration
+	UserResolver        middleware.UserResolver  // Service for resolving and validating user authentication
+	ShortenProc         ShortenProcessor         // Processor for plain text URL shortening requests
+	ExpandProc          ExpandProcessor          // Processor for expanding short URLs to original URLs
+	PingProc            PingProcessor            // Processor for health check requests
+	APIShortenProc      APIShortenProcessor      // Processor for JSON API URL shortening requests
+	APIShortenBatchProc APIShortenBatchProcessor // Processor for batch URL shortening operations
+	APIUserURLsProc     APIUserURLsProcessor     // Processor for user-specific URL management operations
+	EventPublisher      AuditEventPublisher      // Publisher for audit events tracking system actions
+}
+
 // NewRouter creates and configures the HTTP router with all application routes and middleware.
 // It sets up the complete routing structure including authentication, logging, compression,
 // and all URL shortening endpoints.
 //
 // Parameters:
-//   - l: Structured logger for logging operations
-//   - cfg: Application configuration containing server settings and auth configuration
-//   - userResolver: Service for resolving and validating user authentication
-//   - shortenProc: Processor for plain text URL shortening requests
-//   - shortURLProc: Processor for expanding short URLs to original URLs
-//   - pingProc: Processor for health check requests
-//   - apiShortenProc: Processor for JSON API URL shortening requests
-//   - apiShortenBatchProc: Processor for batch URL shortening operations
-//   - apiUserURLsProc: Processor for user-specific URL management operations
-//   - eventPublisher: Publisher for audit events tracking system actions
+//   - h: HTTPDeps containing all dependencies required for HTTP server initialization
 //
 // Returns:
 //   - http.Handler: Configured HTTP router with all middleware and routes
-func NewRouter(
-	l *zap.Logger,
-	cfg *config.Config,
-	userResolver middleware.UserResolver,
-	shortenProc ShortenProcessor,
-	shortURLProc ExpandProcessor,
-	pingProc PingProcessor,
-	apiShortenProc APIShortenProcessor,
-	apiShortenBatchProc APIShortenBatchProcessor,
-	apiUserURLsProc APIUserURLsProcessor,
-	eventPublisher AuditEventPublisher,
-) http.Handler {
+func NewRouter(h HTTPDeps) http.Handler {
 	mux := chi.NewRouter()
-	addRoutes(
-		mux,
-		l,
-		cfg,
-		userResolver,
-		shortenProc,
-		shortURLProc,
-		pingProc,
-		apiShortenProc,
-		apiShortenBatchProc,
-		apiUserURLsProc,
-		eventPublisher,
-	)
+	addRoutes(mux, h)
 	return mux
 }
 
