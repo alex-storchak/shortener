@@ -73,18 +73,20 @@ func createTestApp() http.Handler {
 	var observers []audit.Observer
 	auditPublisher := audit.NewEventManager(observers, cfg.Audit, zl)
 
-	return handler.NewRouter(
-		zl,
-		cfg,
-		authResolver,
-		shortenProc,
-		expandProc,
-		pingProc,
-		apiShortenProc,
-		apiShortenBatchProc,
-		apiUserURLsProc,
-		auditPublisher,
-	)
+	hDeps := handler.HTTPDeps{
+		Logger:              zl,
+		Config:              cfg,
+		UserResolver:        authResolver,
+		ShortenProc:         shortenProc,
+		ExpandProc:          expandProc,
+		PingProc:            pingProc,
+		APIShortenProc:      apiShortenProc,
+		APIShortenBatchProc: apiShortenBatchProc,
+		APIUserURLsProc:     apiUserURLsProc,
+		EventPublisher:      auditPublisher,
+	}
+
+	return handler.NewRouter(hDeps)
 }
 
 func BenchmarkShorten(b *testing.B) {
