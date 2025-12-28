@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -12,6 +12,9 @@ import (
 	"github.com/alex-storchak/shortener/internal/config"
 	"github.com/alex-storchak/shortener/internal/middleware"
 )
+
+var ErrEmptySSLCertPath = errors.New("empty SSL certificate path")
+var ErrEmptySSLKeyPath = errors.New("empty SSL key path")
 
 // HTTPDeps contains dependencies required for HTTP server initialization.
 type HTTPDeps struct {
@@ -52,6 +55,9 @@ func NewRouter(h HTTPDeps) http.Handler {
 //   - logger: Structured logger for logging operations
 //   - router: HTTP handler with all configured routes and middleware
 //
+// Returns:
+//   - error: nil on success, or error server fails to start/stop
+//
 // Behavior:
 //   - Starts the HTTP server in a goroutine
 //   - Listens for context cancellation to initiate graceful shutdown
@@ -62,30 +68,64 @@ func Serve(
 	cfg config.Server,
 	logger *zap.Logger,
 	router http.Handler,
-) {
+) error {
 	httpServer := &http.Server{
 		Addr:    cfg.ServerAddr,
 		Handler: router,
 	}
+
+	errCh := make(chan error, 1)
 	go func() {
 		logger.Info("starting server", zap.String("server address", cfg.ServerAddr))
-		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("error starting server", zap.Error(err))
+		var err error
+		if cfg.EnableHTTPS {
+			err = startHTTPS(cfg, httpServer)
+		} else {
+			err = startHTTP(httpServer)
 		}
+		errCh <- err
 	}()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
+	select {
+	case <-ctx.Done():
 		shutdownCtx := context.Background()
 		shutdownCtx, cancel := context.WithTimeout(shutdownCtx, cfg.ShutdownWaitSecsDuration)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			logger.Error("error shutting down http server", zap.Error(err))
+			return fmt.Errorf("shutdown server: %w", err)
+		}
+
+		if err := <-errCh; err != nil {
+			return fmt.Errorf("wait server shutdown: %w", err)
 		}
 		logger.Info("http server closed")
-	}()
-	wg.Wait()
+		return nil
+	case err := <-errCh:
+		if err != nil {
+			return fmt.Errorf("serve: %w", err)
+		}
+		return nil
+	}
+}
+
+func startHTTP(s *http.Server) error {
+	err := s.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("starting server: %w", err)
+	}
+	return nil
+}
+
+func startHTTPS(cfg config.Server, s *http.Server) error {
+	if cfg.SSLCertPath == "" {
+		return ErrEmptySSLCertPath
+	}
+	if cfg.SSLKeyPath == "" {
+		return ErrEmptySSLKeyPath
+	}
+	err := s.ListenAndServeTLS(cfg.SSLCertPath, cfg.SSLKeyPath)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("starting tls server: %w", err)
+	}
+	return nil
 }

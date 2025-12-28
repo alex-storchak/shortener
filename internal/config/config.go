@@ -8,6 +8,12 @@ import (
 type Server struct {
 	// Address to bind the HTTP server (e.g., "localhost:8080")
 	ServerAddr string `env:"SERVER_ADDRESS"`
+	// HTTPS server mode flag
+	EnableHTTPS bool `env:"ENABLE_HTTPS"`
+	// Path to SSL certificate
+	SSLCertPath string `env:"SSL_CERT_PATH"`
+	// Path to SSL key
+	SSLKeyPath string `env:"SSL_KEY_PATH"`
 	// Graceful shutdown timeout duration
 	ShutdownWaitSecsDuration time.Duration `env:"SHUTDOWN_WAIT_SECS_DURATION"`
 }

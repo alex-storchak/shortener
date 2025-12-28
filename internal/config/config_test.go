@@ -82,6 +82,9 @@ func (s *ConfigTestSuite) TearDownSubTest() {
 func (s *ConfigTestSuite) TestParseConfig() {
 	defServerCfg := Server{
 		ServerAddr:               DefServerAddr,
+		EnableHTTPS:              DefEnableHTTPS,
+		SSLCertPath:              DefSSLCertPath,
+		SSLKeyPath:               DefSSLKeyPath,
 		ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 	}
 	defHandlerCfg := Handler{
@@ -143,6 +146,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "example.com:1111",
+					EnableHTTPS:              DefEnableHTTPS,
+					SSLCertPath:              DefSSLCertPath,
+					SSLKeyPath:               DefSSLKeyPath,
 					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
 				Handler: Handler{
@@ -169,6 +175,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "example.com:1111",
+					EnableHTTPS:              DefEnableHTTPS,
+					SSLCertPath:              DefSSLCertPath,
+					SSLKeyPath:               DefSSLKeyPath,
 					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
 				Handler: defHandlerCfg,
@@ -208,6 +217,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					EnableHTTPS:              DefEnableHTTPS,
+					SSLCertPath:              DefSSLCertPath,
+					SSLKeyPath:               DefSSLKeyPath,
 					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
 				Handler: Handler{
@@ -237,6 +249,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					EnableHTTPS:              DefEnableHTTPS,
+					SSLCertPath:              DefSSLCertPath,
+					SSLKeyPath:               DefSSLKeyPath,
 					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
 				Handler: Handler{
@@ -262,6 +277,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					EnableHTTPS:              DefEnableHTTPS,
+					SSLCertPath:              DefSSLCertPath,
+					SSLKeyPath:               DefSSLKeyPath,
 					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
 				Handler: Handler{
@@ -285,6 +303,9 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					EnableHTTPS:              DefEnableHTTPS,
+					SSLCertPath:              DefSSLCertPath,
+					SSLKeyPath:               DefSSLKeyPath,
 					ShutdownWaitSecsDuration: DefShutdownWaitSecsDuration,
 				},
 				Handler: Handler{
