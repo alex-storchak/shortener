@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/alex-storchak/shortener/internal/app"
 )
@@ -17,7 +18,7 @@ var buildCommit string
 func main() {
 	printBuildInfo()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer cancel()
 
 	if err := app.Run(ctx, os.Args, os.LookupEnv); err != nil {
