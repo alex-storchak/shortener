@@ -497,7 +497,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			testArgs := append([]string{"test"}, tt.flags...)
 			os.Args = testArgs
 
-			got, err := Load()
+			got, err := Load(os.Args, os.LookupEnv)
 
 			s.Require().NoError(err)
 			s.Assert().Equal(tt.want, got)
