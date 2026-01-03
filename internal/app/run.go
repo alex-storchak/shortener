@@ -19,8 +19,12 @@ import (
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
-func Run(ctx context.Context) error {
-	cfg, err := config.Load()
+func Run(
+	ctx context.Context,
+	args []string,
+	lookupEnv func(string) (string, bool),
+) error {
+	cfg, err := config.Load(args[1:], lookupEnv)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
