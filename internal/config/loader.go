@@ -31,6 +31,9 @@ func Load() (*Config, error) {
 //   - cfg: Pointer to Config structure to populate with flag values
 func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.Server.ServerAddr, "a", DefServerAddr, "address of HTTP server")
+	flag.BoolVar(&cfg.Server.EnableHTTPS, "s", DefEnableHTTPS, "enable HTTPS in HTTP server")
+	flag.StringVar(&cfg.Server.SSLCertPath, "ssl-cert", DefSSLCertPath, "path to SSL certificate file")
+	flag.StringVar(&cfg.Server.SSLKeyPath, "ssl-key", DefSSLKeyPath, "path to SSL key file")
 	flag.DurationVar(&cfg.Server.ShutdownWaitSecsDuration, "shutdown-wait-secs-duration", DefShutdownWaitSecsDuration, "server shutdown wait seconds duration")
 
 	flag.StringVar(&cfg.Handler.BaseURL, "b", DefBaseURL, "base URL of short url service")

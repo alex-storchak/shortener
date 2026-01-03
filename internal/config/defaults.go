@@ -8,6 +8,12 @@ import "time"
 const (
 	// DefServerAddr - Default server address
 	DefServerAddr = "localhost:8080"
+	// DefEnableHTTPS - Default flag value for using HTTPS in server
+	DefEnableHTTPS = false
+	// DefSSLCertPath - Default path to SSL certificate file
+	DefSSLCertPath = ""
+	// DefSSLKeyPath - Default path to SSL key file
+	DefSSLKeyPath = ""
 	// DefShutdownWaitSecsDuration - Default graceful shutdown timeout
 	DefShutdownWaitSecsDuration = 10 * time.Second
 )

@@ -506,3 +506,10 @@ Build version: <buildVersion> (или "N/A" при отсутствии знач
 Build date: <buildDate> (или "N/A" при отсутствии значения)
 Build commit: <buildCommit> (или "N/A" при отсутствии значения)
 ```
+
+# Инкремент 24
+
+Добавьте в свой код возможность включения HTTPS в веб-сервере.
+
+При передаче флага `-s` или переменной окружения `ENABLE_HTTPS` запускайте сервер с помощью метода 
+`http.ListenAndServeTLS` или `tls.Listen`.

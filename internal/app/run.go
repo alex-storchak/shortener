@@ -55,7 +55,9 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("init router: %w", err)
 	}
 
-	handler.Serve(ctx, cfg.Server, zl, router)
+	if err := handler.Serve(ctx, cfg.Server, zl, router); err != nil {
+		zl.Error("failed to serve", zap.Error(err))
+	}
 
 	// shutdown
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), cfg.Server.ShutdownWaitSecsDuration)
