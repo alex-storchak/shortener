@@ -59,17 +59,26 @@ func Run(
 		return fmt.Errorf("init router: %w", err)
 	}
 
-	if err := handler.Serve(ctx, cfg.Server, zl, router); err != nil {
-		zl.Error("failed to serve", zap.Error(err))
+	server, err := handler.Serve(cfg.Server, zl, router)
+	if err != nil {
+		return fmt.Errorf("serve: %w", err)
 	}
 
+	<-ctx.Done()
+
 	// shutdown
-	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), cfg.Server.ShutdownWaitSecsDuration)
-	defer cancelShutdown()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownWaitSecsDuration)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		zl.Error("server shutdown error", zap.Error(err))
+	}
+	zl.Info("http server closed")
+
 	em.Close(shutdownCtx)
 
 	if err := storage.Close(); err != nil {
-		zl.Error("close storage", zap.Error(err))
+		zl.Error("failed to close storage", zap.Error(err))
 	}
 
 	//nolint:errcheck // there isn't any good strategy to log error

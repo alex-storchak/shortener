@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -45,30 +45,25 @@ func NewRouter(h HTTPDeps) http.Handler {
 	return mux
 }
 
-// Serve starts the HTTP server and manages its lifecycle.
-// It begins listening to the configured address and gracefully handles server shutdown
-// when the context is canceled.
+// Serve initializes and starts the HTTP server.
+// It creates an HTTP server with the provided configuration and router,
+// starts listening for incoming connections in a goroutine,
+// and verifies successful server startup.
 //
 // Parameters:
-//   - ctx: Context for managing server lifecycle and graceful shutdown
-//   - cfg: Server configuration containing address and shutdown timeout
+//   - cfg: Server configuration containing address, SSL settings, and other server options
 //   - logger: Structured logger for logging operations
 //   - router: HTTP handler with all configured routes and middleware
 //
 // Returns:
-//   - error: nil on success, or error server fails to start/stop
+//   - *http.Server: Started HTTP server instance for later shutdown management
+//   - error: nil on successful startup, or error if server fails to start
 //
-// Behavior:
-//   - Starts the HTTP server in a goroutine
-//   - Listens for context cancellation to initiate graceful shutdown
-//   - Uses a timeout for graceful shutdown to prevent hanging connections
-//   - Logs server startup and shutdown events
-func Serve(
-	ctx context.Context,
-	cfg config.Server,
-	logger *zap.Logger,
-	router http.Handler,
-) error {
+// Note:
+//   - The server runs in a separate goroutine and continues running after this function returns
+//   - Caller must manage server lifecycle including graceful shutdown
+//   - SSL certificate and key paths are validated when HTTPS is enabled
+func Serve(cfg config.Server, logger *zap.Logger, router http.Handler) (*http.Server, error) {
 	httpServer := &http.Server{
 		Addr:    cfg.ServerAddr,
 		Handler: router,
@@ -83,28 +78,17 @@ func Serve(
 		} else {
 			err = startHTTP(httpServer)
 		}
-		errCh <- err
+		if err != nil {
+			errCh <- err
+		}
 	}()
 
+	// Проверяем, успешно ли запустился сервер
 	select {
-	case <-ctx.Done():
-		shutdownCtx := context.Background()
-		shutdownCtx, cancel := context.WithTimeout(shutdownCtx, cfg.ShutdownWaitSecsDuration)
-		defer cancel()
-		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("shutdown server: %w", err)
-		}
-
-		if err := <-errCh; err != nil {
-			return fmt.Errorf("wait server shutdown: %w", err)
-		}
-		logger.Info("http server closed")
-		return nil
 	case err := <-errCh:
-		if err != nil {
-			return fmt.Errorf("serve: %w", err)
-		}
-		return nil
+		return nil, fmt.Errorf("start server: %w", err)
+	case <-time.After(time.Second):
+		return httpServer, nil
 	}
 }
 
