@@ -88,6 +88,16 @@ type URLStorage interface {
 	// Returns:
 	//   - error: nil on success, or storage error if operation fails
 	DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error
+
+	// Count counts the amount of shortened URLs in the storage
+	//
+	// Parameters:
+	//   - ctx: context for cancellation and timeouts
+	//
+	// Returns:
+	//   - int: total amount of shortened URLs in the storage
+	//   - error: nil on success, or storage error if operation fails
+	Count(ctx context.Context) (int, error)
 }
 
 // DataNotFoundError represents an error when requested data is not found in storage.

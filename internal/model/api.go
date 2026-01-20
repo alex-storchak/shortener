@@ -59,3 +59,10 @@ type UserURLsGetResponse []UserURLsGetResponseItem
 //
 //easyjson:json
 type UserURLsDelRequest []string
+
+// StatsResponse represents the response for statistics operations.
+// Returned by `GET /api/internal/stats` endpoint.
+type StatsResponse struct {
+	URLsCount  int `json:"urls"`  // Total amount of shortened URLs
+	UsersCount int `json:"users"` // Total amount of users
+}

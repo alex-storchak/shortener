@@ -14,8 +14,9 @@ import (
 )
 
 type stubExpandShortener struct {
-	retURL string
-	retErr error
+	retURL   string
+	retErr   error
+	retCount int
 }
 
 func (s *stubExpandShortener) IsReady() error {
@@ -40,15 +41,20 @@ func (s *stubExpandShortener) DeleteBatch(_ context.Context, _ model.URLDeleteBa
 	return nil
 }
 
+func (s *stubExpandShortener) Count(_ context.Context) (int, error) {
+	return s.retCount, nil
+}
+
 func TestShortURLService_Expand(t *testing.T) {
 	tests := []struct {
-		name        string
-		shortID     string
-		stubOrigURL string
-		stubErr     error
-		wantOrigURL string
-		wantErr     bool
-		wantErrIs   error
+		name          string
+		shortID       string
+		stubOrigURL   string
+		stubErr       error
+		stubUrlsCount int
+		wantOrigURL   string
+		wantErr       bool
+		wantErrIs     error
 	}{
 		{
 			name:        "returns original url on success",
@@ -67,7 +73,7 @@ func TestShortURLService_Expand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr}
+			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr, tt.stubUrlsCount}
 			srv := NewExpand(shortener, zap.NewNop())
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 

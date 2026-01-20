@@ -248,6 +248,26 @@ func (s *DBURLStorage) GetByUserUUID(ctx context.Context, userUUID string) ([]*m
 	return urls, nil
 }
 
+// Count counts the amount of shortened URLs in the database.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//
+// Returns:
+//   - int: total amount of shortened URLs in the database
+//   - error: nil on success, or database error if query fails
+func (s *DBURLStorage) Count(ctx context.Context) (int, error) {
+	q := "SELECT count(*) FROM url_storage"
+	row := s.db.QueryRowContext(ctx, q)
+
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("scan count urls query result row: %w", err)
+	}
+	return count, nil
+}
+
 // DeleteBatch marks multiple URLs as deleted in the database within a transaction.
 // Only URLs belonging to the specified users are deleted.
 //

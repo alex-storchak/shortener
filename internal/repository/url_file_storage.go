@@ -178,6 +178,21 @@ func (s *FileURLStorage) GetByUserUUID(_ context.Context, userUUID string) ([]*m
 	return records, nil
 }
 
+// Count counts the amount of shortened URLs in the file storage.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts (not used in this implementation)
+//
+// Returns:
+//   - int: total amount of shortened URLs in the database
+//   - error: nil on success, or database error if query fails
+func (s *FileURLStorage) Count(_ context.Context) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.records), nil
+}
+
 // DeleteBatch marks multiple URLs as deleted and persists the changes to disk.
 //
 // Parameters:

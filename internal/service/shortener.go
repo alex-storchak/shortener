@@ -30,6 +30,7 @@ type URLShortener interface {
 	ShortenBatch(ctx context.Context, userUUID string, urls []string) ([]string, error)
 	GetUserURLs(ctx context.Context, userUUID string) ([]*model.URLStorageRecord, error)
 	DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error
+	Count(ctx context.Context) (int, error)
 }
 
 // PingableURLShortener combines URL shortening functionality with health checking capability.
@@ -234,6 +235,18 @@ func (s *Shortener) GetUserURLs(ctx context.Context, userUUID string) ([]*model.
 //   - error: nil on success, or storage error if operation fails
 func (s *Shortener) DeleteBatch(ctx context.Context, urls model.URLDeleteBatch) error {
 	return s.urlStorage.DeleteBatch(ctx, urls)
+}
+
+// Count counts the amount of shortened URLs in storage.
+//
+// Parameters:
+//   - ctx: context for request cancellation and timeouts
+//
+// Returns:
+//   - int: amount of shortened URLs in storage
+//   - error: nil on success, or storage error if operation fails
+func (s *Shortener) Count(ctx context.Context) (int, error) {
+	return s.urlStorage.Count(ctx)
 }
 
 // Common service errors

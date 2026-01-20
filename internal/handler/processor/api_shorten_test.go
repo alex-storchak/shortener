@@ -18,6 +18,7 @@ import (
 type stubShortenerAPI struct {
 	retShortID string
 	retErr     error
+	retCount   int
 }
 
 func (s *stubShortenerAPI) Shorten(_ context.Context, _, _ string) (string, error) {
@@ -40,6 +41,10 @@ func (s *stubShortenerAPI) DeleteBatch(_ context.Context, _ model.URLDeleteBatch
 	return nil
 }
 
+func (s *stubShortenerAPI) Count(_ context.Context) (int, error) {
+	return s.retCount, nil
+}
+
 func TestShortenService_Shorten(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -47,6 +52,7 @@ func TestShortenService_Shorten(t *testing.T) {
 		decoderErr error
 		shortID    string
 		shortenErr error
+		urlsCount  int
 		baseURL    string
 		wantResp   *model.ShortenResponse
 		wantErr    bool
@@ -86,7 +92,7 @@ func TestShortenService_Shorten(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			shortener := &stubShortenerAPI{tt.shortID, tt.shortenErr}
+			shortener := &stubShortenerAPI{tt.shortID, tt.shortenErr, tt.urlsCount}
 			baseURL := tt.baseURL
 			if baseURL == "" {
 				baseURL = "http://any"
