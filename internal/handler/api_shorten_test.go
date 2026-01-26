@@ -27,7 +27,6 @@ func TestAPIShorten(t *testing.T) {
 	tests := []struct {
 		name          string
 		method        string
-		setupMockPub  func(m *mocks.MockAuditEventPublisher)
 		setupMockProc func(m *mocks.MockAPIShortenProcessor)
 		want          want
 		wantErr       bool
@@ -35,15 +34,10 @@ func TestAPIShorten(t *testing.T) {
 		{
 			name:   "POST request returns 201 (Created)",
 			method: http.MethodPost,
-			setupMockPub: func(m *mocks.MockAuditEventPublisher) {
-				m.EXPECT().
-					Publish(mock.Anything).
-					Once()
-			},
 			setupMockProc: func(m *mocks.MockAPIShortenProcessor) {
 				m.EXPECT().
 					Process(mock.Anything, mock.AnythingOfType("model.ShortenRequest")).
-					Return(&model.ShortenResponse{ShortURL: "https://example.com/abcde"}, "", nil).
+					Return(&model.ShortenResponse{ShortURL: "https://example.com/abcde"}, nil).
 					Once()
 			},
 			want: want{
@@ -56,13 +50,12 @@ func TestAPIShorten(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "returns 400 (Bad Request) when empty url in body requested",
-			method:       http.MethodPost,
-			setupMockPub: func(m *mocks.MockAuditEventPublisher) {},
+			name:   "returns 400 (Bad Request) when empty url in body requested",
+			method: http.MethodPost,
 			setupMockProc: func(m *mocks.MockAPIShortenProcessor) {
 				m.EXPECT().
 					Process(mock.Anything, mock.AnythingOfType("model.ShortenRequest")).
-					Return(&model.ShortenResponse{}, "", service.ErrEmptyInputURL).
+					Return(&model.ShortenResponse{}, service.ErrEmptyInputURL).
 					Once()
 			},
 			want: want{
@@ -71,13 +64,12 @@ func TestAPIShorten(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:         "returns 409 (Conflict) when url already exists",
-			method:       http.MethodPost,
-			setupMockPub: func(m *mocks.MockAuditEventPublisher) {},
+			name:   "returns 409 (Conflict) when url already exists",
+			method: http.MethodPost,
 			setupMockProc: func(m *mocks.MockAPIShortenProcessor) {
 				m.EXPECT().
 					Process(mock.Anything, mock.AnythingOfType("model.ShortenRequest")).
-					Return(&model.ShortenResponse{ShortURL: "https://example.com/abcde"}, "", service.ErrURLAlreadyExists).
+					Return(&model.ShortenResponse{ShortURL: "https://example.com/abcde"}, service.ErrURLAlreadyExists).
 					Once()
 			},
 			want: want{
@@ -90,13 +82,12 @@ func TestAPIShorten(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "returns 500 (Internal Server Error) when random error on shorten url",
-			method:       http.MethodPost,
-			setupMockPub: func(m *mocks.MockAuditEventPublisher) {},
+			name:   "returns 500 (Internal Server Error) when random error on shorten url",
+			method: http.MethodPost,
 			setupMockProc: func(m *mocks.MockAPIShortenProcessor) {
 				m.EXPECT().
 					Process(mock.Anything, mock.AnythingOfType("model.ShortenRequest")).
-					Return(&model.ShortenResponse{}, "", errors.New("random error")).
+					Return(&model.ShortenResponse{}, errors.New("random error")).
 					Once()
 			},
 			want: want{
@@ -107,13 +98,10 @@ func TestAPIShorten(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockPub := mocks.NewMockAuditEventPublisher(t)
-			tt.setupMockPub(mockPub)
-
 			mockProc := mocks.NewMockAPIShortenProcessor(t)
 			tt.setupMockProc(mockProc)
 
-			h := HandleAPIShorten(mockProc, zap.NewNop(), mockPub)
+			h := HandleAPIShorten(mockProc, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader(`{"url":"https://existing.com"}`))
 			request.Header.Set("Content-Type", "application/json")

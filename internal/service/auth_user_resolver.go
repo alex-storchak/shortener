@@ -53,6 +53,38 @@ func NewAuthUserResolver(
 	}
 }
 
+// ResolveUserGRPC resolves a user based on the provided authentication token.
+// If token is empty or invalid, returns ErrUnauthorized.
+//
+// Parameters:
+//   - token: JWT token string from client request (can be empty)
+//
+// Returns:
+//   - *model.User: resolved user object (never nil on success)
+//   - error: authentication error if resolution fails
+func (s *AuthUserResolver) ResolveUserGRPC(token string) (*model.User, error) {
+	if token == "" {
+		return nil, ErrUnauthorized
+	}
+
+	claims, err := s.authSrv.ValidateToken(token)
+	if err != nil {
+		return nil, ErrUnauthorized
+	}
+
+	ok, uErr := s.authSrv.ValidateUserUUID(claims.UserUUID)
+	if uErr != nil {
+		return nil, fmt.Errorf("validate user uuid: %w", uErr)
+	}
+	if !ok {
+		return nil, ErrUnauthorized
+	}
+
+	user := &model.User{UUID: claims.UserUUID}
+
+	return user, nil
+}
+
 // ResolveUser resolves a user based on the provided authentication token.
 // It handles three main scenarios:
 //   - No token provided: creates new user and issues token

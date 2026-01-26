@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -101,11 +102,15 @@ func TestShortenService_Shorten(t *testing.T) {
 			if !tt.wantErr || errors.Is(tt.shortenErr, service.ErrURLAlreadyExists) {
 				ub.EXPECT().Build(tt.shortID).Return(baseURL + "/" + tt.shortID)
 			}
+			ep := mocks.NewMockAuditEventPublisher(t)
+			if !tt.wantErr {
+				ep.EXPECT().Publish(mock.AnythingOfType("model.AuditEvent")).Return().Once()
+			}
 
-			srv := NewAPIShorten(shortener, zap.NewNop(), ub)
+			srv := NewAPIShorten(shortener, zap.NewNop(), ub, ep)
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
-			resp, _, err := srv.Process(ctx, tt.decReq)
+			resp, err := srv.Process(ctx, tt.decReq)
 
 			if tt.wantErr {
 				require.Error(t, err)

@@ -38,7 +38,7 @@ func (_m *MockAPIShortenProcessor) EXPECT() *MockAPIShortenProcessor_Expecter {
 }
 
 // Process provides a mock function for the type MockAPIShortenProcessor
-func (_mock *MockAPIShortenProcessor) Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, string, error) {
+func (_mock *MockAPIShortenProcessor) Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, error) {
 	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
@@ -46,9 +46,8 @@ func (_mock *MockAPIShortenProcessor) Process(ctx context.Context, req model.Sho
 	}
 
 	var r0 *model.ShortenResponse
-	var r1 string
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.ShortenRequest) (*model.ShortenResponse, string, error)); ok {
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, model.ShortenRequest) (*model.ShortenResponse, error)); ok {
 		return returnFunc(ctx, req)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, model.ShortenRequest) *model.ShortenResponse); ok {
@@ -58,17 +57,12 @@ func (_mock *MockAPIShortenProcessor) Process(ctx context.Context, req model.Sho
 			r0 = ret.Get(0).(*model.ShortenResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, model.ShortenRequest) string); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, model.ShortenRequest) error); ok {
 		r1 = returnFunc(ctx, req)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, model.ShortenRequest) error); ok {
-		r2 = returnFunc(ctx, req)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockAPIShortenProcessor_Process_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Process'
@@ -101,12 +95,12 @@ func (_c *MockAPIShortenProcessor_Process_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockAPIShortenProcessor_Process_Call) Return(shortenResponse *model.ShortenResponse, s string, err error) *MockAPIShortenProcessor_Process_Call {
-	_c.Call.Return(shortenResponse, s, err)
+func (_c *MockAPIShortenProcessor_Process_Call) Return(shortenResponse *model.ShortenResponse, err error) *MockAPIShortenProcessor_Process_Call {
+	_c.Call.Return(shortenResponse, err)
 	return _c
 }
 
-func (_c *MockAPIShortenProcessor_Process_Call) RunAndReturn(run func(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, string, error)) *MockAPIShortenProcessor_Process_Call {
+func (_c *MockAPIShortenProcessor_Process_Call) RunAndReturn(run func(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, error)) *MockAPIShortenProcessor_Process_Call {
 	_c.Call.Return(run)
 	return _c
 }

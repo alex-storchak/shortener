@@ -8,10 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 
-	"github.com/alex-storchak/shortener/internal/handler/mocks"
 	repo "github.com/alex-storchak/shortener/internal/repository"
 )
 
@@ -19,11 +17,11 @@ type ShortURLSrvStub struct {
 	expandError error
 }
 
-func (s *ShortURLSrvStub) Process(_ context.Context, _ string) (origURL, userUUID string, err error) {
+func (s *ShortURLSrvStub) Process(_ context.Context, _ string) (origURL string, err error) {
 	if s.expandError != nil {
-		return "", "userUUID", s.expandError
+		return "", s.expandError
 	}
-	return "https://existing.com", "userUUID", nil
+	return "https://existing.com", nil
 }
 
 func TestExpand(t *testing.T) {
@@ -34,7 +32,6 @@ func TestExpand(t *testing.T) {
 	tests := []struct {
 		name        string
 		method      string
-		setupMock   func(m *mocks.MockAuditEventPublisher)
 		path        string
 		want        want
 		wantErr     bool
@@ -43,12 +40,7 @@ func TestExpand(t *testing.T) {
 		{
 			name:   "existing short url returns 307 (Temporary Redirect)",
 			method: http.MethodGet,
-			setupMock: func(m *mocks.MockAuditEventPublisher) {
-				m.EXPECT().
-					Publish(mock.AnythingOfType("model.AuditEvent")).
-					Once()
-			},
-			path: "/abcde",
+			path:   "/abcde",
 			want: want{
 				code:     http.StatusTemporaryRedirect,
 				Location: "https://existing.com",
@@ -56,10 +48,9 @@ func TestExpand(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "non-existing short url returns 404 (Not Found)",
-			method:    http.MethodGet,
-			setupMock: func(m *mocks.MockAuditEventPublisher) {},
-			path:      "/non-existing",
+			name:   "non-existing short url returns 404 (Not Found)",
+			method: http.MethodGet,
+			path:   "/non-existing",
 			want: want{
 				code: http.StatusNotFound,
 			},
@@ -67,10 +58,9 @@ func TestExpand(t *testing.T) {
 			expandError: repo.NewDataNotFoundError(nil),
 		},
 		{
-			name:      "returns 500 (Internal Server Error) when random error on expand happens",
-			method:    http.MethodGet,
-			setupMock: func(m *mocks.MockAuditEventPublisher) {},
-			path:      "/non-existing",
+			name:   "returns 500 (Internal Server Error) when random error on expand happens",
+			method: http.MethodGet,
+			path:   "/non-existing",
 			want: want{
 				code: http.StatusInternalServerError,
 			},
@@ -82,10 +72,7 @@ func TestExpand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := &ShortURLSrvStub{tt.expandError}
 
-			mockPublisher := mocks.NewMockAuditEventPublisher(t)
-			tt.setupMock(mockPublisher)
-
-			h := HandleExpand(srv, zap.NewNop(), mockPublisher)
+			h := HandleExpand(srv, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, tt.path, nil)
 			w := httptest.NewRecorder()

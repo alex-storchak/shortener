@@ -49,6 +49,7 @@ func Load(
 //   - cfg: Pointer to Config structure to populate with flag values
 func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.Server.ServerAddr, "a", cfg.Server.ServerAddr, "address of HTTP server")
+	flag.StringVar(&cfg.Server.GRPCServerAddr, "grpc-server-addr", cfg.Server.GRPCServerAddr, "address of gRPC server")
 	flag.BoolVar(&cfg.Server.EnableHTTPS, "s", cfg.Server.EnableHTTPS, "enable HTTPS in HTTP server")
 	flag.StringVar(&cfg.Server.SSLCertPath, "ssl-cert", cfg.Server.SSLCertPath, "path to SSL certificate file")
 	flag.StringVar(&cfg.Server.SSLKeyPath, "ssl-key", cfg.Server.SSLKeyPath, "path to SSL key file")

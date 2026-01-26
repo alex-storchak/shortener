@@ -6,24 +6,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/alex-storchak/shortener/internal/model"
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
 // ShortenProcessor defines the interface for processing plain text URL shortening requests.
 // Implementations should handle the business logic of converting original URLs to short URLs.
 type ShortenProcessor interface {
-	Process(ctx context.Context, body []byte) (shortURL, userUUID string, err error)
-}
-
-// AuditEventPublisher defines the interface for publishing audit events for tracking system actions.
-// Used to record events like URL shortening for auditing purposes.
-type AuditEventPublisher interface {
-	Publish(event model.AuditEvent)
+	Process(ctx context.Context, body []byte) (shortURL string, err error)
 }
 
 // HandleShorten creates an HTTP handler for the plain text URL shortening endpoint.
@@ -37,16 +29,14 @@ type AuditEventPublisher interface {
 //   - 409 Conflict when URL already exists (returns existing short URL)
 //   - 201 Created for successful shortening
 //   - 500 Internal Server Error for processing failures
-//   - Publishes audit events for successful shortening operations
 //
 // Parameters:
 //   - p: Processor implementing the shortening business logic
 //   - l: Logger for logging operations
-//   - ep: Audit event publisher for recording system actions
 //
 // Returns:
 //   - HTTP handler function for the shorten endpoint
-func HandleShorten(p ShortenProcessor, l *zap.Logger, ep AuditEventPublisher) http.HandlerFunc {
+func HandleShorten(p ShortenProcessor, l *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := io.ReadAll(r.Body)
@@ -55,7 +45,7 @@ func HandleShorten(p ShortenProcessor, l *zap.Logger, ep AuditEventPublisher) ht
 			return
 		}
 
-		shortURL, userUUID, err := p.Process(r.Context(), body)
+		shortURL, err := p.Process(r.Context(), body)
 		if errors.Is(err, service.ErrEmptyInputURL) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -74,13 +64,6 @@ func HandleShorten(p ShortenProcessor, l *zap.Logger, ep AuditEventPublisher) ht
 			l.Error("failed to write response (status created) for main page request", zap.Error(err))
 			return
 		}
-
-		ep.Publish(model.AuditEvent{
-			TS:      time.Now().Unix(),
-			Action:  model.AuditActionShorten,
-			UserID:  userUUID,
-			OrigURL: string(body),
-		})
 	}
 }
 

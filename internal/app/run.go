@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"go.uber.org/zap"
 
@@ -54,14 +53,20 @@ func Run(
 	}
 	em := audit.NewEventManager(ao, cfg.Audit, zl)
 
-	router, err := initRouter(cfg, shortener, sf, zl, em)
+	deps, err := initServerDeps(cfg, shortener, sf, zl, em)
 	if err != nil {
-		return fmt.Errorf("init router: %w", err)
+		return fmt.Errorf("init server dependencies: %w", err)
 	}
+	router := handler.NewRouter(deps)
 
-	server, err := handler.Serve(cfg.Server, zl, router)
+	httpServer, err := handler.Serve(cfg.Server, zl, router)
 	if err != nil {
 		return fmt.Errorf("serve: %w", err)
+	}
+
+	grpcServer, err := handler.ServeGRPC(deps)
+	if err != nil {
+		return fmt.Errorf("serve grpc: %w", err)
 	}
 
 	<-ctx.Done()
@@ -70,8 +75,24 @@ func Run(
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownWaitSecsDuration)
 	defer cancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		zl.Error("server shutdown error", zap.Error(err))
+	// shutdown grpc server
+	grpcStopped := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(grpcStopped)
+	}()
+
+	select {
+	case <-grpcStopped:
+		zl.Info("grpc server stopped gracefully")
+	case <-shutdownCtx.Done():
+		zl.Warn("grpc shutdown forced by timeout")
+		grpcServer.Stop()
+	}
+
+	// shutdown http server
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		zl.Error("http server shutdown error", zap.Error(err))
 	}
 	zl.Info("http server closed")
 
@@ -105,13 +126,13 @@ func initShortener(s repository.URLStorage, zl *zap.Logger) (*service.Shortener,
 	return service.NewShortener(g, s, zl), nil
 }
 
-func initRouter(
+func initServerDeps(
 	cfg *config.Config,
 	sh service.PingableURLShortener,
 	sf factory.StorageFactory,
 	zl *zap.Logger,
-	ep handler.AuditEventPublisher,
-) (http.Handler, error) {
+	ep processor.AuditEventPublisher,
+) (*handler.ServerDeps, error) {
 	us, err := sf.MakeUserStorage()
 	if err != nil {
 		return nil, fmt.Errorf("make user storage: %w", err)
@@ -119,18 +140,18 @@ func initRouter(
 	as := service.NewAuthService(zl, us, &cfg.Auth)
 	um := repository.NewUserManager(zl, us)
 	ub := service.NewURLBuilder(cfg.Handler.BaseURL)
-	hDeps := handler.HTTPDeps{
+	hDeps := handler.ServerDeps{
 		Logger:              zl,
 		Config:              cfg,
-		UserResolver:        service.NewAuthUserResolver(as, um, &cfg.Auth),
-		ShortenProc:         processor.NewShorten(sh, zl, ub),
-		ExpandProc:          processor.NewExpand(sh, zl),
+		HTTPUserResolver:    service.NewAuthUserResolver(as, um, &cfg.Auth),
+		GRPCUserResolver:    service.NewAuthUserResolver(as, um, &cfg.Auth),
+		ShortenProc:         processor.NewShorten(sh, zl, ub, ep),
+		ExpandProc:          processor.NewExpand(sh, zl, ep),
 		PingProc:            processor.NewPing(sh, zl),
-		APIShortenProc:      processor.NewAPIShorten(sh, zl, ub),
+		APIShortenProc:      processor.NewAPIShorten(sh, zl, ub, ep),
 		APIShortenBatchProc: processor.NewAPIShortenBatch(sh, zl, ub),
 		APIUserURLsProc:     processor.NewAPIUserURLs(sh, zl, ub),
 		APIInternalProc:     processor.NewAPIInternal(us, sh),
-		EventPublisher:      ep,
 	}
-	return handler.NewRouter(hDeps), nil
+	return &hDeps, nil
 }

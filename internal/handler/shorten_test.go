@@ -10,11 +10,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/alex-storchak/shortener/internal/handler/mocks"
 	"github.com/alex-storchak/shortener/internal/service"
 )
 
@@ -22,11 +20,11 @@ type MainPageSrvStub struct {
 	shortenError error
 }
 
-func (s *MainPageSrvStub) Process(_ context.Context, _ []byte) (shortURL, userUUID string, err error) {
+func (s *MainPageSrvStub) Process(_ context.Context, _ []byte) (shortURL string, err error) {
 	if s.shortenError != nil {
-		return "https://example.com/abcde", "test", s.shortenError
+		return "https://example.com/abcde", s.shortenError
 	}
-	return "https://example.com/abcde", "test", nil
+	return "https://example.com/abcde", nil
 }
 
 func TestShorten(t *testing.T) {
@@ -38,7 +36,6 @@ func TestShorten(t *testing.T) {
 	tests := []struct {
 		name         string
 		method       string
-		setupMock    func(m *mocks.MockAuditEventPublisher)
 		want         want
 		wantErr      bool
 		shortenError error
@@ -46,11 +43,6 @@ func TestShorten(t *testing.T) {
 		{
 			name:   "POST request returns 201 (Created)",
 			method: http.MethodPost,
-			setupMock: func(m *mocks.MockAuditEventPublisher) {
-				m.EXPECT().
-					Publish(mock.AnythingOfType("model.AuditEvent")).
-					Once()
-			},
 			want: want{
 				code:        http.StatusCreated,
 				body:        "https://example.com/abcde",
@@ -59,9 +51,8 @@ func TestShorten(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "POST request returns 400 (Bad Request) when shorten errors on empty body passed",
-			method:    http.MethodPost,
-			setupMock: func(m *mocks.MockAuditEventPublisher) {},
+			name:   "POST request returns 400 (Bad Request) when shorten errors on empty body passed",
+			method: http.MethodPost,
 			want: want{
 				code: http.StatusBadRequest,
 			},
@@ -69,9 +60,8 @@ func TestShorten(t *testing.T) {
 			shortenError: service.ErrEmptyInputURL,
 		},
 		{
-			name:      "POST request returns 409 (Conflict) when URL already exists",
-			method:    http.MethodPost,
-			setupMock: func(m *mocks.MockAuditEventPublisher) {},
+			name:   "POST request returns 409 (Conflict) when URL already exists",
+			method: http.MethodPost,
 			want: want{
 				code:        http.StatusConflict,
 				body:        "https://example.com/abcde",
@@ -81,9 +71,8 @@ func TestShorten(t *testing.T) {
 			shortenError: service.ErrURLAlreadyExists,
 		},
 		{
-			name:      "POST request returns 500 (Internal Server Error) when random error on shorten happens",
-			method:    http.MethodPost,
-			setupMock: func(m *mocks.MockAuditEventPublisher) {},
+			name:   "POST request returns 500 (Internal Server Error) when random error on shorten happens",
+			method: http.MethodPost,
 			want: want{
 				code: http.StatusInternalServerError,
 			},
@@ -95,10 +84,7 @@ func TestShorten(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := &MainPageSrvStub{tt.shortenError}
 
-			mockPublisher := mocks.NewMockAuditEventPublisher(t)
-			tt.setupMock(mockPublisher)
-
-			h := HandleShorten(srv, zap.NewNop(), mockPublisher)
+			h := HandleShorten(srv, zap.NewNop())
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader("https://existing.com"))
 			w := httptest.NewRecorder()

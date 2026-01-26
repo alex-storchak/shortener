@@ -17,12 +17,11 @@ import (
 // mockExpandProcessor is a stub for ExpandProcessor.
 type mockExpandProcessor struct {
 	origURL string
-	userID  string
 	err     error
 }
 
-func (m *mockExpandProcessor) Process(_ context.Context, _ string) (string, string, error) {
-	return m.origURL, m.userID, m.err
+func (m *mockExpandProcessor) Process(_ context.Context, _ string) (string, error) {
+	return m.origURL, m.err
 }
 
 // This example demonstrates a successful response from the handler created by
@@ -31,12 +30,10 @@ func (m *mockExpandProcessor) Process(_ context.Context, _ string) (string, stri
 func ExampleHandleExpand_temporaryRedirect() {
 	mp := &mockExpandProcessor{
 		origURL: "https://example.com/one",
-		userID:  "user-123",
 	}
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
 
-	h := handler.HandleExpand(mp, logger, ap)
+	h := handler.HandleExpand(mp, logger)
 
 	shortID := "aaa"
 	req := httptest.NewRequest(http.MethodGet, "/"+shortID, nil)
@@ -63,9 +60,8 @@ func ExampleHandleExpand_notFound() {
 		err: &repository.DataNotFoundError{},
 	}
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
 
-	h := handler.HandleExpand(mp, logger, ap)
+	h := handler.HandleExpand(mp, logger)
 
 	shortID := "unknown"
 	req := httptest.NewRequest(http.MethodGet, "/"+shortID, nil)
@@ -90,9 +86,8 @@ func ExampleHandleExpand_gone() {
 		err: repository.ErrDataDeleted,
 	}
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
 
-	h := handler.HandleExpand(mp, logger, ap)
+	h := handler.HandleExpand(mp, logger)
 
 	shortID := "deleted"
 	req := httptest.NewRequest(http.MethodGet, "/"+shortID, nil)
@@ -117,9 +112,8 @@ func ExampleHandleExpand_internalServerError() {
 		err: errors.New("storage error"),
 	}
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
 
-	h := handler.HandleExpand(mp, logger, ap)
+	h := handler.HandleExpand(mp, logger)
 
 	shortID := "err"
 	req := httptest.NewRequest(http.MethodGet, "/"+shortID, nil)

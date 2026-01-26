@@ -10,37 +10,21 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/alex-storchak/shortener/internal/config"
-	"github.com/alex-storchak/shortener/internal/middleware"
 )
 
 var ErrEmptySSLCertPath = errors.New("empty SSL certificate path")
 var ErrEmptySSLKeyPath = errors.New("empty SSL key path")
-
-// HTTPDeps contains dependencies required for HTTP server initialization.
-type HTTPDeps struct {
-	Logger              *zap.Logger              // Structured logger for logging operations
-	Config              *config.Config           // Application configuration containing server settings and auth configuration
-	UserResolver        middleware.UserResolver  // Service for resolving and validating user authentication
-	ShortenProc         ShortenProcessor         // Processor for plain text URL shortening requests
-	ExpandProc          ExpandProcessor          // Processor for expanding short URLs to original URLs
-	PingProc            PingProcessor            // Processor for health check requests
-	APIShortenProc      APIShortenProcessor      // Processor for JSON API URL shortening requests
-	APIShortenBatchProc APIShortenBatchProcessor // Processor for batch URL shortening operations
-	APIUserURLsProc     APIUserURLsProcessor     // Processor for user-specific URL management operations
-	APIInternalProc     APIInternalProcessor     // Processor for internal stats requests
-	EventPublisher      AuditEventPublisher      // Publisher for audit events tracking system actions
-}
 
 // NewRouter creates and configures the HTTP router with all application routes and middleware.
 // It sets up the complete routing structure including authentication, logging, compression,
 // and all URL shortening endpoints.
 //
 // Parameters:
-//   - h: HTTPDeps containing all dependencies required for HTTP server initialization
+//   - h: ServerDeps containing all dependencies required for HTTP server initialization
 //
 // Returns:
 //   - http.Handler: Configured HTTP router with all middleware and routes
-func NewRouter(h HTTPDeps) http.Handler {
+func NewRouter(h *ServerDeps) http.Handler {
 	mux := chi.NewRouter()
 	addRoutes(mux, h)
 	return mux

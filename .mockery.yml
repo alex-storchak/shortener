@@ -14,8 +14,8 @@ template-schema: '{{.Template}}.schema.json'
 packages:
   github.com/alex-storchak/shortener/internal/handler:
     interfaces:
-      AuditEventPublisher:
       APIShortenProcessor:
   github.com/alex-storchak/shortener/internal/handler/processor:
     interfaces:
       ShortURLBuilder:
+      AuditEventPublisher:

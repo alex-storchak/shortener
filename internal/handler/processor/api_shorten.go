@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -23,6 +24,7 @@ type APIShorten struct {
 	shortener service.URLShortener
 	logger    *zap.Logger
 	ub        ShortURLBuilder
+	audit     AuditEventPublisher
 }
 
 // NewAPIShorten creates a new APIShorten processor instance.
@@ -31,18 +33,21 @@ type APIShorten struct {
 //   - s: URL shortener service for core shortening operations
 //   - l: Structured logger for logging operations
 //   - ub: URL builder for constructing complete short URLs
+//   - ep: Audit event publisher for recording system actions
 //
 // Returns: configured APIShorten processor
-func NewAPIShorten(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *APIShorten {
+func NewAPIShorten(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder, ep AuditEventPublisher) *APIShorten {
 	return &APIShorten{
 		shortener: s,
 		logger:    l,
 		ub:        ub,
+		audit:     ep,
 	}
 }
 
 // Process handles the URL shortening request for API endpoint.
 // It authenticates the user, shortens the URL, and returns the response.
+// Also publishes audit events for successful shortening operations.
 //
 // Parameters:
 //   - ctx: context for cancellation and timeouts
@@ -56,22 +61,30 @@ func NewAPIShorten(s service.URLShortener, l *zap.Logger, ub ShortURLBuilder) *A
 // Behavior:
 //   - Returns existing short URL with ErrURLAlreadyExists if URL already exists
 //   - Creates new short URL for new URLs
-func (s *APIShorten) Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, string, error) {
+func (s *APIShorten) Process(ctx context.Context, req model.ShortenRequest) (*model.ShortenResponse, error) {
 	userUUID, err := auth.GetCtxUserUUID(ctx)
 	if err != nil {
-		return nil, "", fmt.Errorf("get user uuid from context: %w", err)
+		return nil, fmt.Errorf("get user uuid from context: %w", err)
 	}
 
 	shortID, err := s.shortener.Shorten(ctx, userUUID, req.OrigURL)
 	if errors.Is(err, service.ErrURLAlreadyExists) {
 		shortURL := s.ub.Build(shortID)
 		resp := &model.ShortenResponse{ShortURL: shortURL}
-		return resp, userUUID, fmt.Errorf("tried to shorten existing url: %w", err)
+		return resp, fmt.Errorf("tried to shorten existing url: %w", err)
 	} else if err != nil {
-		return nil, userUUID, fmt.Errorf("shorten url: %w", err)
+		return nil, fmt.Errorf("shorten url: %w", err)
 	}
 
 	// new url
 	shortURL := s.ub.Build(shortID)
-	return &model.ShortenResponse{ShortURL: shortURL}, userUUID, nil
+
+	s.audit.Publish(model.AuditEvent{
+		TS:      time.Now().Unix(),
+		Action:  model.AuditActionShorten,
+		UserID:  userUUID,
+		OrigURL: req.OrigURL,
+	})
+
+	return &model.ShortenResponse{ShortURL: shortURL}, nil
 }

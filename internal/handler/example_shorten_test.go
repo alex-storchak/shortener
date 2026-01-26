@@ -16,12 +16,11 @@ import (
 // mockShortenProcessor is a stub for ShortenProcessor.
 type mockShortenProcessor struct {
 	shortURL string
-	userID   string
 	err      error
 }
 
-func (m *mockShortenProcessor) Process(_ context.Context, _ []byte) (string, string, error) {
-	return m.shortURL, m.userID, m.err
+func (m *mockShortenProcessor) Process(_ context.Context, _ []byte) (string, error) {
+	return m.shortURL, m.err
 }
 
 // This example demonstrates a successful response from the handler created by
@@ -34,12 +33,10 @@ func ExampleHandleShorten_created() {
 
 	mp := &mockShortenProcessor{
 		shortURL: "http://short/aaa",
-		userID:   "user-123",
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleShorten(mp, logger, ap)
+	h := handler.HandleShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -74,8 +71,7 @@ func ExampleHandleShorten_badRequestOnReadError() {
 
 	mp := &mockShortenProcessor{}
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleShorten(mp, logger, ap)
+	h := handler.HandleShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -101,8 +97,7 @@ func ExampleHandleShorten_badRequestOnEmptyInputURL() {
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleShorten(mp, logger, ap)
+	h := handler.HandleShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -127,12 +122,10 @@ func ExampleHandleShorten_conflictOnExistingURL() {
 	mp := &mockShortenProcessor{
 		shortURL: "http://short/exist",
 		err:      service.ErrURLAlreadyExists,
-		userID:   "user-456",
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleShorten(mp, logger, ap)
+	h := handler.HandleShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -160,8 +153,7 @@ func ExampleHandleShorten_internalServerError() {
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleShorten(mp, logger, ap)
+	h := handler.HandleShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
