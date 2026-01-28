@@ -52,6 +52,12 @@ func addRoutes(
 				mux.Get("/", HandleGetUserURLs(h.APIUserURLsProc, h.Logger))
 				mux.Delete("/", HandleDeleteUserURLs(h.APIUserURLsProc, h.Logger))
 			})
+
+			mux.Route("/internal", func(mux chi.Router) {
+				mux.Use(middleware.NewTrustedSubnet(h.Logger, h.Config.Server.TrustedSubnet))
+
+				mux.Get("/stats", HandleStats(h.APIInternalProc, h.Logger))
+			})
 		})
 	})
 }

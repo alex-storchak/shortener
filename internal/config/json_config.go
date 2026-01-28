@@ -51,6 +51,9 @@ func applyJSONConfig(cfg *Config, jc *JSONConfig) {
 	if jc.ShutdownWaitSecsDuration != nil {
 		cfg.Server.ShutdownWaitSecsDuration = *jc.ShutdownWaitSecsDuration
 	}
+	if jc.TrustedSubnet != nil {
+		cfg.Server.TrustedSubnet = *jc.TrustedSubnet
+	}
 
 	// Handler
 	if jc.BaseURL != nil {

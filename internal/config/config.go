@@ -11,6 +11,7 @@ type Server struct {
 	SSLCertPath              string        `env:"SSL_CERT_PATH"`               // Path to SSL certificate
 	SSLKeyPath               string        `env:"SSL_KEY_PATH"`                // Path to SSL key
 	ShutdownWaitSecsDuration time.Duration `env:"SHUTDOWN_WAIT_SECS_DURATION"` // Graceful shutdown timeout duration
+	TrustedSubnet            string        `env:"TRUSTED_SUBNET"`              // Trusted subnet for internal stats requests (CIDR notation, e.g., "127.0.0.1/32")
 }
 
 // Reset set all fields of Server to default values
@@ -129,6 +130,7 @@ type JSONConfig struct {
 	SSLCertPath              *string        `json:"ssl_cert_path"`
 	SSLKeyPath               *string        `json:"ssl_key_path"`
 	ShutdownWaitSecsDuration *time.Duration `json:"shutdown_wait_secs_duration"`
+	TrustedSubnet            *string        `json:"trusted_subnet"`
 
 	// Handler
 	BaseURL *string `json:"base_url"`

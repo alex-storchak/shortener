@@ -18,6 +18,7 @@ import (
 type stubShortener struct {
 	retShortID string
 	retErr     error
+	retCount   int
 }
 
 func (s *stubShortener) Shorten(_ context.Context, _, _ string) (string, error) {
@@ -39,15 +40,20 @@ func (s *stubShortener) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) e
 	return nil
 }
 
+func (s *stubShortener) Count(_ context.Context) (int, error) {
+	return s.retCount, nil
+}
+
 func TestMainPageService_Shorten(t *testing.T) {
 	tests := []struct {
-		name         string
-		body         []byte
-		stubShortID  string
-		stubErr      error
-		wantShortURL string
-		wantErr      bool
-		wantErrIs    error
+		name          string
+		body          []byte
+		stubShortID   string
+		stubErr       error
+		stubUrlsCount int
+		wantShortURL  string
+		wantErr       bool
+		wantErrIs     error
 	}{
 		{
 			name:      "returns ErrEmptyInputURL on empty body",
@@ -82,7 +88,7 @@ func TestMainPageService_Shorten(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			core := &stubShortener{tt.stubShortID, tt.stubErr}
+			shortener := &stubShortener{tt.stubShortID, tt.stubErr, tt.stubUrlsCount}
 			ub := mocks.NewMockShortURLBuilder(t)
 			if !tt.wantErr || errors.Is(tt.stubErr, service.ErrURLAlreadyExists) {
 				ub.EXPECT().
@@ -91,7 +97,7 @@ func TestMainPageService_Shorten(t *testing.T) {
 					Once()
 			}
 
-			srv := NewShorten(core, zap.NewNop(), ub)
+			srv := NewShorten(shortener, zap.NewNop(), ub)
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
 			gotURL, _, gotErr := srv.Process(ctx, tt.body)

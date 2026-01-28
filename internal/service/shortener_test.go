@@ -91,6 +91,10 @@ func (d *urlStorageStub) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) 
 	return nil
 }
 
+func (d *urlStorageStub) Count(_ context.Context) (int, error) {
+	return len(d.storage), nil
+}
+
 func TestShortener_Shorten(t *testing.T) {
 	type args struct {
 		url string

@@ -27,6 +27,7 @@ type HTTPDeps struct {
 	APIShortenProc      APIShortenProcessor      // Processor for JSON API URL shortening requests
 	APIShortenBatchProc APIShortenBatchProcessor // Processor for batch URL shortening operations
 	APIUserURLsProc     APIUserURLsProcessor     // Processor for user-specific URL management operations
+	APIInternalProc     APIInternalProcessor     // Processor for internal stats requests
 	EventPublisher      AuditEventPublisher      // Publisher for audit events tracking system actions
 }
 

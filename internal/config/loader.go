@@ -53,6 +53,7 @@ func parseFlags(cfg *Config) {
 	flag.StringVar(&cfg.Server.SSLCertPath, "ssl-cert", cfg.Server.SSLCertPath, "path to SSL certificate file")
 	flag.StringVar(&cfg.Server.SSLKeyPath, "ssl-key", cfg.Server.SSLKeyPath, "path to SSL key file")
 	flag.DurationVar(&cfg.Server.ShutdownWaitSecsDuration, "shutdown-wait-secs-duration", cfg.Server.ShutdownWaitSecsDuration, "server shutdown wait seconds duration")
+	flag.StringVar(&cfg.Server.TrustedSubnet, "t", cfg.Server.TrustedSubnet, "trusted subnet for internal stats requests (CIDR notation, e.g., \"127.0.0.1/32\")")
 
 	flag.StringVar(&cfg.Handler.BaseURL, "b", cfg.Handler.BaseURL, "base URL of short url service")
 

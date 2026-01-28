@@ -10,6 +10,16 @@ import (
 // It provides methods for checking user existence and storing user data.
 // Implementations can use different storage backends (memory, file, database).
 type UserStorage interface {
+	// Count counts a total amount of users in storage.
+	//
+	// Parameters:
+	//   - ctx: context for cancellation and timeouts
+	//
+	// Returns:
+	//   - int: total amount of users in storage
+	//   - error: nil on success, or storage error if operation fails
+	Count(ctx context.Context) (int, error)
+
 	// HasByUUID checks if a user with the specified UUID exists in storage.
 	//
 	// Parameters:

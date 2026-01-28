@@ -55,7 +55,7 @@ func (s *DBUserStorage) HasByUUID(ctx context.Context, uuid string) (bool, error
 	q := "SELECT id FROM auth_user WHERE user_uuid = $1"
 	row := s.db.QueryRowContext(ctx, q, uuid)
 
-	var id int32
+	var id int
 	err := row.Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
@@ -80,4 +80,24 @@ func (s *DBUserStorage) Set(ctx context.Context, user *model.User) error {
 		return fmt.Errorf("persist user (%s) to db: %w", user.UUID, err)
 	}
 	return nil
+}
+
+// Count counts the amount of users in the database.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//
+// Returns:
+//   - int: total amount of users in the database
+//   - error: nil on success, or database error if query fails
+func (s *DBUserStorage) Count(ctx context.Context) (int, error) {
+	q := "SELECT count(*) FROM auth_user"
+	row := s.db.QueryRowContext(ctx, q)
+
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("scan count users query result row: %w", err)
+	}
+	return count, nil
 }

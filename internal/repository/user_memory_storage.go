@@ -91,3 +91,18 @@ func (s *MemoryUserStorage) Set(_ context.Context, user *model.User) error {
 	s.users[user.UUID] = struct{}{}
 	return nil
 }
+
+// Count counts the amount of users in memory storage.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts (not used in this implementation)
+//
+// Returns:
+//   - int: total amount of users in the file storage
+//   - error: nil on success, or error if file operations fail
+func (s *MemoryUserStorage) Count(_ context.Context) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.users), nil
+}

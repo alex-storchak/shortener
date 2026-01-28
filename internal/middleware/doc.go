@@ -9,6 +9,7 @@
 //   - NewAuth: Authentication middleware that resolves users from JWT tokens
 //   - NewGzip: Compression middleware that handles gzip encoding
 //   - NewRequestLogger: Request logging middleware with detailed metrics
+//   - NewTrustedSubnet: Trusted subnet middleware that checks if the client's IP address belongs to a trusted subnet
 //
 // # Usage Example
 //

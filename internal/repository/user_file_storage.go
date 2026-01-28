@@ -116,6 +116,21 @@ func (s *FileUserStorage) Set(_ context.Context, user *model.User) error {
 	return nil
 }
 
+// Count counts the amount of users in the file storage.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeouts (not used in this implementation)
+//
+// Returns:
+//   - int: total amount of users in the file storage
+//   - error: nil on success, or error if file operations fail
+func (s *FileUserStorage) Count(_ context.Context) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.users), nil
+}
+
 // restoreFromFile reads the storage file and rebuilds the user index
 // by extracting user UUIDs from URL records.
 //

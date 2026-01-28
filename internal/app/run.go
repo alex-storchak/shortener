@@ -129,6 +129,7 @@ func initRouter(
 		APIShortenProc:      processor.NewAPIShorten(sh, zl, ub),
 		APIShortenBatchProc: processor.NewAPIShortenBatch(sh, zl, ub),
 		APIUserURLsProc:     processor.NewAPIUserURLs(sh, zl, ub),
+		APIInternalProc:     processor.NewAPIInternal(us, sh),
 		EventPublisher:      ep,
 	}
 	return handler.NewRouter(hDeps), nil

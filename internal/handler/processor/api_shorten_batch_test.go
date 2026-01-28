@@ -16,8 +16,9 @@ import (
 )
 
 type stubShortenerBatch struct {
-	retIDs []string
-	retErr error
+	retIDs   []string
+	retErr   error
+	retCount int
 }
 
 func (s *stubShortenerBatch) IsReady() error {
@@ -41,6 +42,10 @@ func (s *stubShortenerBatch) GetUserURLs(_ context.Context, _ string) ([]*model.
 
 func (s *stubShortenerBatch) DeleteBatch(_ context.Context, _ model.URLDeleteBatch) error {
 	return nil
+}
+
+func (s *stubShortenerBatch) Count(_ context.Context) (int, error) {
+	return s.retCount, nil
 }
 
 func TestShortenBatchService_ShortenBatch(t *testing.T) {
