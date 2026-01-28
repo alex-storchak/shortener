@@ -58,11 +58,13 @@ func createTestApp() http.Handler {
 	}
 	shortener := service.NewShortener(generator, storage, zl)
 
+	var observers []audit.Observer
+	auditPublisher := audit.NewEventManager(observers, cfg.Audit, zl)
 	ub := service.NewURLBuilder(cfg.Handler.BaseURL)
-	shortenProc := processor.NewShorten(shortener, zl, ub)
-	expandProc := processor.NewExpand(shortener, zl)
+	shortenProc := processor.NewShorten(shortener, zl, ub, auditPublisher)
+	expandProc := processor.NewExpand(shortener, zl, auditPublisher)
 	pingProc := processor.NewPing(shortener, zl)
-	apiShortenProc := processor.NewAPIShorten(shortener, zl, ub)
+	apiShortenProc := processor.NewAPIShorten(shortener, zl, ub, auditPublisher)
 	apiShortenBatchProc := processor.NewAPIShortenBatch(shortener, zl, ub)
 	apiUserURLsProc := processor.NewAPIUserURLs(shortener, zl, ub)
 
@@ -70,20 +72,19 @@ func createTestApp() http.Handler {
 	authService := service.NewAuthService(zl, userStorage, &cfg.Auth)
 	userManager := repository.NewUserManager(zl, userStorage)
 	authResolver := service.NewAuthUserResolver(authService, userManager, &cfg.Auth)
-	var observers []audit.Observer
-	auditPublisher := audit.NewEventManager(observers, cfg.Audit, zl)
+	grpcUserResolver := service.NewAuthUserResolver(authService, userManager, &cfg.Auth)
 
-	hDeps := handler.HTTPDeps{
+	hDeps := &handler.ServerDeps{
 		Logger:              zl,
 		Config:              cfg,
-		UserResolver:        authResolver,
+		HTTPUserResolver:    authResolver,
+		GRPCUserResolver:    grpcUserResolver,
 		ShortenProc:         shortenProc,
 		ExpandProc:          expandProc,
 		PingProc:            pingProc,
 		APIShortenProc:      apiShortenProc,
 		APIShortenBatchProc: apiShortenBatchProc,
 		APIUserURLsProc:     apiUserURLsProc,
-		EventPublisher:      auditPublisher,
 	}
 
 	return handler.NewRouter(hDeps)

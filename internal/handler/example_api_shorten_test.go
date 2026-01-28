@@ -16,22 +16,16 @@ import (
 
 // mockAPIShortenProcessor is a stub for APIShortenProcessor.
 type mockAPIShortenProcessor struct {
-	resp   *model.ShortenResponse
-	userID string
-	err    error
+	resp *model.ShortenResponse
+	err  error
 }
 
 func (m *mockAPIShortenProcessor) Process(
 	_ context.Context,
 	_ model.ShortenRequest,
-) (*model.ShortenResponse, string, error) {
-	return m.resp, m.userID, m.err
+) (*model.ShortenResponse, error) {
+	return m.resp, m.err
 }
-
-// mockAuditEventPublisher is a stub for AuditEventPublisher.
-type mockAuditEventPublisher struct{}
-
-func (m *mockAuditEventPublisher) Publish(_ model.AuditEvent) { /*no-op*/ }
 
 // This example demonstrates a successful response from the handler created by
 // HandleAPIShorten. The handler returns status 201 (Created)
@@ -46,12 +40,10 @@ func ExampleHandleAPIShorten_created() {
 		resp: &model.ShortenResponse{
 			ShortURL: "http://short/aaa",
 		},
-		userID: "user-123",
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleAPIShorten(mp, logger, ap)
+	h := handler.HandleAPIShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -73,8 +65,7 @@ func ExampleHandleAPIShorten_badRequestOnInvalidContentType() {
 
 	mp := &mockAPIShortenProcessor{}
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleAPIShorten(mp, logger, ap)
+	h := handler.HandleAPIShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -101,8 +92,7 @@ func ExampleHandleAPIShorten_badRequestOnEmptyInputURL() {
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleAPIShorten(mp, logger, ap)
+	h := handler.HandleAPIShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -129,13 +119,11 @@ func ExampleHandleAPIShorten_conflictOnExistingURL() {
 		resp: &model.ShortenResponse{
 			ShortURL: "http://short/exist",
 		},
-		err:    service.ErrURLAlreadyExists,
-		userID: "user-456",
+		err: service.ErrURLAlreadyExists,
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleAPIShorten(mp, logger, ap)
+	h := handler.HandleAPIShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -162,8 +150,7 @@ func ExampleHandleAPIShorten_internalServerError() {
 	}
 
 	logger := zap.NewNop()
-	ap := &mockAuditEventPublisher{}
-	h := handler.HandleAPIShorten(mp, logger, ap)
+	h := handler.HandleAPIShorten(mp, logger)
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
+	"github.com/alex-storchak/shortener/internal/handler/processor/mocks"
 	"github.com/alex-storchak/shortener/internal/helper/auth"
 	"github.com/alex-storchak/shortener/internal/model"
 )
@@ -74,10 +76,15 @@ func TestShortURLService_Expand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			shortener := &stubExpandShortener{tt.stubOrigURL, tt.stubErr, tt.stubUrlsCount}
-			srv := NewExpand(shortener, zap.NewNop())
+			ep := mocks.NewMockAuditEventPublisher(t)
+			if !tt.wantErr {
+				ep.EXPECT().Publish(mock.AnythingOfType("model.AuditEvent")).Return().Once()
+			}
+
+			srv := NewExpand(shortener, zap.NewNop(), ep)
 			ctx := auth.WithUser(context.Background(), &model.User{UUID: "userUUID"})
 
-			gotURL, _, gotErr := srv.Process(ctx, tt.shortID)
+			gotURL, gotErr := srv.Process(ctx, tt.shortID)
 
 			if tt.wantErr {
 				require.Error(t, gotErr)

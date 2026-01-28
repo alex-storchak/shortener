@@ -7,6 +7,7 @@ import (
 // Server contains configuration for HTTP server settings.
 type Server struct {
 	ServerAddr               string        `env:"SERVER_ADDRESS"`              // Address to bind the HTTP server (e.g., "localhost:8080")
+	GRPCServerAddr           string        `env:"GRPC_SERVER_ADDRESS"`         // Address to bind the gRPC server
 	EnableHTTPS              bool          `env:"ENABLE_HTTPS"`                // HTTPS server mode flag
 	SSLCertPath              string        `env:"SSL_CERT_PATH"`               // Path to SSL certificate
 	SSLKeyPath               string        `env:"SSL_KEY_PATH"`                // Path to SSL key
@@ -17,6 +18,7 @@ type Server struct {
 // Reset set all fields of Server to default values
 func (s *Server) Reset() {
 	s.ServerAddr = DefServerAddr
+	s.GRPCServerAddr = DefGRPCServerAddr
 	s.EnableHTTPS = DefEnableHTTPS
 	s.SSLCertPath = DefSSLCertPath
 	s.SSLKeyPath = DefSSLKeyPath
@@ -126,6 +128,7 @@ func (c *Config) Reset() {
 type JSONConfig struct {
 	// Server
 	ServerAddress            *string        `json:"server_address"`
+	GRPCServerAddr           *string        `json:"grpc_server_address"`
 	EnableHTTPS              *bool          `json:"enable_https"`
 	SSLCertPath              *string        `json:"ssl_cert_path"`
 	SSLKeyPath               *string        `json:"ssl_key_path"`

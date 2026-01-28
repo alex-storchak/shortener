@@ -8,6 +8,8 @@ import "time"
 const (
 	// DefServerAddr - Default server address
 	DefServerAddr = "localhost:8080"
+	// DefGRPCServerAddr - Default gRPC server address
+	DefGRPCServerAddr = ":50051"
 	// DefEnableHTTPS - Default flag value for using HTTPS in server
 	DefEnableHTTPS = false
 	// DefSSLCertPath - Default path to SSL certificate file
@@ -47,7 +49,7 @@ const (
 // Authentication defaults
 const (
 	// DefAuthCookieName - Default authentication cookie name
-	DefAuthCookieName = "auth"
+	DefAuthCookieName = "authorization"
 	// DefAuthTokenMaxAge - Default token max age (30 days)
 	DefAuthTokenMaxAge = 30 * 24 * time.Hour
 	// DefAuthRefreshThreshold -  Default refresh threshold (7 days)

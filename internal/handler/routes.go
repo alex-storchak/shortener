@@ -20,10 +20,10 @@ const ShortIDParam = "id"
 //
 // Parameters:
 //   - mux: Chi router instance to configure
-//   - h: HTTPDeps containing all dependencies required for HTTP server initialization
+//   - h: ServerDeps containing all dependencies required for HTTP server initialization
 func addRoutes(
 	mux *chi.Mux,
-	h HTTPDeps,
+	h *ServerDeps,
 ) {
 	mux.Use(middleware.NewRequestLogger(h.Logger))
 	mux.Use(middleware.NewGzip(h.Logger))
@@ -36,15 +36,15 @@ func addRoutes(
 
 	// app endpoints
 	mux.Route("/", func(mux chi.Router) {
-		mux.Use(middleware.NewAuth(h.Logger, h.UserResolver, h.Config.Auth))
+		mux.Use(middleware.NewAuth(h.Logger, h.HTTPUserResolver, h.Config.Auth))
 
-		mux.Post("/", HandleShorten(h.ShortenProc, h.Logger, h.EventPublisher))
-		mux.Get("/{id:[a-zA-Z0-9_-]+}", HandleExpand(h.ExpandProc, h.Logger, h.EventPublisher))
+		mux.Post("/", HandleShorten(h.ShortenProc, h.Logger))
+		mux.Get("/{id:[a-zA-Z0-9_-]+}", HandleExpand(h.ExpandProc, h.Logger))
 		mux.Get("/ping", HandlePing(h.PingProc, h.Logger))
 
 		mux.Route("/api", func(mux chi.Router) {
 			mux.Route("/shorten", func(mux chi.Router) {
-				mux.Post("/", HandleAPIShorten(h.APIShortenProc, h.Logger, h.EventPublisher))
+				mux.Post("/", HandleAPIShorten(h.APIShortenProc, h.Logger))
 				mux.Post("/batch", HandleAPIShortenBatch(h.APIShortenBatchProc, h.Logger))
 			})
 

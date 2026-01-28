@@ -1,10 +1,19 @@
 package middleware
 
 import (
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 
 	"go.uber.org/zap"
+)
+
+var (
+	ErrEmptyTrustedSubnet   = errors.New("trusted subnet is empty")
+	ErrEmptyXRealIPHeader   = errors.New("empty X-Real-IP header")
+	ErrInvalidXRealIPHeader = errors.New("invalid X-Real-IP header")
+	ErrNotTrustedSubnet     = errors.New("subnet is not trusted")
 )
 
 // NewTrustedSubnet creates a middleware for checking if a client's IP address
@@ -24,7 +33,8 @@ import (
 func NewTrustedSubnet(l *zap.Logger, trustedSubnet string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !isTrustedSubnet(l, r, trustedSubnet) {
+			if err := checkTrustedSubnet(r, trustedSubnet); err != nil {
+				l.Debug("trusted subnet check failed", zap.Error(err))
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}
@@ -34,30 +44,29 @@ func NewTrustedSubnet(l *zap.Logger, trustedSubnet string) func(http.Handler) ht
 	}
 }
 
-// isTrustedSubnet checks whether the IP address from the X-Real-IP header
+// checkTrustedSubnet checks whether the IP address from the X-Real-IP header
 // belongs to the specified trusted subnet.
-func isTrustedSubnet(l *zap.Logger, r *http.Request, trustedSubnet string) bool {
+func checkTrustedSubnet(r *http.Request, trustedSubnet string) error {
 	if trustedSubnet == "" {
-		l.Debug("trusted subnet is empty")
-		return false
+		return ErrEmptyTrustedSubnet
 	}
 
 	ipStr := r.Header.Get("X-Real-IP")
 	if ipStr == "" {
-		l.Debug("empty X-Real-IP header")
-		return false
+		return ErrEmptyXRealIPHeader
 	}
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		l.Debug("invalid ip in X-Real-IP header")
-		return false
+		return ErrInvalidXRealIPHeader
 	}
 
 	_, ipNet, err := net.ParseCIDR(trustedSubnet)
 	if err != nil {
-		l.Debug("invalid trusted subnet in config")
-		return false
+		return fmt.Errorf("invalid trusted subnet in config: %w", err)
 	}
 
-	return ipNet.Contains(ip)
+	if ipNet.Contains(ip) {
+		return ErrNotTrustedSubnet
+	}
+	return nil
 }

@@ -82,6 +82,7 @@ func (s *ConfigTestSuite) TearDownSubTest() {
 func (s *ConfigTestSuite) TestParseConfig() {
 	defServerCfg := Server{
 		ServerAddr:               DefServerAddr,
+		GRPCServerAddr:           DefGRPCServerAddr,
 		EnableHTTPS:              DefEnableHTTPS,
 		SSLCertPath:              DefSSLCertPath,
 		SSLKeyPath:               DefSSLKeyPath,
@@ -146,6 +147,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "example.com:1111",
+					GRPCServerAddr:           DefGRPCServerAddr,
 					EnableHTTPS:              DefEnableHTTPS,
 					SSLCertPath:              DefSSLCertPath,
 					SSLKeyPath:               DefSSLKeyPath,
@@ -175,6 +177,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "example.com:1111",
+					GRPCServerAddr:           DefGRPCServerAddr,
 					EnableHTTPS:              DefEnableHTTPS,
 					SSLCertPath:              DefSSLCertPath,
 					SSLKeyPath:               DefSSLKeyPath,
@@ -217,6 +220,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					GRPCServerAddr:           DefGRPCServerAddr,
 					EnableHTTPS:              DefEnableHTTPS,
 					SSLCertPath:              DefSSLCertPath,
 					SSLKeyPath:               DefSSLKeyPath,
@@ -249,6 +253,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					GRPCServerAddr:           DefGRPCServerAddr,
 					EnableHTTPS:              DefEnableHTTPS,
 					SSLCertPath:              DefSSLCertPath,
 					SSLKeyPath:               DefSSLKeyPath,
@@ -277,6 +282,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					GRPCServerAddr:           DefGRPCServerAddr,
 					EnableHTTPS:              DefEnableHTTPS,
 					SSLCertPath:              DefSSLCertPath,
 					SSLKeyPath:               DefSSLKeyPath,
@@ -303,6 +309,7 @@ func (s *ConfigTestSuite) TestParseConfig() {
 			want: &Config{
 				Server: Server{
 					ServerAddr:               "env-example.com:1111",
+					GRPCServerAddr:           DefGRPCServerAddr,
 					EnableHTTPS:              DefEnableHTTPS,
 					SSLCertPath:              DefSSLCertPath,
 					SSLKeyPath:               DefSSLKeyPath,

@@ -557,3 +557,53 @@ Build commit: <buildCommit> (или "N/A" при отсутствии значе
 IP-адрес клиента входит в доверенную подсеть, в противном случае возвращать статус ответа `403 Forbidden`.
 
 При пустом значении переменной `trusted_subnet` доступ к эндпоинту должен быть запрещён для любого входящего запроса.
+
+# Инкремент 28
+
+Добавьте возможность выполнять запросы к вашему серверу по протоколу gRPC. 
+Наряду с HTTP доступ по протоколу gRPC должен быть обеспечен к следующим хендлерам:
+- `POST /api/shorten`
+- `GET /<id>`
+- `GET /api/user/urls`
+
+Формат взаимодействия:
+
+```protobuf
+service ShortenerService {
+  rpc ShortenURL (URLShortenRequest) returns (URLShortenResponse);
+  rpc ExpandURL (URLExpandRequest) returns (URLExpandResponse);
+  rpc ListUserURLs (google.protobuf.Empty) returns (UserURLsResponse);
+}
+
+message URLShortenRequest {
+  string url = 1;
+}
+
+message URLShortenResponse {
+  string result = 1;
+}
+
+message URLExpandRequest {
+  string id = 1;
+}
+
+message URLExpandResponse {
+  string result = 1;
+}
+
+
+message UserURLsResponse {
+  repeated URLData url = 1;
+}
+
+message URLData {
+  string short_url = 1;
+  string original_url = 2;
+}
+```
+
+
+Для авторизации используйте `metadata`, передавая авторизационные данные в хедере `authorization`. 
+Обеспечьте те же параметры конфигурации gRPC-сервера, что и у HTTP-сервера.
+
+**Совет:** попробуйте сделать HTTP- и gRPC-хендлеры фасадами к общему коду с бизнес-логикой.
