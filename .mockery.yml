@@ -1,6 +1,6 @@
 all: false
 dir: '{{.InterfaceDir}}/mocks'
-filename: "mock_{{.InterfaceName}}.go"
+filename: "mock_{{ snakecase .InterfaceName }}.go"
 force-file-write: true
 formatter: gofmt
 include-auto-generated: false

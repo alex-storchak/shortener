@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	BearerPrefix = "Bearer "
+	bearerPrefix = "Bearer "
 )
 
 type UserResolver interface {
@@ -36,7 +36,7 @@ func NewAuth(logger *zap.Logger, srv UserResolver, cfg config.Auth) grpc.UnarySe
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
 			values := md.Get(cfg.CookieName)
 			if len(values) > 0 {
-				token = strings.TrimPrefix(values[0], BearerPrefix)
+				token = strings.TrimPrefix(values[0], bearerPrefix)
 			}
 		}
 

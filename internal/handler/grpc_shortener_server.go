@@ -7,8 +7,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/alex-storchak/shortener/api/proto/shortener"
@@ -76,7 +74,7 @@ func (s *GRPCShortenerServer) ExpandURL(ctx context.Context, req *pb.URLExpandRe
 	return res, nil
 }
 
-func (s *GRPCShortenerServer) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*pb.UserURLsResponse, error) {
+func (s *GRPCShortenerServer) ListUserURLs(ctx context.Context, _ *pb.UserURLsRequest) (*pb.UserURLsResponse, error) {
 	respItems, err := s.userURLsProc.ProcessGet(ctx)
 	if err != nil {
 		s.logger.Error("error getting user urls", zap.Error(err))
